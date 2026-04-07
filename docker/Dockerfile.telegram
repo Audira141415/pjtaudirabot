@@ -1,0 +1,40 @@
+# Multi-stage build for Telegram bot
+FROM node:20-alpine AS builder
+
+WORKDIR /build
+
+# Install dependencies
+COPY package.json pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install
+
+# Copy source
+COPY . .
+
+# Build
+RUN pnpm run build
+
+# Runtime stage
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install production dependencies only
+RUN npm install -g pnpm && pnpm install --prod
+
+# Copy built application from builder
+COPY --from=builder /build/packages/bots/telegram/dist ./dist
+COPY --from=builder /build/packages/core/dist ./node_modules/@pjtaudirabot/core/dist
+COPY --from=builder /build/packages/config/dist ./node_modules/@pjtaudirabot/config/dist
+COPY --from=builder /build/packages/services/dist ./node_modules/@pjtaudirabot/services/dist
+
+# Create logs directory
+RUN mkdir -p logs
+
+ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+CMD ["node", "dist/index.js"]

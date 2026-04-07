@@ -1,0 +1,145 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: pjtaudi-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-pjtaudi}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password_change_me}
+      POSTGRES_DB: ${DB_NAME:-pjtaudi}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pjtaudi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pjtaudi-network
+    restart: unless-stopped
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: pjtaudi-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pjtaudi-network
+    restart: unless-stopped
+
+  # API Server
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: pjtaudi-api
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${DB_USER:-pjtaudi}:${DB_PASSWORD:-dev_password_change_me}@db:5432/${DB_NAME:-pjtaudi}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      API_PORT: ${API_PORT:-4000}
+      SERVER_PORT: ${SERVER_PORT:-3000}
+      WHATSAPP_ENABLED: ${WHATSAPP_ENABLED:-true}
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-true}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      AI_PROVIDER: ${AI_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-4000}:${API_PORT:-4000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${API_PORT:-4000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pjtaudi-network
+    restart: unless-stopped
+
+  # WhatsApp Bot Service
+  whatsapp:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.whatsapp
+    container_name: pjtaudi-whatsapp
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${DB_USER:-pjtaudi}:${DB_PASSWORD:-dev_password_change_me}@db:5432/${DB_NAME:-pjtaudi}
+      REDIS_URL: redis://redis:6379
+      WHATSAPP_SESSION_DIR: /data/whatsapp-sessions
+      WHATSAPP_PORT: ${WHATSAPP_PORT:-4020}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    ports:
+      - "${WHATSAPP_PORT:-4020}:${WHATSAPP_PORT:-4020}"
+    volumes:
+      - whatsapp_sessions:/data/whatsapp-sessions
+      - ./logs:/app/logs
+    networks:
+      - pjtaudi-network
+    restart: unless-stopped
+
+  # Telegram Bot Service
+  telegram:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.telegram
+    container_name: pjtaudi-telegram
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${DB_USER:-pjtaudi}:${DB_PASSWORD:-dev_password_change_me}@db:5432/${DB_NAME:-pjtaudi}
+      REDIS_URL: redis://redis:6379
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_PORT: ${TELEGRAM_PORT:-4010}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    ports:
+      - "${TELEGRAM_PORT:-4010}:${TELEGRAM_PORT:-4010}"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pjtaudi-network
+    restart: unless-stopped
+
+networks:
+  pjtaudi-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  whatsapp_sessions:

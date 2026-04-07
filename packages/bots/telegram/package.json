@@ -1,0 +1,29 @@
+{
+  "name": "@pjtaudirabot/bots-telegram",
+  "version": "1.0.0",
+  "description": "Telegram bot implementation using Telegraf",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "telegraf": "^4.14.0",
+    "pino": "^8.17.2",
+    "redis": "^4.6.11",
+    "@prisma/client": "^5.7.0",
+    "@pjtaudirabot/core": "workspace:*",
+    "@pjtaudirabot/config": "workspace:*",
+    "@pjtaudirabot/services": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}

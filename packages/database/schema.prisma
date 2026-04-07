@@ -1,0 +1,1293 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  platform          Platform
+  platformUserId    String   // WhatsApp: phone+timestamp, Telegram: chat_id
+  phoneNumber       String?
+  username          String?
+  displayName       String
+  profileImage      String?
+  role              UserRole @default(USER)
+  status            UserStatus @default(ACTIVE)
+  settings          Json     @default("{\"language\": \"en\", \"notifications\": true}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  lastActivityAt    DateTime?
+
+  sessions              Session[]
+  commandExecutions     CommandExecution[]
+  auditLogs             AuditLog[]
+  memories              UserMemory[]
+  embeddings            MemoryEmbedding[]
+  conversationSummaries ConversationSummary[]
+  broadcastReceipts     BroadcastReceipt[]
+  moderationLogs        ModerationLog[]
+  tasks                 Task[]
+  checklistItems        ChecklistItem[]
+  incidents             Incident[]
+  reminders             Reminder[]
+  knowledgeEntries      KnowledgeEntry[]
+  notes                 Note[]
+  chatLogs              ChatLog[]
+  createdTickets        Ticket[]   @relation("CreatedTickets")
+  assignedTickets       Ticket[]   @relation("AssignedTickets")
+
+  @@unique([platform, platformUserId])
+  @@index([status])
+  @@index([role])
+}
+
+model Session {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  botPlatform       Platform
+  sessionToken      String   @unique
+  metadata          Json     @default("{}")
+  expiresAt         DateTime
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([expiresAt])
+}
+
+model Command {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String
+  category          String
+  handler           String   // Function identifier
+  requiredRole      UserRole @default(USER)
+  rateLimitConfig   Json     @default("{\"perMinute\": 30, \"perHour\": 300}")
+  isEnabled         Boolean  @default(true)
+  aiPowered         Boolean  @default(false)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  executions        CommandExecution[]
+
+  @@index([name])
+  @@index([category])
+}
+
+model CommandExecution {
+  id                String   @id @default(cuid())
+  commandId         String
+  command           Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionId         String?
+  botPlatform       Platform
+  input             String
+  output            String?
+  executionTimeMs   Int      @default(0)
+  status            ExecutionStatus @default(PENDING)
+  errorMessage      String?
+  aiUsed            Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([commandId])
+  @@index([status])
+  @@index([botPlatform])
+}
+
+model AuditLog {
+  id                String   @id @default(cuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action            String   // create, update, delete, execute, login, etc
+  resource          String   // user, command, session, config, etc
+  resourceId        String?
+  changes           Json?    @default("{}")
+  ipAddress         String?
+  userAgent         String?
+  status            AuditStatus @default(SUCCESS)
+  errorDetails      String?
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+}
+
+model BotConfig {
+  id                String   @id @default(cuid())
+  platform          Platform @unique
+  isActive          Boolean  @default(true)
+  configuration     Json     @default("{}")
+  lastConnectedAt   DateTime?
+  connectionStatus  ConnectionStatus @default(DISCONNECTED)
+  version           String   @default("1.0.0")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([platform])
+}
+
+model RateLimitSnapshot {
+  id                String   @id @default(cuid())
+  userId            String
+  commandId         String?
+  requestCount      Int      @default(1)
+  windowStart       DateTime
+  windowEnd         DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([commandId])
+  @@index([windowStart])
+}
+
+// ── AI Memory System ──
+
+model UserMemory {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category          MemoryCategory
+  key               String       // e.g. "name", "language", "preference_theme"
+  value             String       // the extracted fact
+  confidence        Float        @default(0.8)
+  source            String?      // message that produced this fact
+  lastReferencedAt  DateTime?
+  expiresAt         DateTime?    // optional TTL for ephemeral facts
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@unique([userId, category, key])
+  @@index([userId])
+  @@index([category])
+  @@index([expiresAt])
+}
+
+model MemoryEmbedding {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content           String   // original text chunk
+  embedding         Bytes    // serialized Float32Array
+  dimensions        Int      @default(1536)
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ConversationSummary {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform          Platform
+  summary           String
+  messageCount      Int
+  startedAt         DateTime
+  endedAt           DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+  @@index([platform])
+  @@index([endedAt])
+}
+
+enum MemoryCategory {
+  PERSONAL       // name, age, location
+  PREFERENCE     // likes, dislikes, settings
+  CONTEXT        // ongoing topics, current task
+  KNOWLEDGE      // things the user taught the bot
+  RELATIONSHIP   // how user relates to others
+}
+
+// ── Analytics ──
+
+model AnalyticsEvent {
+  id                String   @id @default(cuid())
+  eventType         String   // command_executed, ai_request, message_received, error, etc.
+  userId            String?
+  platform          Platform?
+  metadata          Json     @default("{}")
+  value             Float?   // numeric value (e.g. response time ms)
+  createdAt         DateTime @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([platform])
+  @@index([createdAt])
+}
+
+model DailyStats {
+  id                String   @id @default(cuid())
+  date              DateTime @db.Date
+  platform          Platform?
+  totalMessages     Int      @default(0)
+  totalCommands     Int      @default(0)
+  totalAIRequests   Int      @default(0)
+  totalErrors       Int      @default(0)
+  uniqueUsers       Int      @default(0)
+  avgResponseTimeMs Float    @default(0)
+  topCommands       Json     @default("{}") // { "ai": 50, "help": 30 }
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([date, platform])
+  @@index([date])
+}
+
+// ── Broadcast ──
+
+model BroadcastMessage {
+  id                String            @id @default(cuid())
+  title             String
+  content           String
+  targetPlatform    Platform?         // null = all platforms
+  targetRole        UserRole?         // null = all roles
+  status            BroadcastStatus   @default(PENDING)
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  totalRecipients   Int               @default(0)
+  successCount      Int               @default(0)
+  failureCount      Int               @default(0)
+  createdBy         String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  receipts          BroadcastReceipt[]
+
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model BroadcastReceipt {
+  id                String   @id @default(cuid())
+  broadcastId       String
+  broadcast         BroadcastMessage @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status            BroadcastReceiptStatus @default(PENDING)
+  sentAt            DateTime?
+  errorMessage      String?
+  createdAt         DateTime @default(now())
+
+  @@unique([broadcastId, userId])
+  @@index([broadcastId])
+  @@index([userId])
+}
+
+// ── Webhook ──
+
+model WebhookConfig {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  url               String
+  secret            String?  // HMAC signing secret
+  events            Json     @default("[]") // ["user.created", "command.executed"]
+  isActive          Boolean  @default(true)
+  failureCount      Int      @default(0)
+  lastTriggeredAt   DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// ── Moderation ──
+
+model ModerationRule {
+  id                String           @id @default(cuid())
+  name              String           @unique
+  ruleType          ModerationType
+  pattern           String           // regex or keyword list (JSON array)
+  action            ModerationAction @default(WARN)
+  message           String?          // custom response when triggered
+  isActive          Boolean          @default(true)
+  priority          Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([ruleType])
+  @@index([isActive])
+}
+
+model ModerationLog {
+  id                String           @id @default(cuid())
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId            String?
+  ruleName          String
+  ruleType          ModerationType
+  action            ModerationAction
+  originalMessage   String
+  platform          Platform
+  createdAt         DateTime         @default(now())
+
+  @@index([userId])
+  @@index([ruleType])
+  @@index([createdAt])
+}
+
+// ── Conversation Flow ──
+
+model FlowDefinition {
+  id                String   @id @default(cuid())
+  name              String   @unique
+  description       String?
+  steps             Json     // array of step definitions
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([name])
+}
+
+model FlowSession {
+  id                String   @id @default(cuid())
+  flowName          String
+  userId            String
+  platform          Platform
+  currentStep       Int      @default(0)
+  data              Json     @default("{}") // collected user input
+  status            FlowStatus @default(ACTIVE)
+  expiresAt         DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([flowName, userId, platform])
+  @@index([userId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+enum BroadcastStatus {
+  PENDING
+  SENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum BroadcastReceiptStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ModerationType {
+  KEYWORD      // banned words
+  REGEX        // regex pattern
+  SPAM         // flood/duplicate detection
+  LINK         // URL filtering
+}
+
+enum ModerationAction {
+  WARN         // reply with warning
+  BLOCK        // block the message
+  MUTE         // temp mute user
+  BAN          // ban user
+}
+
+enum FlowStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum Platform {
+  WHATSAPP
+  TELEGRAM
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  ERROR
+  THROTTLED
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILURE
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  DISCONNECTED
+  CONNECTING
+  ERROR
+}
+
+// ── Task Management ──
+
+model Task {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  description       String?
+  status            TaskStatus   @default(PENDING)
+  priority          TaskPriority @default(MEDIUM)
+  category          String?      // e.g. "meeting", "devops", "documentation"
+  dueDate           DateTime?
+  completedAt       DateTime?
+  client            String?      // extracted client/person name
+  location          String?
+  tags              Json         @default("[]")
+  sourceMessage     String?      // original chat message that created this task
+  sheetSynced       Boolean      @default(false)
+  platform          Platform?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ── Checklist System ──
+
+model ChecklistTemplate {
+  id                String          @id @default(cuid())
+  name              String          @unique
+  description       String?
+  items             Json            // array of { title, order }
+  schedule          String?         // cron-like schedule: "daily", "weekly", "monthly"
+  isActive          Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  instances         ChecklistItem[]
+
+  @@index([name])
+  @@index([schedule])
+}
+
+model ChecklistItem {
+  id                String            @id @default(cuid())
+  templateId        String
+  template          ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  isCompleted       Boolean           @default(false)
+  completedAt       DateTime?
+  scheduledDate     DateTime          @db.Date
+  notes             String?
+  sheetSynced       Boolean           @default(false)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([scheduledDate])
+  @@index([isCompleted])
+}
+
+// ── Incident / Auto-Documentation ──
+
+model Incident {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title             String
+  description       String
+  rootCause         String?
+  solution          String?
+  severity          IncidentSeverity @default(MEDIUM)
+  status            IncidentStatus   @default(OPEN)
+  service           String?         // e.g. "nginx", "docker", "database"
+  tags              Json            @default("[]")
+  sourceMessage     String?
+  resolvedAt        DateTime?
+  sheetSynced       Boolean         @default(false)
+  platform          Platform?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([severity])
+  @@index([service])
+  @@index([createdAt])
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+// ── Reminder System ──
+
+model Reminder {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message           String
+  remindAt          DateTime
+  isDelivered       Boolean       @default(false)
+  deliveredAt       DateTime?
+  recurring         String?       // "daily", "weekly", null for one-time
+  platform          Platform
+  sourceMessage     String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([remindAt])
+  @@index([isDelivered])
+}
+
+// ── Knowledge Base ──
+
+model KnowledgeEntry {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic             String
+  question          String
+  answer            String
+  tags              Json     @default("[]")
+  sourceMessages    Json     @default("[]") // array of original messages
+  referenceCount    Int      @default(0)
+  lastReferencedAt  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([topic])
+  @@index([createdAt])
+}
+
+// ── Server Monitoring ──
+
+model ServerLog {
+  id                String   @id @default(cuid())
+  hostname          String
+  service           String   // "nginx", "docker", "postgresql", etc.
+  logLevel          String   // "info", "warn", "error", "critical"
+  message           String
+  metadata          Json     @default("{}")
+  sheetSynced       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([hostname])
+  @@index([service])
+  @@index([logLevel])
+  @@index([createdAt])
+}
+
+// ── Notes ──
+
+model Note {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content           String
+  tags              Json     @default("[]")
+  sourceMessage     String?
+  platform          Platform?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ── Chat Log (raw message → structured extraction audit trail) ──
+
+model ChatLog {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message           String
+  extractedType     ExtractedType
+  extractedData     Json          @default("{}")
+  platform          Platform
+  confidence        Float         @default(0)
+  createdAt         DateTime      @default(now())
+
+  @@index([userId])
+  @@index([extractedType])
+  @@index([createdAt])
+}
+
+enum ExtractedType {
+  TASK
+  NOTE
+  REMINDER
+  INCIDENT
+  GREETING
+  UNKNOWN
+}
+
+// ══════════════════════════════════════════════════════
+// MIGRATED FROM BOT OLD — Ticket / SLA / NOC features
+// ══════════════════════════════════════════════════════
+
+// ── Ticket Management ──
+
+model Ticket {
+  id                String          @id @default(cuid())
+  ticketNumber      String          @unique // e.g. TKT-20260405-0001
+  createdById       String
+  createdBy         User            @relation("CreatedTickets", fields: [createdById], references: [id])
+  assignedToId      String?
+  assignedTo        User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
+
+  // Core fields
+  title             String
+  description       String
+  status            TicketStatus    @default(OPEN)
+  priority          TicketPriority  @default(MEDIUM)
+  category          TicketCategory  @default(INCIDENT)
+
+  // NOC-specific fields (from old bot data extraction)
+  customer          String?
+  location          String?
+  ao                String?          // Area of Operation
+  sid               String?          // Service ID
+  service           String?          // Layanan (METRO, IPTX, etc.)
+  vlanId            String?
+  vlanType          String?
+  vlanName          String?
+  hostnameSwitch    String?
+  port              String?
+  ipAddress         String?
+  gateway           String?
+  subnet            String?
+  mode              String?
+  problem           String
+
+  // Resolution
+  rootCause         String?
+  solution          String?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+
+  // Metadata
+  source            Platform?
+  groupId           String?
+  sourceMessage     String?
+  tags              Json             @default("[]")
+  metadata          Json             @default("{}")
+  sheetSynced       Boolean          @default(false)
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  slaTracking       SLATracking?
+  escalations       Escalation[]
+  ticketHistory     TicketHistory[]
+  dataExtractions   DataExtraction[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([customer])
+  @@index([location])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([createdById])
+}
+
+model TicketHistory {
+  id                String   @id @default(cuid())
+  ticketId          String
+  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  action            String   // created, updated, assigned, escalated, resolved, closed
+  field             String?  // which field changed
+  oldValue          String?
+  newValue          String?
+  changedById       String?
+  note              String?
+  createdAt         DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum TicketCategory {
+  INCIDENT
+  REQUEST
+  MAINTENANCE
+  CONFIGURATION
+  MONITORING
+}
+
+// ── SLA Tracking ──
+
+model SLATracking {
+  id                   String      @id @default(cuid())
+  ticketId             String      @unique
+  ticket               Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // SLA Targets (in minutes)
+  responseTargetMin    Int         @default(15)   // 15 min response SLA
+  resolutionTargetMin  Int         @default(240)  // 4 hr resolution SLA
+
+  // Deadlines
+  responseDeadline     DateTime
+  resolutionDeadline   DateTime
+
+  // Actual times
+  respondedAt          DateTime?
+  resolvedAt           DateTime?
+
+  // Status
+  responseBreached     Boolean     @default(false)
+  resolutionBreached   Boolean     @default(false)
+  responseWarned       Boolean     @default(false)  // 80% threshold warning
+  resolutionWarned     Boolean     @default(false)
+
+  // Metrics
+  responseTimeMin      Float?      // actual response time in minutes
+  resolutionTimeMin    Float?      // actual resolution time in minutes
+
+  slaLevel             String      @default("L1") // L0, L1, helpdesk, smarthand, fulfillment
+  isPaused             Boolean     @default(false)
+  pausedAt             DateTime?
+  pausedDurationMin    Float       @default(0)
+
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([responseBreached])
+  @@index([resolutionBreached])
+  @@index([responseDeadline])
+  @@index([resolutionDeadline])
+}
+
+// ── Escalation System ──
+
+model EscalationRule {
+  id                String           @id @default(cuid())
+  name              String           @unique
+  description       String?
+  triggerType       EscalationTrigger
+  condition         Json             // e.g. { "keyword": ["down","outage"], "timeout_min": 15 }
+  targetLevel       EscalationLevel  @default(L2)
+  isActive          Boolean          @default(true)
+  priority          Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@index([triggerType])
+  @@index([isActive])
+}
+
+model Escalation {
+  id                String           @id @default(cuid())
+  ticketId          String
+  ticket            Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fromLevel         EscalationLevel
+  toLevel           EscalationLevel
+  reason            String
+  triggerType       EscalationTrigger
+  escalatedById     String?          // user or "system"
+  acknowledgedAt    DateTime?
+  resolvedAt        DateTime?
+  notes             String?
+  createdAt         DateTime         @default(now())
+
+  @@index([ticketId])
+  @@index([toLevel])
+  @@index([createdAt])
+}
+
+enum EscalationLevel {
+  L1
+  L2
+  L3
+  MANAGER
+}
+
+enum EscalationTrigger {
+  SLA_BREACH
+  KEYWORD
+  TIMEOUT
+  MANUAL
+  VIP
+  THRESHOLD
+}
+
+// ── Alert System ──
+
+model AlertRule {
+  id                String       @id @default(cuid())
+  name              String       @unique
+  description       String?
+  alertType         AlertType
+  conditions        Json         // { "field": "priority", "operator": "equals", "value": "CRITICAL" }
+  actions           Json         // [{ "type": "whatsapp", "target": "group_id" }]
+  cooldownMin       Int          @default(5) // min between repeated alerts
+  isActive          Boolean      @default(true)
+  lastTriggeredAt   DateTime?
+  triggerCount      Int          @default(0)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  alerts            Alert[]
+
+  @@index([alertType])
+  @@index([isActive])
+}
+
+model Alert {
+  id                String       @id @default(cuid())
+  ruleId            String
+  rule              AlertRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  title             String
+  message           String
+  severity          AlertSeverity @default(WARNING)
+  status            AlertStatus   @default(ACTIVE)
+  acknowledgedAt    DateTime?
+  acknowledgedById  String?
+  metadata          Json          @default("{}")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([ruleId])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum AlertType {
+  SLA_VIOLATION
+  KEYWORD
+  THRESHOLD
+  SCHEDULE
+  CUSTOM
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  EXPIRED
+}
+
+// ── Data Extraction (NOC message parsing) ──
+
+model DataExtraction {
+  id                String   @id @default(cuid())
+  ticketId          String?
+  ticket            Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  extractedById     String?
+
+  // Extracted fields
+  customer          String?
+  location          String?
+  ao                String?
+  sid               String?
+  service           String?
+  vlanId            String?
+  vlanType          String?
+  vlanName          String?
+  hostnameSwitch    String?
+  port              String?
+  ipAddress         String?
+  gateway           String?
+  subnet            String?
+  mode              String?
+  problem           String?
+  notes             String?
+
+  // Metadata
+  rawMessage        String
+  confidence        Float    @default(0)
+  isDuplicate       Boolean  @default(false)
+  duplicateOfId     String?
+  category          TicketCategory?
+  priorityScore     Int      @default(0)
+
+  platform          Platform?
+  groupId           String?
+  sheetSynced       Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@index([customer])
+  @@index([location])
+  @@index([createdAt])
+  @@index([ticketId])
+}
+
+// ── Network Monitoring ──
+
+model NetworkBranch {
+  id                String   @id @default(cuid())
+  branchId          String   @unique  // e.g. "JKT-HQ"
+  name              String
+  region            String   // e.g. "Java", "Sumatra"
+  city              String?
+  totalDevices      Int      @default(0)
+  activeDevices     Int      @default(0)
+  uptimePercent     Float    @default(100)
+  healthScore       Float    @default(100)
+  healthStatus      HealthStatus @default(HEALTHY)
+  latencyMs         Float    @default(0)
+  jitterMs          Float    @default(0)
+  bandwidthIn       Float    @default(0)
+  bandwidthOut      Float    @default(0)
+  utilization       Float    @default(0)
+  criticalIncidents Int      @default(0)
+  warningIncidents  Int      @default(0)
+  metadata          Json     @default("{}")
+  lastUpdatedAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([region])
+  @@index([healthStatus])
+}
+
+enum HealthStatus {
+  HEALTHY
+  DEGRADED
+  WARNING
+  CRITICAL
+  OFFLINE
+}
+
+// ── Bulk Operations ──
+
+model BulkJob {
+  id                String        @id @default(cuid())
+  jobType           BulkJobType
+  status            BulkJobStatus @default(PENDING)
+  totalItems        Int           @default(0)
+  processedItems    Int           @default(0)
+  successCount      Int           @default(0)
+  failureCount      Int           @default(0)
+  input             Json          @default("{}") // filters, file data
+  results           Json          @default("[]") // per-item results
+  errorLog          Json          @default("[]")
+  createdById       String
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@index([jobType])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+enum BulkJobType {
+  CREATE_TICKETS
+  UPDATE_TICKETS
+  CLOSE_TICKETS
+  ASSIGN_TICKETS
+  EXPORT_TICKETS
+}
+
+enum BulkJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  PARTIAL
+}
+
+// ── Backup System ──
+
+model Backup {
+  id                String      @id @default(cuid())
+  backupType        BackupType
+  fileName          String
+  filePath          String
+  fileSize          Int         @default(0) // bytes
+  checksum          String?     // SHA-256
+  recordCount       Int         @default(0)
+  metadata          Json        @default("{}") // dateRange, filters, etc.
+  status            BackupStatus @default(PENDING)
+  completedAt       DateTime?
+  expiresAt         DateTime?
+  createdById       String?
+  createdAt         DateTime    @default(now())
+
+  @@index([backupType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+enum BackupType {
+  FULL
+  INCREMENTAL
+  SNAPSHOT
+}
+
+enum BackupStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+// ── Report Templates / Scheduled Reports ──
+
+model ScheduledReport {
+  id                String        @id @default(cuid())
+  name              String        @unique
+  reportType        ReportType
+  schedule          String        // cron expression
+  recipients        Json          @default("[]") // [{platform, userId}]
+  filters           Json          @default("{}")
+  format            String        @default("text") // text, excel, csv
+  isActive          Boolean       @default(true)
+  lastRunAt         DateTime?
+  nextRunAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([isActive])
+  @@index([nextRunAt])
+}
+
+enum ReportType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  SLA_COMPLIANCE
+  TREND_ANALYSIS
+  AUDIT
+  PERFORMANCE
+}
+
+// ── WhatsApp Group Management ──
+
+model ChatGroup {
+  id                String        @id @default(cuid())
+  groupJid          String        @unique  // e.g. "120363xxx-1632212345@g.us"
+  groupName         String
+  description       String?
+  groupPicture      String?       // URL to group picture
+
+  // Group Configuration
+  isMonitored       Boolean       @default(false) // Should bot listen to messages here?
+  isReportTarget    Boolean       @default(false) // Should reports be sent here?
+  reportTypes       Json          @default("[]") // ["DAILY", "WEEKLY", "MONTHLY"]
+  
+  // Group Info
+  participantCount  Int           @default(0)
+  lastMessageAt     DateTime?
+  
+  // Metadata
+  metadata          Json          @default("{}")
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  reportConfig      ReportGroupConfig?
+
+  @@index([isMonitored])
+  @@index([isReportTarget])
+  @@index([createdAt])
+}
+
+model ReportGroupConfig {
+  id                String        @id @default(cuid())
+  chatGroupId       String        @unique
+  chatGroup         ChatGroup     @relation(fields: [chatGroupId], references: [id], onDelete: Cascade)
+
+  // Report Configuration
+  enableDaily       Boolean       @default(false)
+  enableWeekly      Boolean       @default(false)
+  enableMonthly     Boolean       @default(false)
+  
+  // Delivery Schedule (will override global schedule if set)
+  dailyHour         Int?          // 0-23, null = use default (7)
+  weeklyDay         Int?          // 0-6 (0=Sunday), null = use default (1=Monday)
+  weeklyHour        Int?          // 0-23, null = use default (8)
+  monthlyDay        Int?          // 1-31, null = use default (last day)
+  monthlyHour       Int?          // 0-23, null = use default (18)
+  
+  // Timezone for this group (optional)
+  timezone          String?       // e.g. "Asia/Jakarta"
+  
+  // Additional Options
+  includeCharts     Boolean       @default(true)
+  includeSummary    Boolean       @default(true)
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([enableDaily])
+  @@index([enableWeekly])
+  @@index([enableMonthly])
+}
+
+// ══════════════════════════════════════════════════════
+// UPTIME MONITORING
+// ══════════════════════════════════════════════════════
+
+model UptimeTarget {
+  id                String              @id @default(cuid())
+  name              String              @unique  // friendly name, e.g. "SW-CORE-JKT01"
+  host              String              // IP or hostname
+  port              Int?                // TCP port (null = ICMP ping)
+  checkType         UptimeCheckType     @default(PING)
+  intervalSec       Int                 @default(60)     // check every N seconds
+  timeoutMs         Int                 @default(5000)   // fail threshold
+  retries           Int                 @default(3)      // consecutive fails before DOWN
+  isActive          Boolean             @default(true)
+  tags              Json                @default("[]")   // ["core","jkt","switch"]
+  metadata          Json                @default("{}")   // extra info (model, SN, rack)
+
+  // Current state
+  status            UptimeStatus        @default(UNKNOWN)
+  lastCheckAt       DateTime?
+  lastUpAt          DateTime?
+  lastDownAt        DateTime?
+  consecutiveFails  Int                 @default(0)
+  uptimePercent     Float               @default(100)
+
+  // Auto-ticket
+  autoTicket        Boolean             @default(true)   // create ticket on DOWN?
+  lastTicketId      String?             // prevent duplicate tickets
+
+  createdById       String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  checks            UptimeCheck[]
+
+  @@index([status])
+  @@index([isActive])
+  @@index([host])
+}
+
+model UptimeCheck {
+  id                String          @id @default(cuid())
+  targetId          String
+  target            UptimeTarget    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  status            UptimeStatus
+  responseMs        Float?          // latency in ms
+  errorMessage      String?
+  checkedAt         DateTime        @default(now())
+
+  @@index([targetId])
+  @@index([status])
+  @@index([checkedAt])
+}
+
+enum UptimeCheckType {
+  PING          // ICMP ping
+  TCP           // TCP port connect
+  HTTP          // HTTP GET with status check
+  HTTPS         // HTTPS GET
+}
+
+enum UptimeStatus {
+  UP
+  DOWN
+  DEGRADED      // high latency
+  UNKNOWN
+}
+
+// ══════════════════════════════════════════════════════
+// SHIFT HANDOVER
+// ══════════════════════════════════════════════════════
+
+model ShiftHandover {
+  id                String          @id @default(cuid())
+  shiftLabel        String          // "PAGI", "SIANG", "MALAM"
+  shiftDate         DateTime        @db.Date
+  generatedAt       DateTime        @default(now())
+
+  // Summary counts
+  openTickets       Int             @default(0)
+  slaDueSoon        Int             @default(0)
+  slaBreached       Int             @default(0)
+  pendingTasks      Int             @default(0)
+  activeIncidents   Int             @default(0)
+  criticalAlerts    Int             @default(0)
+
+  // Serialized handover content
+  content           String          // Full formatted handover text
+  highlights        Json            @default("[]")  // Array of highlight strings
+  actionItems       Json            @default("[]")  // Array of action item strings
+
+  // Who received it
+  deliveredTo       Json            @default("[]")  // Array of {jid, name, deliveredAt}
+  createdAt         DateTime        @default(now())
+
+  @@unique([shiftLabel, shiftDate])
+  @@index([shiftDate])
+  @@index([shiftLabel])
+}

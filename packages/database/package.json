@@ -1,0 +1,23 @@
+{
+  "name": "@pjtaudirabot/database",
+  "version": "1.0.0",
+  "description": "Database layer with Prisma ORM",
+  "main": "dist/index.js",
+  "scripts": {
+    "migrate:dev": "prisma migrate dev --name",
+    "migrate:deploy": "prisma migrate deploy",
+    "migrate:reset": "prisma migrate reset",
+    "generate": "prisma generate",
+    "studio": "prisma studio",
+    "db:seed": "ts-node seeds/seed.ts",
+    "db:pull": "prisma db pull"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0"
+  }
+}

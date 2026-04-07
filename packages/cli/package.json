@@ -1,0 +1,19 @@
+{
+  "name": "@pjtaudirabot/cli",
+  "version": "1.0.0",
+  "description": "CLI tool for managing PjtAudiraBot",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "audirabot": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "ts-node src/index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pjtaudirabot/core": "workspace:*",
+    "@pjtaudirabot/config": "workspace:*"
+  }
+}
