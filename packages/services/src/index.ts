@@ -50,3 +50,13 @@ export * from './backup';
 export * from './report';
 export * from './notification';
 export { TelegramNotifier } from './notification/telegram-notifier';
+export {
+  initInfrastructure,
+  createBotServices,
+  registerTicketCommands,
+  setupMaintenanceScheduler,
+  type BotInfrastructure,
+  type BotServices,
+  type CreateServicesOptions,
+  type TicketBroadcasts,
+} from './bootstrap';

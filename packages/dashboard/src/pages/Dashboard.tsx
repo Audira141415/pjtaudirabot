@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { api, TicketOverviewData } from '../lib/api';
+import { useEffect, useState, useRef } from 'react';
+import { api, TicketOverviewData, SystemHealthData, SystemHealthComponent } from '../lib/api';
+import { toast } from '../components/Toast';
+import { notificationStore, getSolution, getGeneralSolution } from '../lib/notification-store';
 import { StatusBadge, PriorityBadge, CategoryBadge } from '../lib/badge-colors';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -7,6 +9,8 @@ import {
 } from 'recharts';
 import {
   MessageSquare, Users, Zap, AlertTriangle, TrendingUp, Clock, Ticket,
+  Server, Database, Radio, Wifi, WifiOff, RefreshCw, Activity,
+  CheckCircle, XCircle, AlertCircle, Loader2, Cpu, HardDrive,
 } from 'lucide-react';
 
 interface Stats {
@@ -44,12 +48,114 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({});
   const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
   const [ticketOverview, setTicketOverview] = useState<TicketOverviewData | null>(null);
+  const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedDays, setSelectedDays] = useState(14);
+  const prevHealthRef = useRef<SystemHealthData | null>(null);
 
   const messages = Number(stats.message_received ?? 0);
   const commands = Number(stats.command_executed ?? 0);
   const errors = Number(stats.error ?? 0);
+
+  // Derive components that are currently down
+  const downComponents = (health?.components ?? []).filter(
+    (c) => c.status === 'offline' || c.status === 'error'
+  );
+
+  // Request browser notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const sendBrowserNotification = (title: string, body: string) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.ico', tag: 'system-health' });
+    }
+  };
+
+  const checkHealthChanges = (newHealth: SystemHealthData) => {
+    const prev = prevHealthRef.current;
+    if (!prev) {
+      // First load — notify if anything is already down
+      const down = newHealth.components.filter((c) => c.status === 'offline' || c.status === 'error');
+      if (down.length > 0) {
+        for (const comp of down) {
+          const solution = getSolution(comp.name, comp.status);
+          toast({ type: 'error', title: `${comp.name} — ${comp.status.toUpperCase()}`, message: comp.details ?? 'Komponen tidak berjalan', solution, duration: 12000 });
+          notificationStore.add({ type: 'error', title: `${comp.name} DOWN`, message: comp.details ?? 'Komponen tidak berjalan', solution, component: comp.name });
+        }
+        sendBrowserNotification('⚠️ AUDIRA System Alert', `${down.map((c) => c.name).join(', ')} sedang DOWN`);
+      }
+      prevHealthRef.current = newHealth;
+      return;
+    }
+
+    // Compare each component
+    const prevMap = new Map(prev.components.map((c) => [c.name, c.status]));
+
+    for (const comp of newHealth.components) {
+      const prevStatus = prevMap.get(comp.name);
+      const isDown = comp.status === 'offline' || comp.status === 'error';
+      const wasDown = prevStatus === 'offline' || prevStatus === 'error';
+      const isDegraded = comp.status === 'degraded';
+      const wasDegraded = prevStatus === 'degraded';
+
+      if (isDown && !wasDown) {
+        const solution = getSolution(comp.name, comp.status);
+        toast({ type: 'error', title: `🔴 ${comp.name} DOWN!`, message: comp.details ?? 'Baru saja offline', solution, duration: 12000 });
+        notificationStore.add({ type: 'error', title: `${comp.name} DOWN`, message: comp.details ?? 'Baru saja offline', solution, component: comp.name });
+        sendBrowserNotification('🔴 AUDIRA System Down', `${comp.name} baru saja DOWN!\n${solution}`);
+        try { new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1sb3Vtgl9sd3t1gneDe3OAlH2CipOKgoqMioSHjIiHh4WJioeGh4iHh4aJiYeFiImKhYWKioqEh4uJhYaJioeGh4mIhoaIiIeGiIiIhoaIiIeGiImHhoaIiIeGiIiHhoaIiIeGiIiHhoaIiIeGiIiHhoaIiA==').play(); } catch {}
+      }
+
+      if (!isDown && wasDown) {
+        toast({ type: 'success', title: `✅ ${comp.name} Recovered`, message: 'Kembali online' });
+        notificationStore.add({ type: 'success', title: `${comp.name} Recovered`, message: 'Kembali online', component: comp.name });
+        sendBrowserNotification('✅ AUDIRA Recovery', `${comp.name} kembali online`);
+      }
+
+      if (isDegraded && !wasDegraded && !wasDown) {
+        const solution = getSolution(comp.name, comp.status);
+        toast({ type: 'warning', title: `⚠️ ${comp.name} Degraded`, message: `Latency: ${comp.latency ?? '?'}ms`, solution });
+        notificationStore.add({ type: 'warning', title: `${comp.name} Degraded`, message: `Latency tinggi: ${comp.latency ?? '?'}ms`, solution, component: comp.name });
+      }
+    }
+
+    // Overall status changes
+    if (prev.overallStatus !== newHealth.overallStatus) {
+      const solution = getGeneralSolution(newHealth.overallStatus);
+      if (newHealth.overallStatus === 'unhealthy') {
+        toast({ type: 'error', title: 'System Unhealthy', message: 'Beberapa komponen mengalami masalah!', solution, duration: 12000 });
+        notificationStore.add({ type: 'error', title: 'System Unhealthy', message: 'Beberapa komponen bermasalah', solution });
+      } else if (newHealth.overallStatus === 'degraded' && prev.overallStatus === 'healthy') {
+        toast({ type: 'warning', title: 'Performance Degraded', message: 'Beberapa komponen berjalan lambat', solution });
+        notificationStore.add({ type: 'warning', title: 'System Degraded', message: 'Performa menurun', solution });
+      } else if (newHealth.overallStatus === 'healthy' && prev.overallStatus !== 'healthy') {
+        toast({ type: 'success', title: 'All Systems Go!', message: 'Semua komponen kembali normal' });
+        notificationStore.add({ type: 'success', title: 'All Systems Healthy', message: 'Semua komponen normal' });
+      }
+    }
+
+    prevHealthRef.current = newHealth;
+  };
+
+  const loadHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const res = await api.getSystemHealth();
+      setHealth(res.data);
+      checkHealthChanges(res.data);
+    } catch (err) {
+      console.error('Failed to load system health:', err);
+      toast({ type: 'error', title: 'Health Check Failed', message: 'Tidak bisa mengecek status system. API mungkin down.', solution: 'Pastikan API server berjalan di port 4000. Coba: pnpm dev:api' });
+      notificationStore.add({ type: 'error', title: 'Health Check Failed', message: 'API tidak merespon', solution: 'Pastikan API server berjalan di port 4000. Coba: pnpm dev:api' });
+    } finally {
+      setHealthLoading(false);
+    }
+  };
 
   const loadData = async (days = selectedDays) => {
     const [todayRes, historyRes, ticketRes] = await Promise.all([
@@ -65,7 +171,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        await loadData(selectedDays);
+        await Promise.all([loadData(selectedDays), loadHealth()]);
       } catch (err) {
         console.error('Failed to load stats:', err);
       } finally {
@@ -76,7 +182,8 @@ export default function DashboardPage() {
 
     const timer = window.setInterval(() => {
       loadData(selectedDays).catch((err) => console.error('Auto-refresh failed:', err));
-    }, 30000);
+      loadHealth().catch((err) => console.error('Health refresh failed:', err));
+    }, 15000);
 
     return () => window.clearInterval(timer);
   }, [selectedDays]);
@@ -92,6 +199,25 @@ export default function DashboardPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+
+      {/* Persistent System Down Banner */}
+      {downComponents.length > 0 && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-300 rounded-xl flex items-center gap-3 animate-pulse">
+          <XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+          <div>
+            <p className="font-bold text-red-700">
+              ⚠️ {downComponents.length} Komponen Bermasalah
+            </p>
+            <p className="text-sm text-red-600">
+              {downComponents.map((c) => `${c.name} (${c.status})`).join(' • ')}
+              {' — '}Periksa segera!
+            </p>
+          </div>
+          <button onClick={loadHealth} className="ml-auto px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
+            Re-check
+          </button>
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -291,30 +417,122 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Active Info */}
-      <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="font-semibold mb-3">Quick Info</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Active Today</span>
-            <p className="font-semibold text-lg">{stats.activeToday ?? 0}</p>
+      {/* System Status Panel */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-5 h-5 text-gray-500" />
+            <h2 className="text-lg font-semibold">System Status</h2>
+            {health && (
+              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                health.overallStatus === 'healthy' ? 'bg-emerald-100 text-emerald-700' :
+                health.overallStatus === 'degraded' ? 'bg-amber-100 text-amber-700' :
+                'bg-red-100 text-red-700'
+              }`}>
+                {health.overallStatus === 'healthy' ? '● All Systems Operational' :
+                 health.overallStatus === 'degraded' ? '◐ Partially Degraded' :
+                 '○ Issues Detected'}
+              </span>
+            )}
           </div>
-          <div>
-            <span className="text-gray-500">Platform</span>
-            <p className="font-semibold text-lg flex gap-2">
-              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium">WhatsApp</span>
-              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium">Telegram</span>
-            </p>
-          </div>
-          <div>
-            <span className="text-gray-500">Date</span>
-            <p className="font-semibold">{(stats.date as string) ?? new Date().toISOString().split('T')[0]}</p>
-          </div>
-          <div>
-            <span className="text-gray-500">Uptime</span>
-            <p className="font-semibold text-green-600">● Online</p>
-          </div>
+          <button
+            onClick={loadHealth}
+            disabled={healthLoading}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
+
+        {/* Component Status Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          {(health?.components ?? []).map((comp) => {
+            const statusConf: Record<string, { icon: React.ElementType; bg: string; text: string; dot: string }> = {
+              online:   { icon: CheckCircle,   bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+              offline:  { icon: XCircle,        bg: 'bg-red-50 border-red-200',         text: 'text-red-700',     dot: 'bg-red-500' },
+              degraded: { icon: AlertCircle,    bg: 'bg-amber-50 border-amber-200',     text: 'text-amber-700',   dot: 'bg-amber-500' },
+              error:    { icon: AlertTriangle,  bg: 'bg-red-50 border-red-200',         text: 'text-red-700',     dot: 'bg-red-500' },
+            };
+            const sc = statusConf[comp.status] ?? statusConf.offline;
+            const Icon = sc.icon;
+            return (
+              <div key={comp.name} className={`rounded-xl border p-4 ${sc.bg} flex items-start gap-3`}>
+                <Icon className={`w-5 h-5 mt-0.5 ${sc.text}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">{comp.name}</h3>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-2 h-2 rounded-full ${sc.dot} ${comp.status === 'online' ? 'animate-pulse' : ''}`} />
+                      <span className={`text-xs font-bold uppercase ${sc.text}`}>{comp.status}</span>
+                    </div>
+                  </div>
+                  {comp.details && <p className="text-xs text-gray-500 mt-0.5 truncate">{comp.details}</p>}
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                    {comp.latency != null && <span>{comp.latency}ms</span>}
+                    <span>{new Date(comp.lastCheck).toLocaleTimeString('id-ID')}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {!health && !healthLoading && (
+            <div className="col-span-3 text-center py-8 text-gray-400">Click Refresh to load system status</div>
+          )}
+          {healthLoading && !health && (
+            <div className="col-span-3 flex items-center justify-center py-8 gap-2 text-gray-400">
+              <Loader2 className="w-5 h-5 animate-spin" /> Loading system status...
+            </div>
+          )}
+        </div>
+
+        {/* Server Metrics Bar */}
+        {health?.metrics && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h3 className="font-semibold mb-3 text-sm flex items-center gap-2">
+              <Server className="w-4 h-4 text-gray-400" /> Server Metrics
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><Cpu className="w-3 h-3" /> CPU Cores</p>
+                <p className="font-bold text-lg">{health.metrics.cpuCores}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><HardDrive className="w-3 h-3" /> Memory</p>
+                <p className="font-bold text-lg">{health.metrics.memoryUsedGB}/{health.metrics.memoryTotalGB} GB</p>
+                <div className="w-full bg-gray-100 rounded-full h-1.5 mt-1">
+                  <div
+                    className={`h-1.5 rounded-full ${health.metrics.memoryUsedPct > 85 ? 'bg-red-500' : health.metrics.memoryUsedPct > 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                    style={{ width: `${Math.min(health.metrics.memoryUsedPct, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5">{health.metrics.memoryUsedPct}%</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Load Avg (1m)</p>
+                <p className="font-bold text-lg">{health.metrics.loadAvg1m}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Uptime</p>
+                <p className="font-bold text-lg">{Math.floor(health.metrics.uptime / 3600)}h {Math.floor((health.metrics.uptime % 3600) / 60)}m</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Active Sessions</p>
+                <p className="font-bold text-lg">{health.metrics.activeSessions}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" /> Errors (1h) / Alerts
+                </p>
+                <p className="font-bold text-lg">
+                  <span className={health.metrics.recentErrors > 0 ? 'text-red-600' : 'text-emerald-600'}>{health.metrics.recentErrors}</span>
+                  {' / '}
+                  <span className={health.metrics.openAlerts > 0 ? 'text-amber-600' : 'text-emerald-600'}>{health.metrics.openAlerts}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "description": "Database layer with Prisma ORM",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
     "migrate:dev": "prisma migrate dev --name",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:reset": "prisma migrate reset",

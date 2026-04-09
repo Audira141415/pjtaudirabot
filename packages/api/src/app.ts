@@ -88,6 +88,20 @@ export async function createApp() {
     return reply.send({ ready: true });
   });
 
+  // ── Auth (public — no JWT required) ───────────────────────
+  app.post('/api/admin/auth/login', async (request, reply) => {
+    const { username, password } = request.body as { username?: string; password?: string };
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+
+    if (username !== adminUser || password !== adminPass) {
+      return reply.status(401).send({ error: 'Invalid username or password' });
+    }
+
+    const token = app.jwt.sign({ sub: 'admin', role: 'admin' });
+    return reply.send({ token });
+  });
+
   // Admin API routes (prefix: /api/admin)
   await app.register(
     async (instance) => adminRoutes(instance, { db, redis, logger }),
