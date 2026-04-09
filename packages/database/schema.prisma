@@ -1291,3 +1291,649 @@ model ShiftHandover {
   @@index([shiftDate])
   @@index([shiftLabel])
 }
+
+// ══════════════════════════════════════════════════════
+// SENTIMENT ANALYSIS
+// ══════════════════════════════════════════════════════
+
+model SentimentLog {
+  id                String          @id @default(cuid())
+  userId            String?
+  platform          Platform?
+  message           String
+  sentiment         SentimentType   @default(NEUTRAL)
+  score             Float           @default(0)    // -1.0 to 1.0
+  confidence        Float           @default(0)
+  emotions          Json            @default("{}") // {joy:0.8, anger:0.1, ...}
+  language          String?
+  groupId           String?
+  metadata          Json            @default("{}")
+  createdAt         DateTime        @default(now())
+
+  @@index([sentiment])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([platform])
+}
+
+enum SentimentType {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+  MIXED
+}
+
+// ══════════════════════════════════════════════════════
+// SCHEDULED MESSAGES
+// ══════════════════════════════════════════════════════
+
+model ScheduledMessage {
+  id                String                @id @default(cuid())
+  title             String
+  content           String
+  targetPlatform    Platform?
+  targetGroupId     String?
+  targetUserId      String?
+  schedule          String?               // cron expression for recurring
+  scheduledAt       DateTime              // when to send
+  recurring         Boolean               @default(false)
+  status            ScheduledMessageStatus @default(PENDING)
+  sentAt            DateTime?
+  errorMessage      String?
+  createdBy         String
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdBy])
+}
+
+enum ScheduledMessageStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+// ══════════════════════════════════════════════════════
+// CAMPAIGN MANAGEMENT
+// ══════════════════════════════════════════════════════
+
+model Campaign {
+  id                String          @id @default(cuid())
+  name              String
+  description       String?
+  content           String
+  targetPlatform    Platform?
+  targetSegment     String?         // tag/role filter
+  status            CampaignStatus  @default(DRAFT)
+  scheduledAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  totalRecipients   Int             @default(0)
+  sentCount         Int             @default(0)
+  deliveredCount    Int             @default(0)
+  readCount         Int             @default(0)
+  repliedCount      Int             @default(0)
+  failedCount       Int             @default(0)
+  createdBy         String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+// ══════════════════════════════════════════════════════
+// CRM / CONTACT MANAGEMENT
+// ══════════════════════════════════════════════════════
+
+model CRMContact {
+  id                String          @id @default(cuid())
+  name              String
+  phone             String?
+  email             String?
+  company           String?
+  position          String?
+  tags              Json            @default("[]")
+  segment           String?         // VIP, Regular, New, Churned
+  source            String?         // whatsapp, telegram, manual
+  notes             String?
+  customFields      Json            @default("{}")
+  totalInteractions Int             @default(0)
+  lastInteractionAt DateTime?
+  score             Int             @default(0)    // lead score
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  interactions      CRMInteraction[]
+
+  @@index([segment])
+  @@index([score])
+  @@index([createdAt])
+}
+
+model CRMInteraction {
+  id                String              @id @default(cuid())
+  contactId         String
+  contact           CRMContact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type              InteractionType
+  channel           String?             // whatsapp, telegram, email, phone
+  subject           String?
+  content           String
+  sentiment         SentimentType?
+  metadata          Json                @default("{}")
+  createdBy         String?
+  createdAt         DateTime            @default(now())
+
+  @@index([contactId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum InteractionType {
+  MESSAGE
+  CALL
+  EMAIL
+  NOTE
+  MEETING
+  TICKET
+}
+
+// ══════════════════════════════════════════════════════
+// PAYMENT / TRANSACTION
+// ══════════════════════════════════════════════════════
+
+model PaymentTransaction {
+  id                String          @id @default(cuid())
+  transactionId     String          @unique // external ref
+  contactId         String?
+  amount            Float
+  currency          String          @default("IDR")
+  status            PaymentStatus   @default(PENDING)
+  method            String?         // bank_transfer, qris, ewallet
+  description       String?
+  invoiceNumber     String?
+  paidAt            DateTime?
+  metadata          Json            @default("{}")
+  createdBy         String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([status])
+  @@index([contactId])
+  @@index([createdAt])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+// ══════════════════════════════════════════════════════
+// UNIFIED INBOX
+// ══════════════════════════════════════════════════════
+
+model InboxMessage {
+  id                String          @id @default(cuid())
+  platform          Platform
+  fromUserId        String?
+  fromName          String
+  fromNumber        String?
+  groupId           String?
+  groupName         String?
+  content           String
+  mediaUrl          String?
+  mediaType         String?         // image, video, audio, document
+  isRead            Boolean         @default(false)
+  isStarred         Boolean         @default(false)
+  isArchived        Boolean         @default(false)
+  replyTo           String?
+  sentiment         SentimentType?
+  tags              Json            @default("[]")
+  assignedTo        String?
+  metadata          Json            @default("{}")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([platform])
+  @@index([fromUserId])
+  @@index([isRead])
+  @@index([isStarred])
+  @@index([isArchived])
+  @@index([createdAt])
+}
+
+// ══════════════════════════════════════════════════════
+// AUTO-MODERATION CONFIG
+// ══════════════════════════════════════════════════════
+
+model AutoModConfig {
+  id                String          @id @default(cuid())
+  feature           AutoModFeature
+  isEnabled         Boolean         @default(true)
+  config            Json            @default("{}") // threshold, cooldown, etc.
+  action            ModerationAction @default(WARN)
+  message           String?         // custom response
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([feature])
+}
+
+enum AutoModFeature {
+  SPAM_DETECTION       // duplicate/flood messages
+  PROFANITY_FILTER     // bad words
+  LINK_FILTER          // suspicious URLs
+  CAPS_DETECTION       // excessive caps
+  INVITE_FILTER        // group invite links
+  MEDIA_FILTER         // restrict media types
+  NEW_MEMBER_RESTRICT  // restrict new members
+}
+
+// ══════════════════════════════════════════════════════
+// FAQ SYSTEM
+// ══════════════════════════════════════════════════════
+
+model FAQEntry {
+  id                String          @id @default(cuid())
+  question          String
+  answer            String
+  category          String?
+  keywords          Json            @default("[]")
+  aliases           Json            @default("[]") // alternative phrasings
+  priority          Int             @default(0)
+  matchCount        Int             @default(0)
+  isActive          Boolean         @default(true)
+  createdBy         String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([matchCount])
+}
+
+// ═══════════════════════════════════════════════════════
+// MESSAGE TEMPLATE MANAGER
+// ═══════════════════════════════════════════════════════
+
+model MessageTemplate {
+  id              String            @id @default(cuid())
+  name            String
+  category        TemplateCategory
+  platform        String            @default("ALL")
+  language        String            @default("id")
+  subject         String?
+  body            String
+  variables       Json              @default("[]")
+  isActive        Boolean           @default(true)
+  usageCount      Int               @default(0)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([category])
+  @@index([platform])
+  @@index([isActive])
+}
+
+enum TemplateCategory {
+  GREETING
+  AWAY
+  QUICK_REPLY
+  NOTIFICATION
+  FOLLOW_UP
+  CLOSING
+  PROMOTION
+  CUSTOM
+}
+
+// ═══════════════════════════════════════════════════════
+// CHATBOT BUILDER (Flow Nodes)
+// ═══════════════════════════════════════════════════════
+
+model ChatbotFlow {
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  triggerKeyword  String?
+  nodes           Json              @default("[]")
+  edges           Json              @default("[]")
+  isActive        Boolean           @default(true)
+  version         Int               @default(1)
+  executionCount  Int               @default(0)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([isActive])
+  @@index([triggerKeyword])
+}
+
+// ═══════════════════════════════════════════════════════
+// CSAT SURVEY
+// ═══════════════════════════════════════════════════════
+
+model CSATSurvey {
+  id              String            @id @default(cuid())
+  ticketId        String?
+  contactId       String?
+  platform        String
+  rating          Int
+  comment         String?
+  agentId         String?
+  respondedAt     DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+
+  @@index([ticketId])
+  @@index([agentId])
+  @@index([rating])
+  @@index([respondedAt])
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENT MANAGEMENT
+// ═══════════════════════════════════════════════════════
+
+model Agent {
+  id              String            @id @default(cuid())
+  name            String
+  email           String?           @unique
+  avatar          String?
+  role            AgentRole         @default(AGENT)
+  status          AgentStatus       @default(OFFLINE)
+  department      String?
+  maxConcurrent   Int               @default(5)
+  activeTickets   Int               @default(0)
+  totalResolved   Int               @default(0)
+  avgResponseTime Int?
+  rating          Float?
+  lastActiveAt    DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([status])
+  @@index([department])
+  @@index([role])
+}
+
+enum AgentRole {
+  AGENT
+  SENIOR_AGENT
+  SUPERVISOR
+  ADMIN
+}
+
+enum AgentStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+  AWAY
+  ON_BREAK
+}
+
+// ═══════════════════════════════════════════════════════
+// TAGS & LABELS
+// ═══════════════════════════════════════════════════════
+
+model Tag {
+  id              String            @id @default(cuid())
+  name            String            @unique
+  color           String            @default("#6366f1")
+  description     String?
+  category        String?
+  usageCount      Int               @default(0)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([category])
+  @@index([usageCount])
+}
+
+// ═══════════════════════════════════════════════════════
+// CRM PIPELINE (Deal/Lead Management)
+// ═══════════════════════════════════════════════════════
+
+model CRMDeal {
+  id              String            @id @default(cuid())
+  title           String
+  contactId       String?
+  contactName     String?
+  value           Float             @default(0)
+  currency        String            @default("IDR")
+  stage           DealStage         @default(LEAD)
+  probability     Int               @default(0)
+  expectedClose   DateTime?
+  assignedTo      String?
+  notes           String?
+  tags            Json              @default("[]")
+  lostReason      String?
+  wonAt           DateTime?
+  lostAt          DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([stage])
+  @@index([assignedTo])
+  @@index([contactId])
+}
+
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
+// ═══════════════════════════════════════════════════════
+// FILE MANAGER
+// ═══════════════════════════════════════════════════════
+
+model ManagedFile {
+  id              String            @id @default(cuid())
+  filename        String
+  originalName    String
+  mimeType        String
+  size            Int
+  path            String
+  url             String?
+  category        String?
+  uploadedBy      String?
+  platform        String?
+  messageId       String?
+  thumbnailUrl    String?
+  isPublic        Boolean           @default(false)
+  downloads       Int               @default(0)
+  createdAt       DateTime          @default(now())
+
+  @@index([category])
+  @@index([mimeType])
+  @@index([uploadedBy])
+}
+
+// ═══════════════════════════════════════════════════════
+// API KEYS
+// ═══════════════════════════════════════════════════════
+
+model ApiKey {
+  id              String            @id @default(cuid())
+  name            String
+  keyHash         String            @unique
+  prefix          String
+  permissions     Json              @default("[]")
+  rateLimit       Int               @default(1000)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  usageCount      Int               @default(0)
+  isActive        Boolean           @default(true)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+
+  @@index([prefix])
+  @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════
+// CANNED RESPONSES
+// ═══════════════════════════════════════════════════════
+
+model CannedResponse {
+  id              String            @id @default(cuid())
+  shortcut        String            @unique
+  title           String
+  content         String
+  category        String?
+  tags            Json              @default("[]")
+  usageCount      Int               @default(0)
+  isActive        Boolean           @default(true)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([shortcut])
+  @@index([category])
+  @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════
+// WEBHOOK LOGS
+// ═══════════════════════════════════════════════════════
+
+model WebhookLog {
+  id              String            @id @default(cuid())
+  webhookId       String
+  url             String
+  method          String            @default("POST")
+  requestHeaders  Json?
+  requestBody     Json?
+  responseStatus  Int?
+  responseBody    String?
+  duration        Int?
+  status          WebhookLogStatus  @default(PENDING)
+  retryCount      Int               @default(0)
+  error           String?
+  createdAt       DateTime          @default(now())
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WebhookLogStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT CENTER
+// ═══════════════════════════════════════════════════════
+
+model ExportJob {
+  id              String            @id @default(cuid())
+  module          String
+  format          ExportFormat
+  filters         Json              @default("{}")
+  status          ExportStatus      @default(PENDING)
+  fileName        String?
+  fileUrl         String?
+  fileSize        Int?
+  totalRows       Int?
+  error           String?
+  requestedBy     String?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+
+  @@index([module])
+  @@index([status])
+  @@index([requestedBy])
+}
+
+enum ExportFormat {
+  CSV
+  XLSX
+  PDF
+  JSON
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// ═══════════════════════════════════════════════════════
+// NOTIFICATION RULES
+// ═══════════════════════════════════════════════════════
+
+model NotificationRule {
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  triggerEvent    String
+  conditions      Json              @default("[]")
+  actions         Json              @default("[]")
+  channels        Json              @default("[]")
+  isActive        Boolean           @default(true)
+  lastTriggered   DateTime?
+  triggerCount    Int               @default(0)
+  createdBy       String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([triggerEvent])
+  @@index([isActive])
+}
+
+// ═══════════════════════════════════════════════════════
+// USER PREFERENCES (Dark Mode, i18n, etc.)
+// ═══════════════════════════════════════════════════════
+
+model UserPreference {
+  id              String            @id @default(cuid())
+  userId          String            @unique
+  theme           String            @default("light")
+  language        String            @default("id")
+  timezone        String            @default("Asia/Jakarta")
+  notifications   Json              @default("{}")
+  dashboardLayout Json              @default("{}")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([userId])
+}
+
+// ═══════════════════════════════════════════════════════
+// ANALYTICS SNAPSHOTS (pre-computed)
+// ═══════════════════════════════════════════════════════
+
+model AnalyticsSnapshot {
+  id              String            @id @default(cuid())
+  period          String
+  date            DateTime
+  metrics         Json
+  breakdown       Json              @default("{}")
+  createdAt       DateTime          @default(now())
+
+  @@unique([period, date])
+  @@index([period])
+  @@index([date])
+}

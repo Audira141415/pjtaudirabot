@@ -27,6 +27,28 @@ import ChecklistPage from './pages/Checklist';
 import RemindersPage from './pages/Reminders';
 import GroupManagementPage from './pages/GroupManagement';
 import SettingsPage from './pages/Settings';
+import SentimentAnalysisPage from './pages/SentimentAnalysis';
+import ScheduledMessagesPage from './pages/ScheduledMessages';
+import CampaignManagerPage from './pages/CampaignManager';
+import CRMContactsPage from './pages/CRMContacts';
+import PaymentManagerPage from './pages/PaymentManager';
+import UnifiedInboxPage from './pages/UnifiedInbox';
+import AutoModerationPage from './pages/AutoModeration';
+import FAQManagerPage from './pages/FAQManager';
+import TemplateManagerPage from './pages/TemplateManager';
+import ChatbotBuilderPage from './pages/ChatbotBuilder';
+import CSATSurveyPage from './pages/CSATSurvey';
+import AgentManagementPage from './pages/AgentManagement';
+import TagsLabelsPage from './pages/TagsLabels';
+import CRMPipelinePage from './pages/CRMPipeline';
+import FileManagerPage from './pages/FileManager';
+import ApiKeysPageComp from './pages/ApiKeysPage';
+import CannedResponsesPage from './pages/CannedResponses';
+import AnalyticsChartsPage from './pages/AnalyticsCharts';
+import WebhookLogsPage from './pages/WebhookLogs';
+import ExportCenterPage from './pages/ExportCenter';
+import NotificationRulesPage from './pages/NotificationRules';
+import MultiLanguagePage from './pages/MultiLanguage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token');
@@ -73,6 +95,28 @@ export default function App() {
         <Route path="reminders" element={<RemindersPage />} />
         <Route path="groups" element={<GroupManagementPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="sentiment" element={<SentimentAnalysisPage />} />
+        <Route path="scheduled-messages" element={<ScheduledMessagesPage />} />
+        <Route path="campaigns" element={<CampaignManagerPage />} />
+        <Route path="crm" element={<CRMContactsPage />} />
+        <Route path="payments" element={<PaymentManagerPage />} />
+        <Route path="inbox" element={<UnifiedInboxPage />} />
+        <Route path="auto-moderation" element={<AutoModerationPage />} />
+        <Route path="faq" element={<FAQManagerPage />} />
+        <Route path="templates" element={<TemplateManagerPage />} />
+        <Route path="chatbot" element={<ChatbotBuilderPage />} />
+        <Route path="csat" element={<CSATSurveyPage />} />
+        <Route path="agents" element={<AgentManagementPage />} />
+        <Route path="tags" element={<TagsLabelsPage />} />
+        <Route path="pipeline" element={<CRMPipelinePage />} />
+        <Route path="files" element={<FileManagerPage />} />
+        <Route path="api-keys" element={<ApiKeysPageComp />} />
+        <Route path="canned-responses" element={<CannedResponsesPage />} />
+        <Route path="analytics" element={<AnalyticsChartsPage />} />
+        <Route path="webhook-logs" element={<WebhookLogsPage />} />
+        <Route path="exports" element={<ExportCenterPage />} />
+        <Route path="notification-rules" element={<NotificationRulesPage />} />
+        <Route path="language" element={<MultiLanguagePage />} />
       </Route>
     </Routes>
     </>

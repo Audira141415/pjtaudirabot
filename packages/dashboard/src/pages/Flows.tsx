@@ -32,12 +32,35 @@ export default function FlowsPage() {
     steps: [{ prompt: '', expectedType: 'text' }],
   });
 
-  useEffect(() => {
+  const refreshFlows = () => {
     api.getFlows()
       .then((res) => setFlows(res.data as unknown as Flow[]))
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refreshFlows();
   }, []);
+
+  const handleToggle = async (flow: Flow) => {
+    try {
+      await api.updateFlow(flow.id, { isActive: !flow.isActive });
+      refreshFlows();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to update flow');
+    }
+  };
+
+  const handleDelete = async (flow: Flow) => {
+    if (!confirm(`Delete flow "${flow.name}"?`)) return;
+    try {
+      await api.deleteFlow(flow.id);
+      refreshFlows();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete flow');
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -189,24 +212,45 @@ export default function FlowsPage() {
         ) : (
           flows.map((flow) => (
             <div key={flow.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setExpanded(expanded === flow.id ? null : flow.id)}
-                className="w-full px-6 py-4 flex items-center gap-3 text-left hover:bg-gray-50 transition"
-              >
-                {expanded === flow.id
-                  ? <ChevronDown className="w-4 h-4 text-gray-400" />
-                  : <ChevronRight className="w-4 h-4 text-gray-400" />
-                }
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${flow.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
-                    <span className="font-medium">{flow.name}</span>
-                    <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{flow.trigger}</span>
+              <div className="w-full px-6 py-4 flex items-center gap-3">
+                <button
+                  onClick={() => setExpanded(expanded === flow.id ? null : flow.id)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left hover:bg-gray-50 transition rounded-lg -m-1 p-1"
+                >
+                  {expanded === flow.id
+                    ? <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                    : <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
+                  }
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{flow.name}</span>
+                      <span className="text-xs font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{flow.trigger}</span>
+                    </div>
+                    {flow.description && <p className="text-sm text-gray-500 mt-0.5">{flow.description}</p>}
                   </div>
-                  {flow.description && <p className="text-sm text-gray-500 mt-0.5">{flow.description}</p>}
-                </div>
-                <span className="text-xs text-gray-400">{flow.steps?.length ?? 0} steps</span>
-              </button>
+                </button>
+                <span className="text-xs text-gray-400 whitespace-nowrap">{flow.steps?.length ?? 0} steps</span>
+                <button
+                  onClick={() => handleToggle(flow)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full shrink-0 transition-colors ${
+                    flow.isActive ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                  title={flow.isActive ? 'Deactivate' : 'Activate'}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transform transition-transform ${
+                      flow.isActive ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => handleDelete(flow)}
+                  className="text-gray-400 hover:text-red-600 transition shrink-0"
+                  title="Delete flow"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
 
               {expanded === flow.id && flow.steps && flow.steps.length > 0 && (
                 <div className="px-6 pb-4 border-t border-gray-100">

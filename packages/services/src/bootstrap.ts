@@ -261,7 +261,7 @@ export async function createBotServices(
     if (options.sheetsTicketsOnly) {
       sheetsOpts.ticketsOnly = true;
     }
-    sheetsService = new GoogleSheetsService(sheetsOpts, logger);
+    sheetsService = new GoogleSheetsService(sheetsOpts as any, logger);
     if (sheetsService.isAvailable()) {
       sheetsService.initializeSheets().catch((err) => logger.error('Sheets init failed', err));
       logger.info('Google Sheets integration enabled');

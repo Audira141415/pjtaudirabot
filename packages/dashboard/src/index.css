@@ -21,3 +21,13 @@ body {
   from { transform: translateX(100%); opacity: 0; }
   to   { transform: translateX(0);    opacity: 1; }
 }
+
+/* Dark mode base styles */
+@layer base {
+  .dark body,
+  .dark {
+    color-scheme: dark;
+  }
+  .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+}

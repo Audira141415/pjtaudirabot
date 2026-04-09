@@ -63,8 +63,8 @@ const SOLUTION_MAP: Record<string, string> = {
   'PostgreSQL Database': 'Cek apakah Docker PostgreSQL berjalan: docker ps | cek port 5433 | jalankan AUDIRA_START.bat',
   'Redis Cache': 'Cek apakah Docker Redis berjalan: docker ps | cek port 6379 | jalankan AUDIRA_START.bat',
   'API Server': 'Jalankan ulang: pnpm dev:api | cek port 4000 | periksa logs di terminal API',
-  'WhatsApp Bot': 'Cek koneksi WhatsApp: scan ulang QR code | restart bot: pnpm dev:whatsapp | cek session di data/whatsapp-sessions/',
-  'Telegram Bot': 'Cek token Telegram di .env | restart bot: pnpm dev:telegram | pastikan BOT_TOKEN valid',
+  'WHATSAPP Bot': 'Cek koneksi WhatsApp: scan ulang QR code | restart bot: pnpm dev:whatsapp | cek session di data/whatsapp-sessions/',
+  'TELEGRAM Bot': 'Cek token Telegram di .env (TELEGRAM_BOT_TOKEN) | restart bot: pnpm dev:telegram | pastikan token valid & bot tidak terblokir',
 };
 
 const DEGRADED_SOLUTION_MAP: Record<string, string> = {

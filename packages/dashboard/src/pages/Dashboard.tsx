@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { api, TicketOverviewData, SystemHealthData, SystemHealthComponent } from '../lib/api';
+import { api, TicketOverviewData, SystemHealthData } from '../lib/api';
 import { toast } from '../components/Toast';
 import { notificationStore, getSolution, getGeneralSolution } from '../lib/notification-store';
 import { StatusBadge, PriorityBadge, CategoryBadge } from '../lib/badge-colors';
@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import {
   MessageSquare, Users, Zap, AlertTriangle, TrendingUp, Clock, Ticket,
-  Server, Database, Radio, Wifi, WifiOff, RefreshCw, Activity,
+  Server, RefreshCw, Activity,
   CheckCircle, XCircle, AlertCircle, Loader2, Cpu, HardDrive,
 } from 'lucide-react';
 

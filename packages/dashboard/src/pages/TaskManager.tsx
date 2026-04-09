@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { ListTodo, CheckCircle2, Circle, Clock, AlertCircle } from 'lucide-react';
+import { ListTodo, CheckCircle2, Circle, Clock, AlertCircle, Plus, Trash2, Loader2, X } from 'lucide-react';
 
 const STATUS_CONF: Record<string, { color: string; icon: JSX.Element }> = {
   PENDING: { color: 'bg-gray-100 text-gray-700', icon: <Circle className="w-4 h-4 text-gray-400" /> },
@@ -16,11 +16,16 @@ const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'bg-gray-100 text-gray-700',
 };
 
+const EMPTY_FORM = { title: '', description: '', priority: 'MEDIUM', category: '', dueDate: '' };
+
 export default function TaskManagerPage() {
   const [tasks, setTasks] = useState<Array<Record<string, any>>>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
 
   const load = async () => {
     try {
@@ -42,6 +47,32 @@ export default function TaskManagerPage() {
     } catch (err) { console.error(err); }
   };
 
+  const handleCreate = async () => {
+    if (!form.title.trim()) return;
+    setCreating(true);
+    try {
+      await api.createTask({
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        priority: form.priority,
+        category: form.category.trim() || undefined,
+        dueDate: form.dueDate || undefined,
+      });
+      setForm({ ...EMPTY_FORM });
+      setShowCreate(false);
+      load();
+    } catch (err) { console.error(err); }
+    finally { setCreating(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this task?')) return;
+    try {
+      await api.deleteTask(id);
+      load();
+    } catch (err) { console.error(err); }
+  };
+
   const total = tasks.length;
   const completed = tasks.filter(t => t.status === 'COMPLETED').length;
   const inProgress = tasks.filter(t => t.status === 'IN_PROGRESS').length;
@@ -51,10 +82,37 @@ export default function TaskManagerPage() {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-6">
-        <ListTodo className="w-6 h-6 text-brand-500" />
-        <h1 className="text-2xl font-bold">Task Manager</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <ListTodo className="w-6 h-6 text-brand-500" />
+          <h1 className="text-2xl font-bold">Task Manager</h1>
+        </div>
+        <button onClick={() => setShowCreate(v => !v)} className="flex items-center gap-1 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 text-sm font-medium">
+          {showCreate ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showCreate ? 'Cancel' : 'New Task'}
+        </button>
       </div>
+
+      {showCreate && (
+        <div className="bg-white rounded-xl border p-4 mb-6 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input placeholder="Title *" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+            <input placeholder="Category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+            <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} className="border rounded-lg px-3 py-2 text-sm">
+              <option value="CRITICAL">Critical</option>
+              <option value="HIGH">High</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="LOW">Low</option>
+            </select>
+            <input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} className="border rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <textarea placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} className="border rounded-lg px-3 py-2 text-sm w-full" />
+          <button onClick={handleCreate} disabled={creating || !form.title.trim()} className="flex items-center gap-1 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 text-sm font-medium disabled:opacity-50">
+            {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Create Task
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl border p-4"><p className="text-sm text-gray-500">Total</p><p className="text-2xl font-bold">{total}</p></div>
@@ -122,6 +180,9 @@ export default function TaskManagerPage() {
                       {t.status === 'IN_PROGRESS' && (
                         <button onClick={() => updateStatus(t.id, 'COMPLETED')} className="px-2 py-1 bg-emerald-500 text-white rounded text-xs">Complete</button>
                       )}
+                      <button onClick={() => handleDelete(t.id)} className="p-1 text-red-500 hover:bg-red-50 rounded" title="Delete">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>

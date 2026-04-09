@@ -28,6 +28,23 @@ export async function createApp() {
     log: serverConfig.env === 'development' ? ['query', 'info', 'warn', 'error'] : [],
   });
 
+  // Ensure default BotConfig rows exist for all platforms
+  async function seedBotConfigs() {
+    const platforms = ['WHATSAPP', 'TELEGRAM'] as const;
+    const defaults: Record<string, object> = {
+      WHATSAPP: { phoneNumber: '', webhookUrl: '', sessionPath: './sessions', maxRetries: 3 },
+      TELEGRAM: { botToken: '', webhookUrl: '', parseMode: 'HTML', commandPrefix: '/' },
+    };
+    for (const platform of platforms) {
+      await db.botConfig.upsert({
+        where: { platform },
+        create: { platform, isActive: false, configuration: defaults[platform] },
+        update: {},
+      });
+    }
+  }
+  await seedBotConfigs();
+
   // Initialize Redis
   const redis = createClient({
     url: redisConfig.url,

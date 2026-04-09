@@ -36,7 +36,31 @@ import {
   AlertTriangle,
   CheckCircle,
   Info,
+  Smile,
+  CalendarClock,
+  Megaphone,
+  Contact,
+  CreditCard,
+  Inbox,
+  ShieldAlert,
+  HelpCircle,
+  FileStack,
+  BotMessageSquare,
+  Star,
+  UserCog,
+  Tag,
+  Kanban,
+  FolderOpen,
+  Key,
+  Zap,
+  BarChart3,
+  ScrollText,
+  Download,
+  Globe,
+  Moon,
+  Sun,
 } from 'lucide-react';
+import { useTheme } from '../lib/ThemeProvider';
 
 const sections = [
   {
@@ -71,6 +95,9 @@ const sections = [
     title: 'Intelligence',
     items: [
       { to: '/incidents', icon: BrainCircuit, label: 'AI Insights' },
+      { to: '/sentiment', icon: Smile, label: 'Sentiment Analysis' },
+      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+      { to: '/csat', icon: Star, label: 'CSAT Survey' },
       { to: '/knowledge', icon: BookOpen, label: 'Knowledge Base' },
       { to: '/memory', icon: Brain, label: 'Memory Browser' },
       { to: '/reports', icon: FileBarChart, label: 'Reports' },
@@ -80,8 +107,25 @@ const sections = [
     title: 'Communication',
     items: [
       { to: '/broadcast', icon: Radio, label: 'Broadcast' },
+      { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
+      { to: '/scheduled-messages', icon: CalendarClock, label: 'Scheduled Messages' },
+      { to: '/inbox', icon: Inbox, label: 'Unified Inbox' },
+      { to: '/templates', icon: FileStack, label: 'Templates' },
+      { to: '/canned-responses', icon: Zap, label: 'Canned Responses' },
+      { to: '/chatbot', icon: BotMessageSquare, label: 'Chatbot Builder' },
       { to: '/moderation', icon: Shield, label: 'Moderation' },
       { to: '/groups', icon: MessageSquare, label: 'Groups' },
+      { to: '/faq', icon: HelpCircle, label: 'FAQ Manager' },
+    ],
+  },
+  {
+    title: 'Business',
+    items: [
+      { to: '/crm', icon: Contact, label: 'CRM Contacts' },
+      { to: '/pipeline', icon: Kanban, label: 'CRM Pipeline' },
+      { to: '/payments', icon: CreditCard, label: 'Payments' },
+      { to: '/tags', icon: Tag, label: 'Tags & Labels' },
+      { to: '/agents', icon: UserCog, label: 'Agents' },
     ],
   },
   {
@@ -89,8 +133,15 @@ const sections = [
     items: [
       { to: '/flows', icon: GitBranch, label: 'Flows' },
       { to: '/webhooks', icon: Webhook, label: 'Webhooks' },
+      { to: '/webhook-logs', icon: ScrollText, label: 'Webhook Logs' },
       { to: '/audit', icon: FileText, label: 'Audit Logs' },
+      { to: '/auto-moderation', icon: ShieldAlert, label: 'Auto-Moderation' },
+      { to: '/notification-rules', icon: BellRing, label: 'Notification Rules' },
+      { to: '/api-keys', icon: Key, label: 'API Keys' },
+      { to: '/files', icon: FolderOpen, label: 'File Manager' },
+      { to: '/exports', icon: Download, label: 'Export Center' },
       { to: '/bulk', icon: Layers, label: 'Bulk Operations' },
+      { to: '/language', icon: Globe, label: 'Language' },
       { to: '/settings', icon: Settings, label: 'Settings' },
     ],
   },
@@ -112,6 +163,7 @@ const NOTIF_COLOR: Record<string, string> = {
 
 export default function Layout() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
   const [bellOpen, setBellOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifs, setNotifs] = useState<NotificationItem[]>([]);
@@ -198,7 +250,19 @@ export default function Layout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar with Bell */}
-        <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-end px-6 shrink-0">
+        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-end px-6 shrink-0">
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-2"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Moon className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
           <div ref={bellRef} className="relative">
             <button
               onClick={() => setBellOpen((p) => !p)}
@@ -288,7 +352,7 @@ export default function Layout() {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
+        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
           <div className="p-8">
             <Outlet />
           </div>
