@@ -1,0 +1,796 @@
+{
+  "startedAt": "2026-04-10T05:46:53.030Z",
+  "finishedAt": "2026-04-10T05:46:58.716Z",
+  "baseUrl": "http://localhost:3003",
+  "credentials": {
+    "username": "admin"
+  },
+  "summary": {
+    "actionMode": "destructive-on",
+    "pagesTested": 48,
+    "pagesPassed": 46,
+    "pagesFailed": 2,
+    "buttonsTested": 57,
+    "buttonsPassed": 15,
+    "buttonsFailed": 1,
+    "buttonsSkipped": 41
+  },
+  "pageResults": [
+    {
+      "route": "/",
+      "label": "Dashboard",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/users",
+      "label": "Users",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/tickets",
+      "label": "Tickets",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/sla",
+      "label": "SLA Monitor",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/alerts",
+      "label": "Alerts",
+      "status": "failed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [
+        {
+          "url": "http://localhost:3003/api/admin/alerts/cmnsbmy3x001li0z31fguzd2w/acknowledge",
+          "status": 400
+        }
+      ],
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        }
+      ]
+    },
+    {
+      "route": "/tasks",
+      "label": "Tasks",
+      "status": "failed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [
+        {
+          "url": "http://localhost:3003/api/admin/alerts/cmnsbmy3x001li0z31fguzd2w/resolve",
+          "status": 400
+        }
+      ],
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        }
+      ]
+    },
+    {
+      "route": "/shift",
+      "label": "Shift Handover",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/checklist",
+      "label": "Checklists",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/reminders",
+      "label": "Reminders",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/maintenance",
+      "label": "Maintenance",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/uptime",
+      "label": "Uptime Monitor",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/network",
+      "label": "Network Health",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/server",
+      "label": "Server Status",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/backups",
+      "label": "Backups",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/incidents",
+      "label": "AI Insights",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/sentiment",
+      "label": "Sentiment Analysis",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/analytics",
+      "label": "Analytics",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/csat",
+      "label": "CSAT Survey",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/knowledge",
+      "label": "Knowledge Base",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/memory",
+      "label": "Memory Browser",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/reports",
+      "label": "Reports",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/broadcast",
+      "label": "Broadcast",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/campaigns",
+      "label": "Campaigns",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/scheduled-messages",
+      "label": "Scheduled Messages",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/inbox",
+      "label": "Unified Inbox",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/templates",
+      "label": "Templates",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/canned-responses",
+      "label": "Canned Responses",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/chatbot",
+      "label": "Chatbot Builder",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/moderation",
+      "label": "Moderation",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/groups",
+      "label": "Groups",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/faq",
+      "label": "FAQ Manager",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/crm",
+      "label": "CRM Contacts",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/pipeline",
+      "label": "CRM Pipeline",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/payments",
+      "label": "Payments",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/tags",
+      "label": "Tags & Labels",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/agents",
+      "label": "Agents",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/flows",
+      "label": "Flows",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/webhooks",
+      "label": "Webhooks",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/webhook-logs",
+      "label": "Webhook Logs",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/audit",
+      "label": "Audit Logs",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/auto-moderation",
+      "label": "Auto-Moderation",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/notification-rules",
+      "label": "Notification Rules",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/api-keys",
+      "label": "API Keys",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/files",
+      "label": "File Manager",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/exports",
+      "label": "Export Center",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/bulk",
+      "label": "Bulk Operations",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/language",
+      "label": "Language",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/settings",
+      "label": "Settings",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    }
+  ],
+  "buttonResults": [
+    {
+      "route": "/",
+      "pageLabel": "Dashboard",
+      "label": "Refresh",
+      "status": "passed"
+    },
+    {
+      "route": "/users",
+      "pageLabel": "Users",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/tickets",
+      "pageLabel": "Tickets",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/sla",
+      "pageLabel": "SLA Monitor",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/alerts",
+      "pageLabel": "Alerts",
+      "label": "button[title=\"Acknowledge\"]",
+      "status": "passed"
+    },
+    {
+      "route": "/alerts",
+      "pageLabel": "Alerts",
+      "label": "button[title=\"Resolve\"]",
+      "status": "failed",
+      "apiErrors": [
+        {
+          "url": "http://localhost:3003/api/admin/alerts/cmnsbmy3x001li0z31fguzd2w/acknowledge",
+          "status": 400
+        }
+      ],
+      "consoleErrors": [
+        {
+          "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+        }
+      ],
+      "error": "Action triggered API/console errors"
+    },
+    {
+      "route": "/tasks",
+      "pageLabel": "Tasks",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/shift",
+      "pageLabel": "Shift Handover",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/checklist",
+      "pageLabel": "Checklists",
+      "label": "Templates",
+      "status": "passed"
+    },
+    {
+      "route": "/checklist",
+      "pageLabel": "Checklists",
+      "label": "Active Items",
+      "status": "passed"
+    },
+    {
+      "route": "/reminders",
+      "pageLabel": "Reminders",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "Filter",
+      "status": "passed"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "Refresh",
+      "status": "passed"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "+Nonaktif",
+      "status": "passed"
+    },
+    {
+      "route": "/uptime",
+      "pageLabel": "Uptime Monitor",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/network",
+      "pageLabel": "Network Health",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/server",
+      "pageLabel": "Server Status",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/backups",
+      "pageLabel": "Backups",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/incidents",
+      "pageLabel": "AI Insights",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/sentiment",
+      "pageLabel": "Sentiment Analysis",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/analytics",
+      "pageLabel": "Analytics",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/csat",
+      "pageLabel": "CSAT Survey",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/knowledge",
+      "pageLabel": "Knowledge Base",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/memory",
+      "pageLabel": "Memory Browser",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/reports",
+      "pageLabel": "Reports",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/broadcast",
+      "pageLabel": "Broadcast",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "DRAFT",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "SCHEDULED",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "RUNNING",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "COMPLETED",
+      "status": "passed"
+    },
+    {
+      "route": "/scheduled-messages",
+      "pageLabel": "Scheduled Messages",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/inbox",
+      "pageLabel": "Unified Inbox",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/templates",
+      "pageLabel": "Templates",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/canned-responses",
+      "pageLabel": "Canned Responses",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/chatbot",
+      "pageLabel": "Chatbot Builder",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/moderation",
+      "pageLabel": "Moderation",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/groups",
+      "pageLabel": "Groups",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/faq",
+      "pageLabel": "FAQ Manager",
+      "label": "+ Tambah FAQ",
+      "status": "passed"
+    },
+    {
+      "route": "/faq",
+      "pageLabel": "FAQ Manager",
+      "label": "Simpan",
+      "status": "passed"
+    },
+    {
+      "route": "/crm",
+      "pageLabel": "CRM Contacts",
+      "label": "+ Tambah Kontak",
+      "status": "passed"
+    },
+    {
+      "route": "/crm",
+      "pageLabel": "CRM Contacts",
+      "label": "Simpan",
+      "status": "passed"
+    },
+    {
+      "route": "/pipeline",
+      "pageLabel": "CRM Pipeline",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/payments",
+      "pageLabel": "Payments",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/tags",
+      "pageLabel": "Tags & Labels",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/agents",
+      "pageLabel": "Agents",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/flows",
+      "pageLabel": "Flows",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/webhooks",
+      "pageLabel": "Webhooks",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/webhook-logs",
+      "pageLabel": "Webhook Logs",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/audit",
+      "pageLabel": "Audit Logs",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/auto-moderation",
+      "pageLabel": "Auto-Moderation",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/notification-rules",
+      "pageLabel": "Notification Rules",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/api-keys",
+      "pageLabel": "API Keys",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/files",
+      "pageLabel": "File Manager",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/exports",
+      "pageLabel": "Export Center",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/bulk",
+      "pageLabel": "Bulk Operations",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/language",
+      "pageLabel": "Language",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    },
+    {
+      "route": "/settings",
+      "pageLabel": "Settings",
+      "label": "(no whitelisted action in destructive-on)",
+      "status": "skipped"
+    }
+  ],
+  "rawNetworkFailures": [
+    {
+      "url": "http://localhost:3003/api/admin/alerts/cmnsbmy3x001li0z31fguzd2w/acknowledge",
+      "status": 400
+    },
+    {
+      "url": "http://localhost:3003/api/admin/alerts/cmnsbmy3x001li0z31fguzd2w/resolve",
+      "status": 400
+    }
+  ],
+  "rawConsoleErrors": [
+    {
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    },
+    {
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    }
+  ]
+}

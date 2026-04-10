@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { getServerConfig, getRedisConfig } from '@pjtaudirabot/config';
 import { createLogger } from '@pjtaudirabot/core';
@@ -9,6 +10,7 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from 'redis';
 import { adminRoutes } from './routes/admin';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 export interface AppContext {
@@ -73,6 +75,12 @@ export async function createApp() {
       expiresIn: process.env.JWT_EXPIRY || '24h',
     }
   });
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 10 * 1024 * 1024,
+      files: 1,
+    },
+  });
 
   // Context middleware
   app.decorate('db', db);
@@ -128,12 +136,20 @@ export async function createApp() {
   // Serve dashboard static files in production
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const dashboardPath = path.resolve(__dirname, '../../dashboard/dist');
+  const uploadsPath = path.resolve(process.cwd(), 'data/uploads');
+  await fs.mkdir(uploadsPath, { recursive: true });
+
+  await app.register(fastifyStatic, {
+    root: uploadsPath,
+    prefix: '/uploads/',
+    wildcard: true,
+    decorateReply: false,
+  });
 
   await app.register(fastifyStatic, {
     root: dashboardPath,
     prefix: '/',
     wildcard: false,
-    decorateReply: false,
   });
 
   // SPA fallback: serve index.html for non-API routes

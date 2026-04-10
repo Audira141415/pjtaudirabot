@@ -178,6 +178,16 @@ echo  [OK] WhatsApp Bot window opened.
 echo.
 
 :: ----------------------------------------------------------------
+:: STEP 4b: Start Telegram Bot
+:: ----------------------------------------------------------------
+echo [4b/6] Starting Telegram Bot (port %AUDIRA_TELEGRAM_PORT%)...
+set TELEGRAM_PORT=%AUDIRA_TELEGRAM_PORT%
+start "AUDIRA - Telegram Bot" cmd /k "title AUDIRA - Telegram Bot [port %AUDIRA_TELEGRAM_PORT%] && cd /d F:\PJTAUDIRABOT && set TELEGRAM_PORT=%AUDIRA_TELEGRAM_PORT% && pnpm dev:telegram"
+timeout /t 3 /nobreak >nul
+echo  [OK] Telegram Bot window opened.
+echo.
+
+:: ----------------------------------------------------------------
 :: STEP 5: Start Dashboard (opsional)
 :: ----------------------------------------------------------------
 echo [5/6] Starting Dashboard (port %AUDIRA_DASHBOARD_PORT%)...
@@ -223,6 +233,7 @@ echo   Service           Port    Window Title
 echo   -------           ----    ------------
 echo   API Server        %AUDIRA_API_PORT%    AUDIRA - API Server
 echo   WhatsApp Bot      %AUDIRA_WHATSAPP_PORT%    AUDIRA - WhatsApp Bot
+echo   Telegram Bot      %AUDIRA_TELEGRAM_PORT%    AUDIRA - Telegram Bot
 echo   Dashboard         %AUDIRA_DASHBOARD_PORT%    AUDIRA - Dashboard
 echo   PostgreSQL        5433    (Docker container: pjtaudi-db)
 echo   Redis             6379    (Docker container: pjtaudi-redis)
@@ -247,5 +258,6 @@ echo     - Port bentrok?    powershell -File scripts\check-ports.ps1
 echo     - Docker error?    docker compose -f docker/docker-compose.yml logs
 echo     - API error?       Lihat window "AUDIRA - API Server"
 echo     - WhatsApp error?  Lihat window "AUDIRA - WhatsApp Bot"
+echo     - Telegram error?  Lihat window "AUDIRA - Telegram Bot"
 echo.
 pause

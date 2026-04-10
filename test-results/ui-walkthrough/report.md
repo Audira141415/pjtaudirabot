@@ -1,0 +1,123 @@
+# UI Click Walkthrough Report
+
+- Base URL: http://localhost:3003
+- Pages Tested: 48
+- Action Mode: destructive-on
+- Pages Passed: 46
+- Pages Failed: 2
+- Buttons Passed: 15
+- Buttons Failed: 1
+- Buttons Skipped: 41
+
+## Page Results
+- PASS Dashboard (/)
+- PASS Users (/users)
+- PASS Tickets (/tickets)
+- PASS SLA Monitor (/sla)
+- FAIL Alerts (/alerts) | apiErrors=1
+- FAIL Tasks (/tasks) | apiErrors=1
+- PASS Shift Handover (/shift)
+- PASS Checklists (/checklist)
+- PASS Reminders (/reminders)
+- PASS Maintenance (/maintenance)
+- PASS Uptime Monitor (/uptime)
+- PASS Network Health (/network)
+- PASS Server Status (/server)
+- PASS Backups (/backups)
+- PASS AI Insights (/incidents)
+- PASS Sentiment Analysis (/sentiment)
+- PASS Analytics (/analytics)
+- PASS CSAT Survey (/csat)
+- PASS Knowledge Base (/knowledge)
+- PASS Memory Browser (/memory)
+- PASS Reports (/reports)
+- PASS Broadcast (/broadcast)
+- PASS Campaigns (/campaigns)
+- PASS Scheduled Messages (/scheduled-messages)
+- PASS Unified Inbox (/inbox)
+- PASS Templates (/templates)
+- PASS Canned Responses (/canned-responses)
+- PASS Chatbot Builder (/chatbot)
+- PASS Moderation (/moderation)
+- PASS Groups (/groups)
+- PASS FAQ Manager (/faq)
+- PASS CRM Contacts (/crm)
+- PASS CRM Pipeline (/pipeline)
+- PASS Payments (/payments)
+- PASS Tags & Labels (/tags)
+- PASS Agents (/agents)
+- PASS Flows (/flows)
+- PASS Webhooks (/webhooks)
+- PASS Webhook Logs (/webhook-logs)
+- PASS Audit Logs (/audit)
+- PASS Auto-Moderation (/auto-moderation)
+- PASS Notification Rules (/notification-rules)
+- PASS API Keys (/api-keys)
+- PASS File Manager (/files)
+- PASS Export Center (/exports)
+- PASS Bulk Operations (/bulk)
+- PASS Language (/language)
+- PASS Settings (/settings)
+
+## Button Results
+- PASSED Dashboard | Refresh
+- SKIPPED Users | (no whitelisted action in destructive-on)
+- SKIPPED Tickets | (no whitelisted action in destructive-on)
+- SKIPPED SLA Monitor | (no whitelisted action in destructive-on)
+- PASSED Alerts | button[title="Acknowledge"]
+- FAILED Alerts | button[title="Resolve"]
+- SKIPPED Tasks | (no whitelisted action in destructive-on)
+- SKIPPED Shift Handover | (no whitelisted action in destructive-on)
+- PASSED Checklists | Templates
+- PASSED Checklists | Active Items
+- SKIPPED Reminders | (no whitelisted action in destructive-on)
+- PASSED Maintenance | Filter
+- PASSED Maintenance | Refresh
+- PASSED Maintenance | +Nonaktif
+- SKIPPED Uptime Monitor | (no whitelisted action in destructive-on)
+- SKIPPED Network Health | (no whitelisted action in destructive-on)
+- SKIPPED Server Status | (no whitelisted action in destructive-on)
+- SKIPPED Backups | (no whitelisted action in destructive-on)
+- SKIPPED AI Insights | (no whitelisted action in destructive-on)
+- SKIPPED Sentiment Analysis | (no whitelisted action in destructive-on)
+- SKIPPED Analytics | (no whitelisted action in destructive-on)
+- SKIPPED CSAT Survey | (no whitelisted action in destructive-on)
+- SKIPPED Knowledge Base | (no whitelisted action in destructive-on)
+- SKIPPED Memory Browser | (no whitelisted action in destructive-on)
+- SKIPPED Reports | (no whitelisted action in destructive-on)
+- SKIPPED Broadcast | (no whitelisted action in destructive-on)
+- PASSED Campaigns | DRAFT
+- PASSED Campaigns | SCHEDULED
+- PASSED Campaigns | RUNNING
+- PASSED Campaigns | COMPLETED
+- SKIPPED Scheduled Messages | (no whitelisted action in destructive-on)
+- SKIPPED Unified Inbox | (no whitelisted action in destructive-on)
+- SKIPPED Templates | (no whitelisted action in destructive-on)
+- SKIPPED Canned Responses | (no whitelisted action in destructive-on)
+- SKIPPED Chatbot Builder | (no whitelisted action in destructive-on)
+- SKIPPED Moderation | (no whitelisted action in destructive-on)
+- SKIPPED Groups | (no whitelisted action in destructive-on)
+- PASSED FAQ Manager | + Tambah FAQ
+- PASSED FAQ Manager | Simpan
+- PASSED CRM Contacts | + Tambah Kontak
+- PASSED CRM Contacts | Simpan
+- SKIPPED CRM Pipeline | (no whitelisted action in destructive-on)
+- SKIPPED Payments | (no whitelisted action in destructive-on)
+- SKIPPED Tags & Labels | (no whitelisted action in destructive-on)
+- SKIPPED Agents | (no whitelisted action in destructive-on)
+- SKIPPED Flows | (no whitelisted action in destructive-on)
+- SKIPPED Webhooks | (no whitelisted action in destructive-on)
+- SKIPPED Webhook Logs | (no whitelisted action in destructive-on)
+- SKIPPED Audit Logs | (no whitelisted action in destructive-on)
+- SKIPPED Auto-Moderation | (no whitelisted action in destructive-on)
+- SKIPPED Notification Rules | (no whitelisted action in destructive-on)
+- SKIPPED API Keys | (no whitelisted action in destructive-on)
+- SKIPPED File Manager | (no whitelisted action in destructive-on)
+- SKIPPED Export Center | (no whitelisted action in destructive-on)
+- SKIPPED Bulk Operations | (no whitelisted action in destructive-on)
+- SKIPPED Language | (no whitelisted action in destructive-on)
+- SKIPPED Settings | (no whitelisted action in destructive-on)
+
+## Notes
+- Script only clicks safe (non-destructive) buttons using allow/deny label patterns.
+- API errors are captured from browser network responses (status >= 400).

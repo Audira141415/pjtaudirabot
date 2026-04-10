@@ -80,6 +80,7 @@ const sections = [
       { to: '/shift', icon: ArrowRightLeft, label: 'Shift Handover' },
       { to: '/checklist', icon: ClipboardCheck, label: 'Checklists' },
       { to: '/reminders', icon: Bell, label: 'Reminders' },
+      { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
     ],
   },
   {

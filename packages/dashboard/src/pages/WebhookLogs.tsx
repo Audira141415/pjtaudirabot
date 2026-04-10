@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import { ScrollText, RefreshCw, Search, CheckCircle, XCircle, Clock, RotateCcw } from 'lucide-react';
 
@@ -46,8 +46,8 @@ export default function WebhookLogs() {
           <tbody>
             {filtered.map(l => {
               const S = STATUS_STYLE[l.status] || STATUS_STYLE.PENDING;
-              return (<>
-                <tr key={l.id} className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setExpanded(expanded === l.id ? null : l.id)}>
+              return (<Fragment key={String(l.id)}>
+                <tr className="border-t hover:bg-gray-50 cursor-pointer" onClick={() => setExpanded(expanded === l.id ? null : l.id)}>
                   <td className="p-3"><S.icon className={`w-4 h-4 ${S.color}`} /></td>
                   <td className="p-3 font-mono text-xs truncate max-w-xs">{l.url}</td>
                   <td className="p-3"><span className="px-2 py-0.5 rounded text-xs bg-gray-100">{l.method}</span></td>
@@ -57,14 +57,14 @@ export default function WebhookLogs() {
                   <td className="p-3 text-xs text-gray-500">{new Date(l.createdAt).toLocaleString('id-ID')}</td>
                 </tr>
                 {expanded === l.id && (
-                  <tr key={l.id + '-detail'} className="bg-gray-50"><td colSpan={7} className="p-4">
+                  <tr className="bg-gray-50"><td colSpan={7} className="p-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div><p className="text-xs font-medium mb-1">Request Body</p><pre className="bg-gray-900 text-green-400 p-3 rounded-lg text-xs overflow-auto max-h-48">{JSON.stringify(l.requestBody, null, 2) || 'null'}</pre></div>
                       <div><p className="text-xs font-medium mb-1">Response</p><pre className="bg-gray-900 text-green-400 p-3 rounded-lg text-xs overflow-auto max-h-48">{l.responseBody || l.error || 'null'}</pre></div>
                     </div>
                   </td></tr>
                 )}
-              </>);
+              </Fragment>);
             })}
             {filtered.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-gray-400">Tidak ada webhook log</td></tr>}
           </tbody>

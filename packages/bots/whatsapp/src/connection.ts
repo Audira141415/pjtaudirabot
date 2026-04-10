@@ -1,16 +1,20 @@
-import makeWASocket, {
-  DisconnectReason,
-  useMultiFileAuthState,
-  fetchLatestWaWebVersion,
-  WASocket,
-  proto,
-  makeCacheableSignalKeyStore,
-} from '@whiskeysockets/baileys';
+import { createRequire } from 'module';
 import { Boom } from '@hapi/boom';
 import { ILogger } from '@pjtaudirabot/core';
 import { mkdir } from 'fs/promises';
 import path from 'path';
 import pino from 'pino';
+
+const require = createRequire(import.meta.url);
+const {
+  makeWASocket,
+  DisconnectReason,
+  useMultiFileAuthState,
+  fetchLatestWaWebVersion,
+  makeCacheableSignalKeyStore,
+} = require('@whiskeysockets/baileys');
+
+type WASocket = any;
 
 export interface WhatsAppConnectionConfig {
   sessionDir: string;
@@ -21,14 +25,15 @@ export interface WhatsAppConnectionConfig {
 export class WhatsAppConnection {
   private socket: WASocket | null = null;
   private reconnectCount = 0;
-  private onMessageCallback: ((msg: proto.IWebMessageInfo) => Promise<void>) | null = null;
+  private onMessageCallback: ((msg: any) => Promise<void>) | null = null;
+  public connectionState: 'open' | 'connecting' | 'close' = 'connecting';
 
   constructor(
     private config: WhatsAppConnectionConfig,
     private logger: ILogger
   ) {}
 
-  onMessage(callback: (msg: proto.IWebMessageInfo) => Promise<void>): void {
+  onMessage(callback: (msg: any) => Promise<void>): void {
     this.onMessageCallback = callback;
   }
 
@@ -65,7 +70,7 @@ export class WhatsAppConnection {
 
     this.socket.ev.on('creds.update', saveCreds);
 
-    this.socket.ev.on('connection.update', (update) => {
+    this.socket.ev.on('connection.update', (update: any) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
@@ -73,6 +78,7 @@ export class WhatsAppConnection {
       }
 
       if (connection === 'close') {
+        this.connectionState = 'close';
         const statusCode = (lastDisconnect?.error as Boom)?.output?.statusCode;
         const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
@@ -95,6 +101,7 @@ export class WhatsAppConnection {
       }
 
       if (connection === 'open') {
+        this.connectionState = 'open';
         this.reconnectCount = 0;
         this.logger.info('WhatsApp connection established');
       }
@@ -105,7 +112,7 @@ export class WhatsAppConnection {
       this.logger.warn('WhatsApp WebSocket error (suppressed)', { message: err?.message });
     });
 
-    this.socket.ev.on('messages.upsert', async ({ messages, type }) => {
+    this.socket.ev.on('messages.upsert', async ({ messages, type }: any) => {
       if (type !== 'notify') return;
 
       for (const msg of messages) {

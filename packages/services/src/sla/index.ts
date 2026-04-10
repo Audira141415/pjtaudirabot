@@ -188,11 +188,54 @@ export class SLAService {
       const total = t.resolutionTargetMin * 60_000;
 
       if (remaining <= 0) {
+        const overdueMin = Math.ceil(Math.abs(remaining) / 60_000);
+        const resolutionTimeMin = (now.getTime() - t.createdAt.getTime()) / 60_000;
+        const isAlreadyFinished = ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(t.ticket.status);
+
+        if (!isAlreadyFinished) {
+          // Auto-resolve ticket with SLA breach note
+          await this.db.ticket.update({
+            where: { id: t.ticket.id },
+            data: {
+              status: 'RESOLVED',
+              rootCause: 'SLA resolution deadline terlampaui',
+              solution: `Ticket di-resolve otomatis oleh sistem. SLA target: ${t.resolutionTargetMin} menit, aktual: ${Math.ceil(resolutionTimeMin)} menit (terlambat ${overdueMin} menit).`,
+              resolvedAt: now,
+            },
+          });
+          await this.db.ticketHistory.create({
+            data: {
+              ticketId: t.ticket.id,
+              action: 'auto_resolved',
+              field: 'status',
+              oldValue: t.ticket.status,
+              newValue: 'RESOLVED',
+              note: `⚠️ Auto-resolved oleh sistem: SLA melebihi batas waktu ${t.resolutionTargetMin} menit (terlambat ${overdueMin} menit)`,
+            },
+          });
+
+          this.logger.warn('Ticket auto-resolved due to SLA breach', {
+            ticketId: t.ticket.id,
+            ticketNumber: t.ticket.ticketNumber,
+            overdueMin,
+          });
+        }
+
+        // Mark SLA tracking as breached and resolved
         await this.db.sLATracking.update({
           where: { id: t.id },
-          data: { resolutionBreached: true },
+          data: {
+            resolutionBreached: true,
+            resolvedAt: isAlreadyFinished ? undefined : now,
+            resolutionTimeMin: isAlreadyFinished ? undefined : Math.round(resolutionTimeMin * 10) / 10,
+          },
         });
-        breaches.push(`🚨 Resolution SLA BREACHED: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) [${t.ticket.status}] — selesaikan segera! !ticket-resolve ${t.ticket.ticketNumber} | <cause> | <solution>`);
+
+        if (isAlreadyFinished) {
+          breaches.push(`🚨 Resolution SLA BREACHED: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — sudah ${t.ticket.status}`);
+        } else {
+          breaches.push(`🚨 Resolution SLA BREACHED: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — terlambat ${overdueMin} menit → ✅ *Auto-resolved oleh sistem* (SLA melewati batas waktu ${t.resolutionTargetMin} menit)`);
+        }
       } else if (remaining < total * 0.2 && !t.resolutionWarned) {
         await this.db.sLATracking.update({
           where: { id: t.id },

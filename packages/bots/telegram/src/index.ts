@@ -1,8 +1,15 @@
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import dotenv from 'dotenv';
 import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 import http from 'node:http';
+import { PortResolver } from '@pjtaudirabot/core';
 import {
   initInfrastructure,
   createBotServices,
@@ -15,12 +22,7 @@ import { TelegramMessageHandler } from './message-handler';
 
 async function main(): Promise<void> {
   const infra = await initInfrastructure('telegram-bot');
-  const { logger, botsConfig, portConfig, ports, db, redis } = infra;
-
-  // Reserve dedicated port for this bot
-  ports.reserve('telegram', portConfig.telegram);
-  await ports.validateAll();
-  logger.info(`Telegram port ${portConfig.telegram} reserved and validated`);
+  const { logger, botsConfig, portConfig, db, redis } = infra;
 
   if (!botsConfig.telegram.enabled) {
     logger.warn('Telegram bot is disabled via config');
@@ -163,19 +165,27 @@ async function main(): Promise<void> {
   }, 5 * 60_000);
 
   // ── Health-check HTTP server ──
+  let boundHealthPort = portConfig.telegram;
   const healthServer = http.createServer((_req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       service: 'telegram-bot',
       status: 'healthy',
-      port: portConfig.telegram,
+      port: boundHealthPort,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     }));
   });
-  healthServer.listen(portConfig.telegram, () => {
-    logger.info(`Telegram health endpoint on :${portConfig.telegram}/`);
+
+  const healthPortResolver = new PortResolver({
+    serviceName: 'telegram-health-endpoint',
+    preferredPort: portConfig.telegram,
+    maxRetries: 20,
+    logger,
   });
+  const { port: resolvedHealthPort } = await healthPortResolver.bindServer(healthServer);
+  boundHealthPort = resolvedHealthPort;
+  logger.info(`Telegram health endpoint on :${resolvedHealthPort}/`);
 
   logger.info('Telegram bot started');
 

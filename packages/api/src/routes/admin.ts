@@ -1,6 +1,12 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AppContext } from '../app';
 import os from 'node:os';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
+import crypto from 'node:crypto';
+import { MaintenanceScheduleService } from '@pjtaudirabot/services';
 
 /**
  * Admin API routes — requires JWT auth with admin role.
@@ -9,6 +15,7 @@ export async function adminRoutes(
   app: FastifyInstance,
   ctx: AppContext
 ): Promise<void> {
+  const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger);
 
   // JWT auth hook for all admin routes
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -118,14 +125,22 @@ export async function adminRoutes(
         latency = Date.now() - start;
 
         if (res.ok) {
-          const data = await res.json() as { status?: string };
-          status = 'online';
-          details = `Running on port ${bot.port} · ${latency}ms`;
+          const data = await res.json() as { status?: string; waConnectionState?: string };
+          const waConnected = bot.platform === 'WHATSAPP'
+            ? data.waConnectionState === 'open'
+            : true; // Telegram uses token polling, process running = connected
+          status = waConnected ? 'online' : 'degraded';
+          details = bot.platform === 'WHATSAPP'
+            ? `Process running · WA: ${data.waConnectionState ?? 'unknown'} · port ${bot.port} · ${latency}ms`
+            : `Running on port ${bot.port} · ${latency}ms`;
           // Also update BotConfig in DB
           try {
             await ctx.db.botConfig.updateMany({
               where: { platform: bot.platform as any },
-              data: { connectionStatus: 'CONNECTED', lastConnectedAt: new Date() },
+              data: {
+                connectionStatus: waConnected ? 'CONNECTED' : 'DISCONNECTED',
+                ...(waConnected && { lastConnectedAt: new Date() }),
+              },
             });
           } catch { /* ignore */ }
         } else {
@@ -139,13 +154,13 @@ export async function adminRoutes(
 
         if (!hasToken) {
           status = 'error';
-          details = 'Token/config belum di-set di .env';
+          details = `Token/config belum di-set di .env (${bot.platform}_BOT_TOKEN)`;
         } else if (!isEnabled) {
           status = 'offline';
-          details = 'Disabled di .env (ENABLED=false)';
+          details = `Disabled di .env (${bot.platform}_ENABLED=false)`;
         } else {
           status = 'offline';
-          details = `Token configured tapi bot tidak berjalan (port ${bot.port} tidak merespon)`;
+          details = `Bot tidak berjalan — jalankan: pnpm dev:${bot.platform.toLowerCase()} (port ${bot.port})`;
         }
 
         // Update DB status
@@ -706,6 +721,162 @@ export async function adminRoutes(
     });
     if (!ticket) return reply.status(404).send({ error: 'Ticket not found' });
     return reply.send({ data: ticket });
+  });
+
+  app.post('/tickets/bulk-resolve', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as {
+      filter?: {
+        status?: string;
+        priority?: string;
+        customer?: string;
+        search?: string;
+      };
+      rootCause?: string;
+      solution?: string;
+      dryRun?: boolean;
+    };
+
+    const unresolvedStatuses: Array<'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'ESCALATED'> = ['OPEN', 'IN_PROGRESS', 'WAITING', 'ESCALATED'];
+    const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
+    const requestedStatus = body?.filter?.status;
+    if (requestedStatus && !unresolvedStatuses.includes(requestedStatus as any)) {
+      return reply.status(400).send({ error: 'Invalid filter.status' });
+    }
+    if (body?.filter?.priority && !allowedPriorities.includes(body.filter.priority)) {
+      return reply.status(400).send({ error: 'Invalid filter.priority' });
+    }
+
+    const hasNarrowingFilter = Boolean(
+      body?.filter?.status
+      || body?.filter?.priority
+      || body?.filter?.customer?.trim()
+      || body?.filter?.search?.trim()
+    );
+    if (!hasNarrowingFilter) {
+      return reply.status(400).send({ error: 'At least one filter (status/priority/customer/search) is required' });
+    }
+
+    const user = request.user as { sub?: string; id?: string; userId?: string };
+    const actorId = user?.sub || user?.id || user?.userId || 'system';
+
+    const where: any = {
+      status: body?.filter?.status
+        ? body.filter.status
+        : { in: unresolvedStatuses },
+    };
+
+    if (body?.filter?.priority) where.priority = body.filter.priority;
+    if (body?.filter?.customer) {
+      where.customer = { contains: body.filter.customer, mode: 'insensitive' };
+    }
+    if (body?.filter?.search) {
+      where.OR = [
+        { ticketNumber: { contains: body.filter.search } },
+        { customer: { contains: body.filter.search, mode: 'insensitive' } },
+        { title: { contains: body.filter.search, mode: 'insensitive' } },
+        { problem: { contains: body.filter.search, mode: 'insensitive' } },
+      ];
+    }
+
+    let jobId: string | null = null;
+    try {
+      const candidates = await ctx.db.ticket.findMany({ where, select: { id: true } });
+
+      if (body?.dryRun) {
+        return reply.send({
+          data: {
+            candidateCount: candidates.length,
+            resolvedCount: candidates.length,
+            filter: body?.filter ?? {},
+            dryRun: true,
+          },
+        });
+      }
+
+      const job = await ctx.db.bulkJob.create({
+        data: {
+          jobType: 'UPDATE_TICKETS',
+          totalItems: candidates.length,
+          createdById: actorId,
+          status: 'RUNNING',
+          startedAt: new Date(),
+          results: {
+            filter: body?.filter ?? {},
+            action: 'BULK_RESOLVE',
+          } as any,
+        },
+      });
+      jobId = job.id;
+
+      if (candidates.length === 0) {
+        await ctx.db.bulkJob.update({
+          where: { id: job.id },
+          data: {
+            status: 'COMPLETED',
+            processedItems: 0,
+            successCount: 0,
+            failureCount: 0,
+            completedAt: new Date(),
+          },
+        });
+
+        return reply.send({
+          data: {
+            resolvedCount: 0,
+            jobId: job.id,
+            filter: body?.filter ?? {},
+          },
+        });
+      }
+
+      const now = new Date();
+      const updateData: any = {
+        status: 'RESOLVED',
+        resolvedAt: now,
+      };
+      if (body?.rootCause) updateData.rootCause = body.rootCause;
+      if (body?.solution) updateData.solution = body.solution;
+
+      const updateResult = await ctx.db.ticket.updateMany({
+        where: {
+          id: { in: candidates.map((t) => t.id) },
+          status: { in: unresolvedStatuses },
+        },
+        data: updateData,
+      });
+
+      const failureCount = Math.max(candidates.length - updateResult.count, 0);
+      await ctx.db.bulkJob.update({
+        where: { id: job.id },
+        data: {
+          status: failureCount > 0 ? 'PARTIAL' : 'COMPLETED',
+          processedItems: updateResult.count,
+          successCount: updateResult.count,
+          failureCount,
+          completedAt: new Date(),
+        },
+      });
+
+      return reply.send({
+        data: {
+          resolvedCount: updateResult.count,
+          jobId: job.id,
+          filter: body?.filter ?? {},
+        },
+      });
+    } catch (err) {
+      if (jobId) {
+        await ctx.db.bulkJob.update({
+          where: { id: jobId },
+          data: {
+            status: 'FAILED',
+            completedAt: new Date(),
+            errorLog: err instanceof Error ? err.message : String(err),
+          },
+        }).catch(() => undefined);
+      }
+      return reply.status(500).send({ error: 'Failed to execute bulk resolve' });
+    }
   });
 
   app.put('/tickets/:id', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -1917,10 +2088,10 @@ export async function adminRoutes(
         message: (body.message as string) || null,
       } as any,
       update: {
-        ...(body.isEnabled !== undefined && { isEnabled: body.isEnabled }),
-        ...(body.action !== undefined && { action: body.action }),
-        ...(body.config !== undefined && { config: body.config }),
-        ...(body.message !== undefined && { message: body.message }),
+        ...(body.isEnabled !== undefined && { isEnabled: Boolean(body.isEnabled) }),
+        ...(body.action !== undefined && { action: body.action as any }),
+        ...(body.config !== undefined && { config: body.config as any }),
+        ...(body.message !== undefined && { message: body.message == null ? null : String(body.message) }),
       },
     });
 
@@ -2159,6 +2330,225 @@ export async function adminRoutes(
     return reply.send({ success: true });
   });
 
+  // ─── PREVENTIVE MAINTENANCE ───────────────────────────────
+
+  app.post('/maintenance', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    if (!body.title || typeof body.title !== 'string' || !body.title.trim()) {
+      return reply.status(400).send({ error: 'title is required' });
+    }
+    const intervalMonths = body.intervalMonths == null ? 3 : Number(body.intervalMonths);
+    const anchorMonth = body.anchorMonth == null ? 1 : Number(body.anchorMonth);
+    const anchorDay = body.anchorDay == null ? 1 : Number(body.anchorDay);
+    const reminderEveryMonths = body.reminderEveryMonths == null ? 3 : Number(body.reminderEveryMonths);
+    const notifyDaysBefore = body.notifyDaysBefore == null ? 7 : Number(body.notifyDaysBefore);
+
+    if (![1, 2, 3, 6, 12].includes(intervalMonths)) {
+      return reply.status(400).send({ error: 'intervalMonths must be one of 1, 2, 3, 6, 12' });
+    }
+    if (anchorMonth < 1 || anchorMonth > 12) {
+      return reply.status(400).send({ error: 'anchorMonth must be 1–12' });
+    }
+    if (anchorDay < 1 || anchorDay > 31) {
+      return reply.status(400).send({ error: 'anchorDay must be 1–31' });
+    }
+
+    // createdById must be a real User FK — use existing schedule's author or first user
+    const anyUser = await ctx.db.user.findFirst({ orderBy: { createdAt: 'asc' } });
+    if (!anyUser) {
+      return reply.status(500).send({ error: 'No users found in database to assign createdById' });
+    }
+
+    try {
+      const item = await maintenanceScheduleService.create({
+        title: (body.title as string).trim(),
+        description: body.description as string | undefined,
+        customer: body.customer as string | undefined,
+        location: body.location as string | undefined,
+        ao: body.ao as string | undefined,
+        sid: body.sid as string | undefined,
+        service: body.service as string | undefined,
+        hostnameSwitch: body.hostnameSwitch as string | undefined,
+        intervalMonths,
+        anchorMonth,
+        anchorDay,
+        reminderEveryMonths,
+        notifyDaysBefore,
+        firstDueDate: body.firstDueDate ? new Date(body.firstDueDate as string) : undefined,
+        createdById: anyUser.id,
+      });
+      return reply.status(201).send({ data: item });
+    } catch (error) {
+      return reply.status(500).send({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/maintenance', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { active, search } = request.query as { active?: string; search?: string };
+    const schedules = await maintenanceScheduleService.listDashboard({
+      active: active == null ? undefined : active === 'true',
+      search: search?.trim() || undefined,
+    });
+    return reply.send({ data: schedules });
+  });
+
+  app.get('/maintenance/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const schedules = await maintenanceScheduleService.listDashboard();
+    const item = schedules.find((schedule) => schedule.id === id);
+    if (!item) return reply.status(404).send({ error: 'Maintenance schedule not found' });
+    return reply.send({ data: item });
+  });
+
+  app.get('/maintenance/:id/history', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const tickets = await ctx.db.ticket.findMany({
+      where: {
+        category: 'MAINTENANCE',
+        tags: { array_contains: [`schedule:${id}`] },
+      },
+      include: {
+        ticketHistory: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+
+    const events = tickets.flatMap((ticket) =>
+      ticket.ticketHistory.map((h) => ({
+        id: h.id,
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        ticketStatus: String(ticket.status),
+        action: h.action,
+        note: h.note,
+        field: h.field,
+        oldValue: h.oldValue,
+        newValue: h.newValue,
+        createdAt: h.createdAt,
+      }))
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return reply.send({ data: events });
+  });
+
+  app.put('/maintenance/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = request.body as Record<string, unknown>;
+
+    const intervalMonths = body.intervalMonths == null ? undefined : Number(body.intervalMonths);
+    const anchorDay = body.anchorDay == null ? undefined : Number(body.anchorDay);
+    const reminderEveryMonths = body.reminderEveryMonths == null ? undefined : Number(body.reminderEveryMonths);
+    const notifyDaysBefore = body.notifyDaysBefore == null ? undefined : Number(body.notifyDaysBefore);
+
+    if (intervalMonths != null && ![1, 2, 3, 6, 12].includes(intervalMonths)) {
+      return reply.status(400).send({ error: 'intervalMonths must be one of 1, 2, 3, 6, 12' });
+    }
+    if (anchorDay != null && (anchorDay < 1 || anchorDay > 31)) {
+      return reply.status(400).send({ error: 'anchorDay must be between 1 and 31' });
+    }
+    if (reminderEveryMonths != null && reminderEveryMonths < 1) {
+      return reply.status(400).send({ error: 'reminderEveryMonths must be at least 1' });
+    }
+    if (notifyDaysBefore != null && (notifyDaysBefore < 1 || notifyDaysBefore > 60)) {
+      return reply.status(400).send({ error: 'notifyDaysBefore must be between 1 and 60' });
+    }
+
+    try {
+      const item = await maintenanceScheduleService.updateSchedule(id, {
+        title: body.title as string | undefined,
+        description: body.description as string | undefined,
+        customer: body.customer as string | undefined,
+        location: body.location as string | undefined,
+        ao: body.ao as string | undefined,
+        sid: body.sid as string | undefined,
+        service: body.service as string | undefined,
+        hostnameSwitch: body.hostnameSwitch as string | undefined,
+        intervalMonths,
+        anchorDay,
+        reminderEveryMonths,
+        notifyDaysBefore,
+        isActive: body.isActive as boolean | undefined,
+      });
+      return reply.send({ data: item });
+    } catch (error) {
+      return reply.status(404).send({ error: (error as Error).message });
+    }
+  });
+
+  app.post('/maintenance/:id/complete', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as Record<string, unknown>;
+    const completedAt = body.completedAt ? new Date(body.completedAt as string) : new Date();
+    if (Number.isNaN(completedAt.getTime())) {
+      return reply.status(400).send({ error: 'completedAt is invalid' });
+    }
+
+    try {
+      const item = await maintenanceScheduleService.completeSchedule(id, {
+        note: body.note as string | undefined,
+        evidenceFileId: body.evidenceFileId as string | undefined,
+        completedAt,
+        completedBy: String((request.user as { sub?: string })?.sub ?? 'admin'),
+      });
+      return reply.send({ data: item });
+    } catch (error) {
+      return reply.status(404).send({ error: (error as Error).message });
+    }
+  });
+
+  app.post('/maintenance/:id/evidence', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    const schedule = await ctx.db.maintenanceSchedule.findUnique({ where: { id } });
+    if (!schedule) {
+      return reply.status(404).send({ error: 'Maintenance schedule not found' });
+    }
+
+    const part = await request.file();
+    if (!part) {
+      return reply.status(400).send({ error: 'Evidence file is required' });
+    }
+
+    const notesField = Array.isArray(part.fields.notes) ? part.fields.notes[0] : part.fields.notes;
+    const notes = notesField && 'value' in notesField ? String(notesField.value ?? '') : '';
+    const uploader = String((request.user as { sub?: string })?.sub ?? 'admin');
+    const uploadsDir = path.resolve(process.cwd(), 'data/uploads/maintenance-evidence');
+    await fs.mkdir(uploadsDir, { recursive: true });
+
+    const safeOriginalName = (part.filename || 'evidence').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storedName = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}-${safeOriginalName}`;
+    const absolutePath = path.join(uploadsDir, storedName);
+    await pipeline(part.file, createWriteStream(absolutePath));
+    const stats = await fs.stat(absolutePath);
+
+    const relativePath = path.posix.join('maintenance-evidence', storedName);
+    const publicUrl = `/uploads/${relativePath}`;
+
+    const file = await ctx.db.managedFile.create({
+      data: {
+        filename: storedName,
+        originalName: part.filename,
+        mimeType: part.mimetype,
+        size: stats.size,
+        path: absolutePath,
+        url: publicUrl,
+        category: 'maintenance-evidence',
+        uploadedBy: uploader,
+        platform: 'DASHBOARD',
+        isPublic: true,
+        maintenanceScheduleId: id,
+        metadata: {
+          notes,
+          scheduleTitle: schedule.title,
+        } as any,
+      },
+    });
+
+    return reply.send({ data: file });
+  });
+
   // ─── FILE MANAGER ──────────────────────────────────────────
 
   app.get('/files', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -2272,7 +2662,7 @@ export async function adminRoutes(
 
   app.post('/exports', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { module: string; format: string; filters?: Record<string, unknown> };
-    const item = await ctx.db.exportJob.create({ data: { module: body.module, format: body.format as any, filters: body.filters ?? {}, status: 'PROCESSING', requestedBy: ((request.user as any)?.sub ?? 'admin') } });
+    const item = await ctx.db.exportJob.create({ data: { module: body.module, format: body.format as any, filters: (body.filters ?? {}) as any, status: 'PROCESSING', requestedBy: ((request.user as any)?.sub ?? 'admin') } });
     // simulate processing
     setTimeout(async () => { try { await ctx.db.exportJob.update({ where: { id: item.id }, data: { status: 'COMPLETED', fileName: `${body.module}_export.${body.format.toLowerCase()}`, totalRows: Math.floor(Math.random() * 500) + 10, fileSize: Math.floor(Math.random() * 500000) + 1000, completedAt: new Date() } }); } catch {} }, 2000);
     return reply.send({ data: item });

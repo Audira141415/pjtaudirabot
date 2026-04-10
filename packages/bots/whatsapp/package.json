@@ -2,6 +2,7 @@
   "name": "@pjtaudirabot/bots-whatsapp",
   "version": "1.0.0",
   "description": "WhatsApp bot implementation using Baileys",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

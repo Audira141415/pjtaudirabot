@@ -42,6 +42,7 @@ model User {
   chatLogs              ChatLog[]
   createdTickets        Ticket[]   @relation("CreatedTickets")
   assignedTickets       Ticket[]   @relation("AssignedTickets")
+  maintenanceSchedules  MaintenanceSchedule[]
 
   @@unique([platform, platformUserId])
   @@index([status])
@@ -1100,6 +1101,49 @@ enum BackupStatus {
   FAILED
 }
 
+// ── Maintenance Schedule (Preventive Maintenance / PM) ──
+
+model MaintenanceSchedule {
+  id                String    @id @default(cuid())
+  title             String
+  description       String?
+
+  // NOC fields (used when auto-creating ticket)
+  customer          String?
+  location          String?
+  ao                String?   // Area of Operation
+  sid               String?   // Service ID
+  service           String?
+  hostnameSwitch    String?
+
+  // Schedule configuration
+  intervalMonths    Int       @default(3)   // 1=monthly, 3=quarterly, 6=semi-annual, 12=annual
+  anchorMonth       Int       @default(1)   // all cycles start from January by default
+  anchorDay         Int       @default(1)   // cycle day in month (default 1st)
+  reminderEveryMonths Int     @default(3)   // periodic reminder cadence for pending items
+  notifyDaysBefore  Int       @default(7)   // send reminder N days before due
+
+  // Tracking
+  nextDueDate       DateTime
+  lastCreatedAt     DateTime?
+  lastTicketId      String?
+  lastMaintainedAt  DateTime?
+  lastMaintenanceTicketId String?
+  lastCompletionNote String?
+
+  isActive          Boolean   @default(true)
+  createdById       String
+  createdBy         User      @relation(fields: [createdById], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  evidenceFiles     ManagedFile[]
+
+  @@index([nextDueDate])
+  @@index([isActive])
+  @@index([createdById])
+}
+
 // ── Report Templates / Scheduled Reports ──
 
 model ScheduledReport {
@@ -1757,6 +1801,9 @@ model ManagedFile {
   uploadedBy      String?
   platform        String?
   messageId       String?
+  metadata        Json              @default("{}")
+  maintenanceScheduleId String?
+  maintenanceSchedule   MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id], onDelete: SetNull)
   thumbnailUrl    String?
   isPublic        Boolean           @default(false)
   downloads       Int               @default(0)
@@ -1765,6 +1812,7 @@ model ManagedFile {
   @@index([category])
   @@index([mimeType])
   @@index([uploadedBy])
+  @@index([maintenanceScheduleId])
 }
 
 // ═══════════════════════════════════════════════════════

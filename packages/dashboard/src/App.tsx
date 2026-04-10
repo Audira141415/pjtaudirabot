@@ -49,6 +49,7 @@ import WebhookLogsPage from './pages/WebhookLogs';
 import ExportCenterPage from './pages/ExportCenter';
 import NotificationRulesPage from './pages/NotificationRules';
 import MultiLanguagePage from './pages/MultiLanguage';
+import MaintenancePage from './pages/Maintenance';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token');
@@ -93,6 +94,7 @@ export default function App() {
         <Route path="bulk" element={<BulkOperationsPage />} />
         <Route path="checklist" element={<ChecklistPage />} />
         <Route path="reminders" element={<RemindersPage />} />
+        <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="groups" element={<GroupManagementPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="sentiment" element={<SentimentAnalysisPage />} />

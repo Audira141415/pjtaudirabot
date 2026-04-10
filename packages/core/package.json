@@ -2,6 +2,7 @@
   "name": "@pjtaudirabot/core",
   "version": "1.0.0",
   "description": "Core library with shared utilities and interfaces",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

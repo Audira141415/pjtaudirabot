@@ -2,6 +2,7 @@
   "name": "@pjtaudirabot/bots-telegram",
   "version": "1.0.0",
   "description": "Telegram bot implementation using Telegraf",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

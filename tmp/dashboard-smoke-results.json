@@ -1,0 +1,482 @@
+{
+  "total": 48,
+  "passed": 9,
+  "failed": 39,
+  "testedAt": "2026-04-10T04:05:15.735Z",
+  "results": [
+    {
+      "path": "/",
+      "name": "Dashboard",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/users",
+      "name": "Users",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: Failed to load system health: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getSystemHealth (http://localhost:3002/src/lib/api.ts:138:26)\n    at loadHealth (http://localhost:3002/src/pages/Dashboard.tsx:186:29)\n    at load (http://localhost:3002/src/pages/Dashboard.tsx:212:52)\n    at http://localhost:3002/src/pages/Dashboard.tsx:219:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18117:15)\n    at commitPassiveMountEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18107:11)",
+        "console: Failed to load system health: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getSystemHealth (http://localhost:3002/src/lib/api.ts:138:26)\n    at loadHealth (http://localhost:3002/src/pages/Dashboard.tsx:186:29)\n    at load (http://localhost:3002/src/pages/Dashboard.tsx:212:52)\n    at http://localhost:3002/src/pages/Dashboard.tsx:219:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)",
+        "console: Failed to load stats: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getStatsToday (http://localhost:3002/src/lib/api.ts:48:24)\n    at loadData (http://localhost:3002/src/pages/Dashboard.tsx:200:13)\n    at load (http://localhost:3002/src/pages/Dashboard.tsx:212:28)\n    at http://localhost:3002/src/pages/Dashboard.tsx:219:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18117:15)\n    at commitPassiveMountEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18107:11)",
+        "console: Failed to load stats: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getTicketOverview (http://localhost:3002/src/lib/api.ts:50:37)\n    at loadData (http://localhost:3002/src/pages/Dashboard.tsx:202:13)\n    at load (http://localhost:3002/src/pages/Dashboard.tsx:212:28)\n    at http://localhost:3002/src/pages/Dashboard.tsx:219:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/tickets",
+      "name": "Tickets",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/sla",
+      "name": "SLA Monitor",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getTickets (http://localhost:3002/src/lib/api.ts:107:12)\n    at loadData (http://localhost:3002/src/pages/Tickets.tsx:39:29)\n    at http://localhost:3002/src/pages/Tickets.tsx:50:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)\n    at flushPassiveEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19445:22)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/alerts",
+      "name": "Alerts",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getSLADashboard (http://localhost:3002/src/lib/api.ts:112:26)\n    at load (http://localhost:3002/src/pages/SLAMonitor.tsx:28:31)\n    at http://localhost:3002/src/pages/SLAMonitor.tsx:36:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18117:15)\n    at commitPassiveMountEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19488:11)",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getSLADashboard (http://localhost:3002/src/lib/api.ts:112:26)\n    at load (http://localhost:3002/src/pages/SLAMonitor.tsx:28:31)\n    at http://localhost:3002/src/pages/SLAMonitor.tsx:36:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)\n    at flushPassiveEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19445:22)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/tasks",
+      "name": "Tasks",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/shift",
+      "name": "Shift Handover",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/checklist",
+      "name": "Checklists",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getCurrentShift (http://localhost:3002/src/lib/api.ts:146:26)\n    at load (http://localhost:3002/src/pages/ShiftHandover.tsx:52:72)\n    at http://localhost:3002/src/pages/ShiftHandover.tsx:61:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)\n    at flushPassiveEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19445:22)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/reminders",
+      "name": "Reminders",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/maintenance",
+      "name": "Maintenance",
+      "status": "PASS",
+      "interaction": "Filter",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/uptime",
+      "name": "Uptime Monitor",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/network",
+      "name": "Network Health",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/server",
+      "name": "Server Status",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/backups",
+      "name": "Backups",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/incidents",
+      "name": "AI Insights",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/sentiment",
+      "name": "Sentiment Analysis",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/analytics",
+      "name": "Analytics",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/csat",
+      "name": "CSAT Survey",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/knowledge",
+      "name": "Knowledge Base",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/memory",
+      "name": "Memory Browser",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/reports",
+      "name": "Reports",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getMemory (http://localhost:3002/src/lib/api.ts:206:12)\n    at load (http://localhost:3002/src/pages/MemoryBrowser.tsx:34:29)\n    at http://localhost:3002/src/pages/MemoryBrowser.tsx:46:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at invokePassiveEffectMountInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18322:19)\n    at invokeEffectsInDev (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19699:19)\n    at commitDoubleInvokeEffectsInDEV (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19684:15)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19501:13)\n    at flushPassiveEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19445:22)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/broadcast",
+      "name": "Broadcast",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/campaigns",
+      "name": "Campaigns",
+      "status": "PASS",
+      "interaction": "+ Buat Campaign",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/scheduled-messages",
+      "name": "Scheduled Messages",
+      "status": "PASS",
+      "interaction": "+ Buat Jadwal",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/inbox",
+      "name": "Unified Inbox",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/templates",
+      "name": "Templates",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/canned-responses",
+      "name": "Canned Responses",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/chatbot",
+      "name": "Chatbot Builder",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/moderation",
+      "name": "Moderation",
+      "status": "PASS",
+      "interaction": "Logs",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/groups",
+      "name": "Groups",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: TypeError: Failed to fetch\n    at request (http://localhost:3002/src/lib/api.ts:8:21)\n    at Object.getModerationLogs (http://localhost:3002/src/lib/api.ts:77:36)\n    at load (http://localhost:3002/src/pages/Moderation.tsx:38:33)\n    at http://localhost:3002/src/pages/Moderation.tsx:47:5\n    at commitHookEffectListMount (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:16913:34)\n    at commitPassiveMountOnFiber (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18154:19)\n    at commitPassiveMountEffects_complete (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18127:17)\n    at commitPassiveMountEffects_begin (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18117:15)\n    at commitPassiveMountEffects (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:18107:11)\n    at flushPassiveEffectsImpl (http://localhost:3002/node_modules/.vite/deps/chunk-ID62ME7M.js?v=65681718:19488:11)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/faq",
+      "name": "FAQ Manager",
+      "status": "PASS",
+      "interaction": "+ Tambah FAQ",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/crm",
+      "name": "CRM Contacts",
+      "status": "PASS",
+      "interaction": "+ Tambah Kontak",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/pipeline",
+      "name": "CRM Pipeline",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/payments",
+      "name": "Payments",
+      "status": "PASS",
+      "interaction": "+ Catat Pembayaran",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/tags",
+      "name": "Tags & Labels",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/agents",
+      "name": "Agents",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/flows",
+      "name": "Flows",
+      "status": "PASS",
+      "interaction": "New Flow",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/webhooks",
+      "name": "Webhooks",
+      "status": "PASS",
+      "interaction": "Add Webhook",
+      "errors": [],
+      "probableCause": ""
+    },
+    {
+      "path": "/webhook-logs",
+      "name": "Webhook Logs",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/audit",
+      "name": "Audit Logs",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: Warning: Each child in a list should have a unique \"key\" prop.%s%s See https://reactjs.org/link/warning-keys for more information.%s \n\nCheck the render method of `WebhookLogs`.  \n    at WebhookLogs (http://localhost:3002/src/pages/WebhookLogs.tsx:29:27)\n    at RenderedRoute (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:4129:5)\n    at Outlet (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:4535:26)\n    at div\n    at main\n    at div\n    at div\n    at Layout (http://localhost:3002/src/components/Layout.tsx:180:20)\n    at ProtectedRoute (http://localhost:3002/src/App.tsx:69:27)\n    at RenderedRoute (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:4129:5)\n    at Routes (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:4599:5)\n    at App\n    at ThemeProvider (http://localhost:3002/src/lib/ThemeProvider.tsx:21:33)\n    at Router (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:4542:15)\n    at BrowserRouter (http://localhost:3002/node_modules/.vite/deps/react-router-dom.js?v=65681718:5288:5)"
+      ],
+      "probableCause": "Backend/server error or data dependency"
+    },
+    {
+      "path": "/auto-moderation",
+      "name": "Auto-Moderation",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/notification-rules",
+      "name": "Notification Rules",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/api-keys",
+      "name": "API Keys",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page",
+        "console: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "probableCause": "Missing route/handler or unimplemented API"
+    },
+    {
+      "path": "/files",
+      "name": "File Manager",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/exports",
+      "name": "Export Center",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/bulk",
+      "name": "Bulk Operations",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/language",
+      "name": "Language",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    },
+    {
+      "path": "/settings",
+      "name": "Settings",
+      "status": "FAIL",
+      "interaction": "No explicitly safe button found in main content",
+      "errors": [
+        "No safe clickable primary interaction found on page"
+      ],
+      "probableCause": "Likely data/state dependency or frontend handler issue"
+    }
+  ]
+}

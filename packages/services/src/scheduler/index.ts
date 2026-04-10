@@ -7,6 +7,7 @@ export interface ScheduledTask {
   intervalMs: number;
   handler: () => Promise<void>;
   runOnStart?: boolean;
+  lockTtlMs?: number;
 }
 
 /**
@@ -36,14 +37,18 @@ export class Scheduler {
 
     const wrappedHandler = async () => {
       const lockKey = `scheduler:lock:${task.name}`;
+      const lockToken = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+      let acquired = false;
       try {
         // Acquire distributed lock (prevent multi-instance overlap)
-        const acquired = await this.redis.set(lockKey, '1', {
+        const lockTtlMs = task.lockTtlMs ?? Math.min(task.intervalMs, 60 * 60 * 1000);
+        const result = await this.redis.set(lockKey, lockToken, {
           NX: true,
-          PX: Math.min(task.intervalMs, 300000), // Lock TTL = min(interval, 5m)
+          PX: lockTtlMs,
         });
+        acquired = !!result;
 
-        if (!acquired) {
+        if (!result) {
           this.logger.debug('Task skipped (locked)', { name: task.name });
           return;
         }
@@ -54,7 +59,19 @@ export class Scheduler {
       } catch (error) {
         this.logger.error('Task failed', error as Error, { name: task.name });
       } finally {
-        try { await this.redis.del(lockKey); } catch { /* non-critical */ }
+        if (acquired) {
+          try {
+            await this.redis.eval(
+              'if redis.call("GET", KEYS[1]) == ARGV[1] then return redis.call("DEL", KEYS[1]) else return 0 end',
+              {
+                keys: [lockKey],
+                arguments: [lockToken],
+              },
+            );
+          } catch {
+            /* non-critical */
+          }
+        }
       }
     };
 

@@ -1,0 +1,733 @@
+{
+  "startedAt": "2026-04-10T08:05:47.328Z",
+  "finishedAt": "2026-04-10T08:06:03.382Z",
+  "baseUrl": "http://localhost:3004",
+  "credentials": {
+    "username": "admin"
+  },
+  "summary": {
+    "actionMode": "destructive-off",
+    "pagesTested": 48,
+    "pagesPassed": 48,
+    "pagesFailed": 0,
+    "buttonsTested": 10,
+    "buttonsPassed": 9,
+    "buttonsFailed": 1,
+    "buttonsSkipped": 44
+  },
+  "pageResults": [
+    {
+      "route": "/",
+      "label": "Dashboard",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/users",
+      "label": "Users",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/tickets",
+      "label": "Tickets",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/sla",
+      "label": "SLA Monitor",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/alerts",
+      "label": "Alerts",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/tasks",
+      "label": "Tasks",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/shift",
+      "label": "Shift Handover",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/checklist",
+      "label": "Checklists",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/reminders",
+      "label": "Reminders",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/maintenance",
+      "label": "Maintenance",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/uptime",
+      "label": "Uptime Monitor",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/network",
+      "label": "Network Health",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/server",
+      "label": "Server Status",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/backups",
+      "label": "Backups",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/incidents",
+      "label": "AI Insights",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/sentiment",
+      "label": "Sentiment Analysis",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/analytics",
+      "label": "Analytics",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/csat",
+      "label": "CSAT Survey",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/knowledge",
+      "label": "Knowledge Base",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/memory",
+      "label": "Memory Browser",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/reports",
+      "label": "Reports",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/broadcast",
+      "label": "Broadcast",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/campaigns",
+      "label": "Campaigns",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/scheduled-messages",
+      "label": "Scheduled Messages",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/inbox",
+      "label": "Unified Inbox",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/templates",
+      "label": "Templates",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/canned-responses",
+      "label": "Canned Responses",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/chatbot",
+      "label": "Chatbot Builder",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/moderation",
+      "label": "Moderation",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/groups",
+      "label": "Groups",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/faq",
+      "label": "FAQ Manager",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/crm",
+      "label": "CRM Contacts",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/pipeline",
+      "label": "CRM Pipeline",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/payments",
+      "label": "Payments",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/tags",
+      "label": "Tags & Labels",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/agents",
+      "label": "Agents",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/flows",
+      "label": "Flows",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/webhooks",
+      "label": "Webhooks",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/webhook-logs",
+      "label": "Webhook Logs",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/audit",
+      "label": "Audit Logs",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/auto-moderation",
+      "label": "Auto-Moderation",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/notification-rules",
+      "label": "Notification Rules",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/api-keys",
+      "label": "API Keys",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/files",
+      "label": "File Manager",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/exports",
+      "label": "Export Center",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/bulk",
+      "label": "Bulk Operations",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/language",
+      "label": "Language",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    },
+    {
+      "route": "/settings",
+      "label": "Settings",
+      "status": "passed",
+      "title": "AudiraBot Dashboard",
+      "apiErrors": [],
+      "consoleErrors": []
+    }
+  ],
+  "buttonResults": [
+    {
+      "route": "/",
+      "pageLabel": "Dashboard",
+      "label": "Refresh",
+      "status": "passed"
+    },
+    {
+      "route": "/users",
+      "pageLabel": "Users",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/tickets",
+      "pageLabel": "Tickets",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/sla",
+      "pageLabel": "SLA Monitor",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/alerts",
+      "pageLabel": "Alerts",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/tasks",
+      "pageLabel": "Tasks",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/shift",
+      "pageLabel": "Shift Handover",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/checklist",
+      "pageLabel": "Checklists",
+      "label": "Templates",
+      "status": "failed",
+      "error": "locator.click: Timeout 7000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Templates\")').first()\u001b[22m\n\u001b[2m    - locator resolved to <button class=\"px-3 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white\">Templates</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <p class=\"text-xs text-gray-700 font-medium\">Jalankan ulang: pnpm dev:telegram | cek port 4010…</p> from <div class=\"fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <p class=\"text-xs text-gray-700 font-medium\">Jalankan ulang: pnpm dev:telegram | cek port 4010…</p> from <div class=\"fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    13 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <p class=\"text-xs text-gray-700 font-medium\">Jalankan ulang: pnpm dev:telegram | cek port 4010…</p> from <div class=\"fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "route": "/checklist",
+      "pageLabel": "Checklists",
+      "label": "Active Items",
+      "status": "passed"
+    },
+    {
+      "route": "/reminders",
+      "pageLabel": "Reminders",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "Filter",
+      "status": "passed"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "Refresh",
+      "status": "passed"
+    },
+    {
+      "route": "/maintenance",
+      "pageLabel": "Maintenance",
+      "label": "+Nonaktif",
+      "status": "passed"
+    },
+    {
+      "route": "/uptime",
+      "pageLabel": "Uptime Monitor",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/network",
+      "pageLabel": "Network Health",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/server",
+      "pageLabel": "Server Status",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/backups",
+      "pageLabel": "Backups",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/incidents",
+      "pageLabel": "AI Insights",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/sentiment",
+      "pageLabel": "Sentiment Analysis",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/analytics",
+      "pageLabel": "Analytics",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/csat",
+      "pageLabel": "CSAT Survey",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/knowledge",
+      "pageLabel": "Knowledge Base",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/memory",
+      "pageLabel": "Memory Browser",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/reports",
+      "pageLabel": "Reports",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/broadcast",
+      "pageLabel": "Broadcast",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "DRAFT",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "SCHEDULED",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "RUNNING",
+      "status": "passed"
+    },
+    {
+      "route": "/campaigns",
+      "pageLabel": "Campaigns",
+      "label": "COMPLETED",
+      "status": "passed"
+    },
+    {
+      "route": "/scheduled-messages",
+      "pageLabel": "Scheduled Messages",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/inbox",
+      "pageLabel": "Unified Inbox",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/templates",
+      "pageLabel": "Templates",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/canned-responses",
+      "pageLabel": "Canned Responses",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/chatbot",
+      "pageLabel": "Chatbot Builder",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/moderation",
+      "pageLabel": "Moderation",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/groups",
+      "pageLabel": "Groups",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/faq",
+      "pageLabel": "FAQ Manager",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/crm",
+      "pageLabel": "CRM Contacts",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/pipeline",
+      "pageLabel": "CRM Pipeline",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/payments",
+      "pageLabel": "Payments",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/tags",
+      "pageLabel": "Tags & Labels",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/agents",
+      "pageLabel": "Agents",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/flows",
+      "pageLabel": "Flows",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/webhooks",
+      "pageLabel": "Webhooks",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/webhook-logs",
+      "pageLabel": "Webhook Logs",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/audit",
+      "pageLabel": "Audit Logs",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/auto-moderation",
+      "pageLabel": "Auto-Moderation",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/notification-rules",
+      "pageLabel": "Notification Rules",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/api-keys",
+      "pageLabel": "API Keys",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/files",
+      "pageLabel": "File Manager",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/exports",
+      "pageLabel": "Export Center",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/bulk",
+      "pageLabel": "Bulk Operations",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/language",
+      "pageLabel": "Language",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    },
+    {
+      "route": "/settings",
+      "pageLabel": "Settings",
+      "label": "(no whitelisted action in destructive-off)",
+      "status": "skipped"
+    }
+  ],
+  "rawNetworkFailures": [],
+  "rawConsoleErrors": []
+}

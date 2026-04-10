@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Logger, PortResolver } from '@pjtaudirabot/core';
 import { createApp } from './app';
-import { getServerConfig, getPortConfig, getPortRegistry } from '@pjtaudirabot/config';
+import { getServerConfig, getPortConfig } from '@pjtaudirabot/config';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,22 +15,26 @@ async function main() {
   try {
     const serverConfig = getServerConfig();
     const portConfig = getPortConfig();
-    const ports = getPortRegistry();
-
-    // Reserve the API port in the global registry
-    ports.reserve('api', portConfig.api);
-
-    // Validate port is actually free before binding
-    await ports.validateAll(serverConfig.host);
+    const portLogger = new Logger('api-port-resolver');
+    const portResolver = new PortResolver({
+      serviceName: 'api-server',
+      preferredPort: portConfig.api,
+      maxRetries: 20,
+      logger: portLogger,
+    });
 
     const { app } = await createApp();
 
-    // Use the dedicated API port (not the generic SERVER_PORT)
-    await app.listen({ host: serverConfig.host, port: portConfig.api });
+    // Use dedicated API port with atomic fallback binding to avoid race conditions.
+    const { port: effectiveApiPort } = await portResolver.bindWithFallback(
+      async (port) => {
+        await app.listen({ host: serverConfig.host, port });
+      },
+    );
 
     console.log(`
       🚀 ${serverConfig.appName} v${serverConfig.appVersion} started
-      📍 http://${serverConfig.host}:${portConfig.api}
+      📍 http://${serverConfig.host}:${effectiveApiPort}
       🌍 Environment: ${serverConfig.env}
     `);
   } catch (err) {

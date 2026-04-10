@@ -2,6 +2,7 @@
   "name": "@pjtaudirabot/database",
   "version": "1.0.0",
   "description": "Database layer with Prisma ORM",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

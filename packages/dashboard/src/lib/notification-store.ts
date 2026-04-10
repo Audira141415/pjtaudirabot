@@ -58,13 +58,22 @@ export const notificationStore = {
   },
 };
 
-// Solution database per component
-const SOLUTION_MAP: Record<string, string> = {
+// Solution database per component — when offline (process not running, token/config already set)
+const OFFLINE_SOLUTION_MAP: Record<string, string> = {
+  'PostgreSQL Database': 'Jalankan AUDIRA_START.bat atau: docker compose -f docker/docker-compose.yml up -d db',
+  'Redis Cache': 'Jalankan AUDIRA_START.bat atau: docker compose -f docker/docker-compose.yml up -d redis',
+  'API Server': 'Jalankan ulang: pnpm dev:api | cek port 4000 | periksa logs di terminal API',
+  'WHATSAPP Bot': 'Jalankan ulang: pnpm dev:whatsapp | cek port 4020 | scan ulang QR code jika perlu',
+  'TELEGRAM Bot': 'Jalankan ulang: pnpm dev:telegram | cek port 4010 | token & config sudah terkonfigurasi',
+};
+
+// Solution database per component — when error (token/config not configured)
+const ERROR_SOLUTION_MAP: Record<string, string> = {
   'PostgreSQL Database': 'Cek apakah Docker PostgreSQL berjalan: docker ps | cek port 5433 | jalankan AUDIRA_START.bat',
   'Redis Cache': 'Cek apakah Docker Redis berjalan: docker ps | cek port 6379 | jalankan AUDIRA_START.bat',
   'API Server': 'Jalankan ulang: pnpm dev:api | cek port 4000 | periksa logs di terminal API',
   'WHATSAPP Bot': 'Cek koneksi WhatsApp: scan ulang QR code | restart bot: pnpm dev:whatsapp | cek session di data/whatsapp-sessions/',
-  'TELEGRAM Bot': 'Cek token Telegram di .env (TELEGRAM_BOT_TOKEN) | restart bot: pnpm dev:telegram | pastikan token valid & bot tidak terblokir',
+  'TELEGRAM Bot': 'Set TELEGRAM_BOT_TOKEN di file .env | pastikan token valid dari @BotFather | restart: pnpm dev:telegram',
 };
 
 const DEGRADED_SOLUTION_MAP: Record<string, string> = {
@@ -74,8 +83,11 @@ const DEGRADED_SOLUTION_MAP: Record<string, string> = {
 };
 
 export function getSolution(componentName: string, status: string): string {
-  if (status === 'offline' || status === 'error') {
-    return SOLUTION_MAP[componentName] ?? `Restart komponen ${componentName} atau cek logs untuk detail error`;
+  if (status === 'error') {
+    return ERROR_SOLUTION_MAP[componentName] ?? `Konfigurasi ${componentName} belum lengkap — cek .env dan logs`;
+  }
+  if (status === 'offline') {
+    return OFFLINE_SOLUTION_MAP[componentName] ?? `Restart komponen ${componentName} atau cek logs untuk detail error`;
   }
   if (status === 'degraded') {
     return DEGRADED_SOLUTION_MAP[componentName] ?? `Periksa performa ${componentName}, mungkin perlu restart`;

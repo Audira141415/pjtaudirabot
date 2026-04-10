@@ -58,6 +58,63 @@ export interface TicketOverviewData {
   recentTickets: RecentTicketItem[];
 }
 
+export interface MaintenanceEvidenceFile {
+  id: string;
+  originalName: string;
+  url?: string | null;
+  mimeType: string;
+  createdAt: string;
+  metadata?: {
+    notes?: string;
+  };
+}
+
+export interface MaintenanceHistoryEvent {
+  id: string;
+  ticketId: string;
+  ticketNumber: string;
+  ticketStatus: string;
+  action: string;
+  note?: string | null;
+  field?: string | null;
+  oldValue?: string | null;
+  newValue?: string | null;
+  createdAt: string;
+}
+
+export interface MaintenanceScheduleItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  customer?: string | null;
+  location?: string | null;
+  ao?: string | null;
+  sid?: string | null;
+  service?: string | null;
+  hostnameSwitch?: string | null;
+  intervalMonths: number;
+  anchorMonth: number;
+  anchorDay: number;
+  reminderEveryMonths: number;
+  notifyDaysBefore: number;
+  nextDueDate: string;
+  lastCreatedAt?: string | null;
+  lastTicketId?: string | null;
+  lastMaintainedAt?: string | null;
+  lastMaintenanceTicketId?: string | null;
+  lastCompletionNote?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  evidenceFiles: MaintenanceEvidenceFile[];
+  openTicket?: {
+    id: string;
+    ticketNumber: string;
+    status: string;
+    createdAt: string;
+  } | null;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem('admin_token');
   const headers: Record<string, string> = {
@@ -68,6 +125,28 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: { ...headers, ...options?.headers },
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem('admin_token');
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(body.error ?? `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}
+
+async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
+  const token = localStorage.getItem('admin_token');
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    body,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
   });
 
   if (res.status === 401) {
@@ -176,6 +255,16 @@ export const api = {
   getTicket: (id: string) => request<{ data: Record<string, unknown> }>(`/tickets/${id}`),
   updateTicket: (id: string, data: Record<string, unknown>) =>
     request<{ data: Record<string, unknown> }>(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  bulkResolveTickets: (payload?: {
+    filter?: { status?: string; priority?: string; customer?: string; search?: string };
+    rootCause?: string;
+    solution?: string;
+    dryRun?: boolean;
+  }) =>
+    request<{ data: { resolvedCount: number; candidateCount?: number; jobId?: string; filter: { status?: string; priority?: string; customer?: string; search?: string }; dryRun?: boolean } }>('/tickets/bulk-resolve', {
+      method: 'POST',
+      body: JSON.stringify(payload ?? {}),
+    }),
 
   // ─── SLA Dashboard ───────────────────────────────────────
   getSLADashboard: () => request<{ data: Record<string, unknown> }>('/sla/dashboard'),
@@ -484,6 +573,27 @@ export const api = {
     request<{ data: Record<string, unknown> }>(`/deals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteDeal: (id: string) =>
     request<{ success: boolean }>(`/deals/${id}`, { method: 'DELETE' }),
+
+  // ─── Preventive Maintenance ────────────────────────────
+  getMaintenanceSchedules: (params?: { active?: boolean; search?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.active !== undefined) query.set('active', String(params.active));
+    if (params?.search) query.set('search', params.search);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return request<{ data: MaintenanceScheduleItem[] }>(`/maintenance${suffix}`);
+  },
+  getMaintenanceSchedule: (id: string) =>
+    request<{ data: MaintenanceScheduleItem }>(`/maintenance/${id}`),
+  createMaintenanceSchedule: (data: Record<string, unknown>) =>
+    request<{ data: MaintenanceScheduleItem }>('/maintenance', { method: 'POST', body: JSON.stringify(data) }),
+  updateMaintenanceSchedule: (id: string, data: Record<string, unknown>) =>
+    request<{ data: MaintenanceScheduleItem }>(`/maintenance/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  completeMaintenanceSchedule: (id: string, data: Record<string, unknown>) =>
+    request<{ data: MaintenanceScheduleItem }>(`/maintenance/${id}/complete`, { method: 'POST', body: JSON.stringify(data) }),
+  uploadMaintenanceEvidence: (id: string, formData: FormData) =>
+    uploadRequest<{ data: MaintenanceEvidenceFile }>(`/maintenance/${id}/evidence`, formData),
+  getMaintenanceHistory: (id: string) =>
+    request<{ data: MaintenanceHistoryEvent[] }>(`/maintenance/${id}/history`),
 
   // ─── File Manager ───────────────────────────────────────
   getFiles: (category?: string, page = 1) => {

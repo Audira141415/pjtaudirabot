@@ -91,6 +91,7 @@ import { TicketService } from './ticket';
 import { SLAService } from './sla';
 import { UptimeMonitorService } from './uptime-monitor';
 import { ShiftHandoverService } from './shift-handover';
+import { MaintenanceScheduleService } from './maintenance-schedule';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -132,6 +133,7 @@ export interface BotServices {
   slaService: SLAService;
   uptimeMonitorService: UptimeMonitorService;
   shiftHandoverService: ShiftHandoverService;
+  maintenanceScheduleService: MaintenanceScheduleService;
   scheduler: Scheduler;
 }
 
@@ -291,6 +293,9 @@ export async function createBotServices(
   const uptimeMonitorService = new UptimeMonitorService(db, redis, logger);
   const shiftHandoverService = new ShiftHandoverService(db, redis, logger);
 
+  // Maintenance Schedule (Preventive Maintenance)
+  const maintenanceScheduleService = new MaintenanceScheduleService(db, redis, logger);
+
   // Scheduler
   const scheduler = new Scheduler(db, redis, logger);
 
@@ -341,7 +346,7 @@ export async function createBotServices(
     taskManager, checklistService, documentationService, devopsService,
     knowledgeBase, reportingService, reminderService, intentDetector,
     aiExtractor, chatPipeline, ticketService, slaService,
-    uptimeMonitorService, shiftHandoverService, scheduler,
+    uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, scheduler,
   };
 }
 
@@ -374,7 +379,7 @@ export function registerTicketCommands(
 // ─── Maintenance Scheduler ────────────────────────────────────
 
 export function setupMaintenanceScheduler(services: BotServices, infra: BotInfrastructure): void {
-  const { scheduler, analytics, flowEngine } = services;
+  const { scheduler, analytics, flowEngine, maintenanceScheduleService, ticketService, slaService, sheetsService } = services;
   const { db, redis, logger } = infra;
 
   const tasks = createMaintenanceTasks({
@@ -388,4 +393,34 @@ export function setupMaintenanceScheduler(services: BotServices, infra: BotInfra
   for (const task of tasks) {
     scheduler.register(task);
   }
+
+  // Daily preventive maintenance check (every 24 hours)
+  scheduler.register({
+    name: 'pm-schedule-check',
+    intervalMs: 24 * 60 * 60 * 1000,
+    lockTtlMs: 60 * 60 * 1000,
+    runOnStart: true,
+    handler: async () => {
+      const { dueTickets, reminders, quarterlyReminders, syncedCompleted } = await maintenanceScheduleService.checkDue(
+        async (opts) => {
+          const ticket = await ticketService.create(opts);
+          if (ticket && slaService) {
+            await slaService.startTracking(ticket.id, opts.priority as any, opts.category as any, opts.problem).catch(() => {});
+          }
+          if (ticket && sheetsService?.isAvailable()) {
+            await sheetsService.syncTicket(ticket as any).catch(() => {});
+          }
+          return { ticketNumber: ticket.ticketNumber, id: ticket.id };
+        },
+      );
+
+      if (syncedCompleted > 0) {
+        logger.info(`Maintenance completion synced: ${syncedCompleted}`);
+      }
+
+      for (const msg of [...dueTickets, ...reminders, ...quarterlyReminders]) {
+        logger.info(msg);
+      }
+    },
+  });
 }

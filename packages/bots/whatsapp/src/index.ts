@@ -1,8 +1,15 @@
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import dotenv from 'dotenv';
 import path from 'node:path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 import http from 'node:http';
+import { PortResolver } from '@pjtaudirabot/core';
 import {
   initInfrastructure,
   createBotServices,
@@ -48,11 +55,7 @@ import { WhatsAppMessageHandler } from './message-handler';
 
 async function main(): Promise<void> {
   const infra = await initInfrastructure('whatsapp-bot');
-  const { logger, config, botsConfig, portConfig, ports, db, redis } = infra;
-
-  // Reserve preferred health endpoint port (fallback binding handles collisions at runtime)
-  ports.reserve('whatsapp', portConfig.whatsapp);
-  logger.info(`WhatsApp preferred health port configured: ${portConfig.whatsapp}`);
+  const { logger, config, botsConfig, portConfig, db, redis } = infra;
 
   if (!botsConfig.whatsapp.enabled) {
     logger.warn('WhatsApp bot is disabled via config');
@@ -557,57 +560,27 @@ async function main(): Promise<void> {
 
   // ── Health-check HTTP server ──
   const healthServer = http.createServer((_req, res) => {
+    const waState = connection.connectionState;
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       service: 'whatsapp-bot',
-      status: 'healthy',
+      status: waState === 'open' ? 'healthy' : 'degraded',
+      waConnectionState: waState,
       port: boundHealthPort,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
     }));
   });
 
-  const bindHealthServer = async () => {
-    const desiredPort = portConfig.whatsapp;
-    const maxPort = desiredPort + 20;
-
-    for (let port = desiredPort; port <= maxPort; port += 1) {
-      const listened = await new Promise<boolean>((resolve) => {
-        const onError = (err: NodeJS.ErrnoException) => {
-          healthServer.off('listening', onListening);
-          if (err.code === 'EADDRINUSE') {
-            resolve(false);
-            return;
-          }
-          logger.error(`Health server failed on :${port}`, err);
-          resolve(false);
-        };
-
-        const onListening = () => {
-          healthServer.off('error', onError);
-          resolve(true);
-        };
-
-        healthServer.once('error', onError);
-        healthServer.once('listening', onListening);
-        healthServer.listen(port);
-      });
-
-      if (listened) {
-        boundHealthPort = port;
-        if (port !== desiredPort) {
-          logger.info(`WhatsApp health endpoint moved to fallback port :${port}/ (default :${desiredPort} in use)`);
-        } else {
-          logger.info(`WhatsApp health endpoint on :${port}/`);
-        }
-        return;
-      }
-    }
-
-    logger.error(`No available health endpoint port in range ${desiredPort}-${maxPort}; health endpoint disabled`);
-  };
-
-  await bindHealthServer();
+  const healthPortResolver = new PortResolver({
+    serviceName: 'whatsapp-health-endpoint',
+    preferredPort: portConfig.whatsapp,
+    maxRetries: 20,
+    logger,
+  });
+  const { port: resolvedHealthPort } = await healthPortResolver.bindServer(healthServer);
+  boundHealthPort = resolvedHealthPort;
+  logger.info(`WhatsApp health endpoint on :${resolvedHealthPort}/`);
 
   logger.info('WhatsApp bot started — scan QR code to authenticate');
 

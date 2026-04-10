@@ -155,8 +155,9 @@ export class DataExtractionService {
       subnet: get([/(?:subnet|mask)\s*[:\-=]\s*(.+)/i]),
       mode: get([/(?:mode)\s*[:\-=]\s*(.+)/i]),
       problem: get([
-        /(?:laporan\s*(?:gangguan)?|problem|masalah|keluhan|issue|gangguan)\s*[:\-=]\s*(.+)/i,
+        /(?:laporan\s*(?:gangguan\/request|gangguan|request)?|problem|masalah(?:\s+yang\s+terjadi)?|keluhan|issue|gangguan)\s*[:\-=]\s*(.+)/i,
         /(?:request|permintaan)\s*[:\-=]\s*(.+)/i,
+        /a\.\s*(?:problem|masalah)(?:[^\/]*\/[^:]*)\s*[:\-=]\s*([^\.\n]+)/i,
       ]),
       notes: get([/(?:note|notes|catatan|keterangan)\s*[:\-=]\s*(.+)/i]),
     };
