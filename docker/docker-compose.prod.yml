@@ -1,0 +1,86 @@
+# =============================================================================
+# docker-compose.prod.yml — Production overrides for audira@bot-server
+#
+# Usage (always combine with base file):
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.prod.yml up -d
+#
+# This file only overrides what differs from docker-compose.yml:
+#   - restart: always  (survive reboots)
+#   - resource limits  (prevent OOM kill taking down the whole VM)
+#   - google-credentials bind-mount  (Linux path)
+#   - db port NOT exposed to host  (security: db only reachable inside compose network)
+#   - redis port NOT exposed to host
+# =============================================================================
+
+version: '3.9'
+
+services:
+  db:
+    restart: always
+    ports: []   # remove host-binding — DB only reachable inside pjtaudi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  redis:
+    restart: always
+    ports: []   # remove host-binding — Redis only reachable inside pjtaudi-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
+
+  api:
+    restart: always
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials.json
+    volumes:
+      - /opt/pjtaudirabot/logs:/app/logs
+      - /opt/pjtaudirabot/google-credentials.json:/opt/google-credentials.json:ro
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 768M
+        reservations:
+          memory: 256M
+
+  whatsapp:
+    restart: always
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+    volumes:
+      - whatsapp_sessions:/data/whatsapp-sessions
+      - /opt/pjtaudirabot/logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          memory: 128M
+
+  telegram:
+    restart: always
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: info
+    volumes:
+      - /opt/pjtaudirabot/logs:/app/logs
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
