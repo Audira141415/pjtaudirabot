@@ -9,7 +9,8 @@ import { resolveLocation } from '../data/neucentrix-locations';
 
 export interface ExtractedNOCData {
   customer?: string;
-  location?: string;
+  location?: string;  // Lokasi (physical location: DC, kota, site)
+  alokasi?: string;   // Alokasi (infrastructure allocation: hostname/switch + port)
   ao?: string;
   sid?: string;
   service?: string;
@@ -84,6 +85,27 @@ export class DataExtractionService {
     return cleaned || undefined;
   }
 
+  /** Normalize port/interface notation: ethernet8 → port 8, GE0/0 remains as-is */
+  private normalizePort(value?: string): string | undefined {
+    if (!value) return undefined;
+    
+    let normalized = value.trim();
+    
+    // Convert ethernet<N> to port <N>
+    normalized = normalized.replace(/^ethernet(\d+)$/i, 'port $1');
+    
+    return normalized || undefined;
+  }
+
+  /** Build alokasi (infrastructure allocation) from hostname/switch + port */
+  private buildAlokasi(hostname?: string, port?: string): string | undefined {
+    const parts: string[] = [];
+    if (hostname) parts.push(hostname);
+    if (port) parts.push(port);
+    
+    return parts.length > 0 ? parts.join(' / ') : undefined;
+  }
+
   /** Extract structured data from a raw NOC message */
   extract(message: string): ExtractionResult {
     const data = this.extractFields(message);
@@ -116,6 +138,12 @@ export class DataExtractionService {
       /\b([A-Z]{2,3}-[A-Z]{3,6}-\w+)\b/,
     ]));
 
+    const rawPort = get([
+      /(?:port|interface)\s*[:\-=]\s*(.+)/i,
+      /\b((?:GE|FE|TE|XE|ET)\d+\/\d+(?:\/\d+)?)\b/i,
+    ]);
+    const normalizedPort = this.normalizePort(rawPort);
+
     return {
       location: (() => {
         const raw = get([
@@ -143,10 +171,8 @@ export class DataExtractionService {
         /vlan\s+(\d{1,4})/i,
       ]),
       hostnameSwitch,
-      port: get([
-        /(?:port|interface)\s*[:\-=]\s*(.+)/i,
-        /\b((?:GE|FE|TE|XE|ET)\d+\/\d+(?:\/\d+)?)\b/i,
-      ]),
+      port: normalizedPort,
+      alokasi: this.buildAlokasi(hostnameSwitch, normalizedPort),
       ipAddress: get([
         /(?:ip\s*(?:address)?)\s*[:\-=]\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d{1,2})?)/i,
         /(?:ip\s*p2p)\s*[:\-=]\s*(.+)/i,

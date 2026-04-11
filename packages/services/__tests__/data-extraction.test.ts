@@ -115,4 +115,59 @@ describe('DataExtractionService hostname parsing', () => {
     expect(result.data.hostnameSwitch).toBeUndefined();
     expect(result.data.problem).toBe('Link down');
   });
+
+  it('normalizes ethernet interface notation: ethernet8 → port 8', () => {
+    const result = service.extract([
+      'Customer: PT Example',
+      'Hostname: SW_NEUCENTRIX_JKT_01',
+      'Port: ethernet8',
+      'Problem: Link down',
+    ].join('\n'));
+
+    expect(result.data.port).toBe('port 8');
+  });
+
+  it('builds alokasi from hostname and port', () => {
+    const result = service.extract([
+      'Customer: PT Example',
+      'Hostname: SW_NEUCENTRIX_JKT_01',
+      'Port: GE0/0',
+      'Problem: Link down',
+    ].join('\n'));
+
+    expect(result.data.alokasi).toBe('SW_NEUCENTRIX_JKT_01 / GE0/0');
+  });
+
+  it('alokasi only includes defined fields (hostname only)', () => {
+    const result = service.extract([
+      'Customer: PT Example',
+      'Hostname: SW_NEUCENTRIX_JKT_01',
+      'Problem: Link down',
+    ].join('\n'));
+
+    expect(result.data.alokasi).toBe('SW_NEUCENTRIX_JKT_01');
+  });
+
+  it('alokasi only includes defined fields (port only)', () => {
+    const result = service.extract([
+      'Customer: PT Example',
+      'Port: ethernet8',
+      'Problem: Link down',
+    ].join('\n'));
+
+    expect(result.data.alokasi).toBe('port 8');
+  });
+
+  it('separates lokasi from alokasi correctly', () => {
+    const result = service.extract([
+      'Customer: PT Example',
+      'Lokasi: NEUCENTRIX JAKARTA',
+      'Hostname: SW_NEUCENTRIX_JKT_01',
+      'Port: ethernet8',
+      'Problem: Link down',
+    ].join('\n'));
+
+    expect(result.data.location).toBeDefined();
+    expect(result.data.alokasi).toBe('SW_NEUCENTRIX_JKT_01 / port 8');
+  });
 });

@@ -55,6 +55,30 @@ export class TelegramNotifier {
     }
   }
 
+  /** Parse technical details string and extract lokasi + alokasi for display */
+  private parseAndFormatTechnicalDetails(details?: string): { lokasi?: string; alokasi?: string; other: string[] } {
+    const result: { lokasi?: string; alokasi?: string; other: string[] } = { other: [] };
+    if (!details) return result;
+
+    const lines = details.split('\n');
+    for (const line of lines) {
+      const match = line.match(/•\s+([^:]+):\s*(.+)/);
+      if (match) {
+        const [, key, value] = match;
+        if (key.toLowerCase() === 'location' || key.toLowerCase() === 'lokasi') {
+          result.lokasi = value.trim();
+        } else if (key.toLowerCase() === 'alokasi') {
+          result.alokasi = value.trim();
+        } else {
+          result.other.push(line);
+        }
+      } else {
+        result.other.push(line);
+      }
+    }
+    return result;
+  }
+
   /** Notify NOC Telegram group when a new ticket is created (from any source) */
   async sendNewTicket(params: NewTicketBroadcast): Promise<void> {
     if (!this.isConfigured()) return;
@@ -66,7 +90,8 @@ export class TelegramNotifier {
     const problem = params.problem.length > 300
       ? `${params.problem.slice(0, 300)}…`
       : params.problem;
-    const technicalDetails = params.technicalDetails?.trim();
+    
+    const parsed = this.parseAndFormatTechnicalDetails(params.technicalDetails?.trim());
 
     const text = [
       `${icon} <b>TIKET BARU — ${this.esc(params.priority)}</b>`,
@@ -79,9 +104,12 @@ export class TelegramNotifier {
       ``,
       `<i>Problem:</i>`,
       this.esc(problem),
-      technicalDetails ? '' : null,
-      technicalDetails ? '<i>Detail Teknis:</i>' : null,
-      technicalDetails ? this.esc(technicalDetails) : null,
+      parsed.lokasi ? `` : null,
+      parsed.lokasi ? `📍 <b>Lokasi:</b> ${this.esc(parsed.lokasi)}` : null,
+      parsed.alokasi ? `🔧 <b>Alokasi:</b> ${this.esc(parsed.alokasi)}` : null,
+      parsed.other.length > 0 ? '' : null,
+      parsed.other.length > 0 ? '<i>Detail Teknis Lainnya:</i>' : null,
+      parsed.other.length > 0 ? this.esc(parsed.other.join('\n')) : null,
       ``,
       `────────────────`,
       `👉 Ambil tiket:`,
