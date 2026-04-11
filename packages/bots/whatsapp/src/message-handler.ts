@@ -139,6 +139,33 @@ export class WhatsAppMessageHandler {
     return quotedMessage;
   }
 
+  private async sendAutoExtractAck(
+    jid: string,
+    senderJid: string,
+    ticketNumber: string,
+    priority: string,
+    category: string,
+  ): Promise<void> {
+    const ackMessage = [
+      `✅ *Ticket Created*`,
+      `📋 ${ticketNumber}`,
+      `🎯 Priority: ${priority}`,
+      `📂 Category: ${category}`,
+      `📨 Detail teknis dikirim ke Telegram NOC.`,
+    ].join('\n');
+
+    if (jid.endsWith('@g.us') && senderJid !== jid) {
+      try {
+        await this.connection.sendMessage(senderJid, ackMessage);
+      } catch (error) {
+        this.logger.error('Auto-extract DM acknowledgement failed', error as Error);
+      }
+      return;
+    }
+
+    await this.sendReply(jid, senderJid, ackMessage);
+  }
+
   async handle(msg: proto.IWebMessageInfo): Promise<void> {
     const startTime = Date.now();
     const text = this.extractText(msg);
@@ -259,6 +286,11 @@ export class WhatsAppMessageHandler {
               extraction.data.problem ?? text.slice(0, 100),
             );
 
+            const extractedFields = Object.entries(extraction.data)
+              .filter(([, v]) => v)
+              .map(([k, v]) => `  • ${k}: ${v}`)
+              .join('\n');
+
             // Broadcast new ticket to admin groups (non-blocking)
             this.onTicketCreated?.({
               id: ticket.id,
@@ -269,6 +301,7 @@ export class WhatsAppMessageHandler {
               problem: extraction.data.problem ?? text.slice(0, 200),
               createdByName: user.displayName ?? user.phoneNumber ?? 'Unknown',
               groupId: jid.includes('@g.us') ? jid : null,
+              technicalDetails: extractedFields,
             }).catch(() => {});
 
             await this.dataExtractionService.save(extraction.data, text, {
@@ -308,21 +341,13 @@ export class WhatsAppMessageHandler {
               }).catch(() => {});
             }
 
-            const fields = Object.entries(extraction.data)
-              .filter(([, v]) => v)
-              .map(([k, v]) => `  • ${k}: ${v}`)
-              .join('\n');
-
-            await this.sendReply(jid, senderJid, [
-              `🤖 *Auto-Extract — Ticket Created*`,
-              ``,
-              `📋 *${ticket.ticketNumber}*`,
-              `🎯 Priority: ${priority} (score: ${extraction.priorityScore}/10)`,
-              `📂 Category: ${extraction.category}`,
-              `📊 Fields extracted: ${extraction.fieldCount}`,
-              ``,
-              fields,
-            ].join('\n'), msg);
+            await this.sendAutoExtractAck(
+              jid,
+              senderJid,
+              ticket.ticketNumber,
+              `${priority} (score: ${extraction.priorityScore}/10)`,
+              extraction.category,
+            );
 
             this.eventBus?.emit('noc.auto_extracted', {
               userId: user.id, platform: 'whatsapp', ticketNumber: ticket.ticketNumber,

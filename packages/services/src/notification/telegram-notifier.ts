@@ -66,6 +66,7 @@ export class TelegramNotifier {
     const problem = params.problem.length > 300
       ? `${params.problem.slice(0, 300)}…`
       : params.problem;
+    const technicalDetails = params.technicalDetails?.trim();
 
     const text = [
       `${icon} <b>TIKET BARU — ${this.esc(params.priority)}</b>`,
@@ -78,6 +79,9 @@ export class TelegramNotifier {
       ``,
       `<i>Problem:</i>`,
       this.esc(problem),
+      technicalDetails ? '' : null,
+      technicalDetails ? '<i>Detail Teknis:</i>' : null,
+      technicalDetails ? this.esc(technicalDetails) : null,
       ``,
       `────────────────`,
       `👉 Ambil tiket:`,

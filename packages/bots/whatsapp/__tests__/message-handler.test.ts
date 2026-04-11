@@ -142,4 +142,75 @@ describe('WhatsAppMessageHandler reply routing', () => {
       expect.stringContaining('Gagal kirim ke grup'),
     );
   });
+
+  it('sends auto-extract acknowledgement to DM and forwards technical details to broadcast', async () => {
+    process.env.WHATSAPP_FORCE_DM_GROUP_JIDS = '';
+    const onTicketCreated = jest.fn().mockResolvedValue(undefined);
+    const { deps, connection } = makeDeps({
+      nocAutoExtract: true,
+      onTicketCreated,
+      dataExtractionService: {
+        extract: jest.fn().mockReturnValue({
+          isValid: true,
+          fieldCount: 7,
+          priorityScore: 5,
+          category: 'REQUEST',
+          data: {
+            location: 'neuCentrIX Palembang',
+            customer: 'JARINGANKU-SARANA-NUSANTARA',
+            sid: '2090123956',
+            service: 'metro',
+            vlanId: '2806',
+            hostnameSwitch: 'SW_NEUCENTRIX-TLKA_ARISTA(R1',
+            problem: 'minta log, redaman, mac address',
+          },
+        }),
+        checkDuplicate: jest.fn().mockResolvedValue({ isDuplicate: false, similarity: 0 }),
+        save: jest.fn().mockResolvedValue(undefined),
+      },
+      ticketService: {
+        create: jest.fn().mockResolvedValue({
+          id: 't1',
+          ticketNumber: 'PLM-20260411-0001',
+          title: 'NOC Auto-Extract',
+        }),
+      },
+      slaService: {
+        startTracking: jest.fn().mockResolvedValue(undefined),
+      },
+      chatPipeline: undefined,
+      intentDetector: undefined,
+    });
+    const handler = new WhatsAppMessageHandler(deps);
+
+    const msg = {
+      key: {
+        remoteJid: '120363402324316651@g.us',
+        participant: '628123@s.whatsapp.net',
+        id: 'm4',
+      },
+      pushName: 'Tester',
+      message: {
+        conversation: 'buat tiket noc dari teks ini',
+      },
+    };
+
+    await handler.handle(msg);
+
+    expect(connection.sendMessage).toHaveBeenCalledTimes(1);
+    expect(connection.sendMessage).toHaveBeenCalledWith(
+      '628123@s.whatsapp.net',
+      expect.stringContaining('Detail teknis dikirim ke Telegram NOC'),
+    );
+    expect(connection.sendMessage).not.toHaveBeenCalledWith(
+      '120363402324316651@g.us',
+      expect.anything(),
+      expect.anything(),
+    );
+
+    expect(onTicketCreated).toHaveBeenCalledWith(expect.objectContaining({
+      ticketNumber: 'PLM-20260411-0001',
+      technicalDetails: expect.stringContaining('location: neuCentrIX Palembang'),
+    }));
+  });
 });

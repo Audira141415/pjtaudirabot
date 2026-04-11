@@ -14,6 +14,7 @@ export interface NewTicketBroadcast {
   problem: string;
   createdByName: string;
   groupId?: string | null;
+  technicalDetails?: string;
 }
 
 export interface TicketPickedBroadcast {
