@@ -128,7 +128,7 @@ export class WhatsAppConnection {
     });
   }
 
-  async sendMessage(jid: string, text: string): Promise<void> {
+  async sendMessage(jid: string, text: string): Promise<boolean> {
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -137,9 +137,14 @@ export class WhatsAppConnection {
         }
 
         await this.socket.sendMessage(jid, { text });
-        return;
+        return true;
       } catch (err: any) {
         const isRecoverableError = this.isRecoverableSendError(err);
+        const isNoSession = this.isNoSessionError(err);
+
+        if (isNoSession && jid.endsWith('@g.us')) {
+          await this.tryRecoverGroupSessions(jid);
+        }
 
         if (isRecoverableError && attempt < maxRetries) {
           this.logger.warn(`sendMessage transient error for ${jid} (attempt ${attempt}/${maxRetries}), retrying...`);
@@ -157,11 +162,48 @@ export class WhatsAppConnection {
             `sendMessage failed after ${maxRetries} attempts for ${jid}`,
             sendError,
           );
-          return;
+          return false;
         }
 
         throw err;
       }
+    }
+
+    return false;
+  }
+
+  private isNoSessionError(err: unknown): boolean {
+    const message = (err as any)?.message;
+    const normalizedMessage = typeof message === 'string' ? message.toLowerCase() : '';
+    const name = ((err as any)?.name ?? (err as any)?.constructor?.name ?? '') as string;
+    const normalizedName = name.toLowerCase();
+
+    return normalizedMessage === 'no sessions' || normalizedName === 'sessionerror';
+  }
+
+  private async tryRecoverGroupSessions(groupJid: string): Promise<void> {
+    try {
+      if (!this.socket) return;
+
+      const groupMetadata = await this.socket.groupMetadata?.(groupJid);
+      const participants = (groupMetadata?.participants ?? [])
+        .map((p: any) => p?.id)
+        .filter((id: unknown): id is string => typeof id === 'string' && id.length > 0);
+
+      if (!participants.length) return;
+
+      if (typeof this.socket.assertSessions === 'function') {
+        await this.socket.assertSessions(participants, false);
+        this.logger.info('Recovered group participant sessions', {
+          groupJid,
+          participantCount: participants.length,
+        });
+      }
+    } catch (error) {
+      this.logger.warn('Failed to recover group sessions', {
+        groupJid,
+        message: (error as Error)?.message,
+      });
     }
   }
 
@@ -172,11 +214,14 @@ export class WhatsAppConnection {
     const normalizedName = name.toLowerCase();
 
     return normalizedMessage === 'no sessions'
+      || normalizedMessage.includes('not-acceptable')
+      || normalizedMessage.includes('not acceptable')
       || normalizedMessage.includes('connection closed')
       || normalizedMessage.includes('connection terminated')
       || normalizedMessage.includes('timed out')
       || normalizedMessage.includes('socket closed')
-      || normalizedName === 'sessionerror';
+      || normalizedName === 'sessionerror'
+      || normalizedName === 'boom';
   }
 
   async disconnect(): Promise<void> {

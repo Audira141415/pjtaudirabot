@@ -2,6 +2,7 @@
 FROM node:20-alpine AS builder
 
 WORKDIR /build
+RUN apk add --no-cache git openssl
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
@@ -9,9 +10,16 @@ RUN npm install -g pnpm && pnpm install
 
 # Copy source
 COPY . .
+RUN pnpm install --no-frozen-lockfile
 
 # Build
+# Generate Prisma client before TypeScript compilation
+ENV DATABASE_URL=postgresql://build:build@localhost:5432/builddb
+RUN cd packages/database && pnpm exec prisma generate
 RUN pnpm run build
+RUN node -e "const fs=require('fs');const path=require('path');const hasExt=(s)=>/\.[a-zA-Z0-9]+$/.test(s);const resolveSpec=(spec,file)=>{if(!(spec.startsWith('./')||spec.startsWith('../'))||hasExt(spec))return spec;const base=path.resolve(path.dirname(file),spec);if(fs.existsSync(base+'.js'))return spec+'.js';if(fs.existsSync(path.join(base,'index.js')))return spec+'/index.js';return spec;};const rewrite=(src,file)=>src.replace(/(from\\s+['\"])([^'\"]+)(['\"])/g,(m,a,s,b)=>a+resolveSpec(s,file)+b).replace(/(import\\(\\s*['\"])([^'\"]+)(['\"]\\s*\\))/g,(m,a,s,b)=>a+resolveSpec(s,file)+b);const walk=(d)=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(p.endsWith('.js')){const src=fs.readFileSync(p,'utf8');const out=rewrite(src,p);if(out!==src)fs.writeFileSync(p,out);}}};walk('/build/packages');"
+RUN pnpm --filter @pjtaudirabot/bots-whatsapp deploy --prod /prod/whatsapp
+RUN SRC=$(find /build/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && DST=$(find /prod/whatsapp/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && cp -R "$SRC/node_modules/.prisma" "$DST/node_modules/"
 
 # Runtime stage
 FROM node:20-alpine
@@ -19,22 +27,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init openssl
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install production dependencies only
-RUN npm install -g pnpm && pnpm install --prod
-
-# Copy built application from builder
-COPY --from=builder /build/packages/bots/whatsapp/dist ./dist
-COPY --from=builder /build/packages/core/dist ./node_modules/@pjtaudirabot/core/dist
-COPY --from=builder /build/packages/config/dist ./node_modules/@pjtaudirabot/config/dist
-COPY --from=builder /build/packages/services/dist ./node_modules/@pjtaudirabot/services/dist
+# Copy production-ready deployment package
+COPY --from=builder /prod/whatsapp ./
 
 # Create data directory for sessions
 RUN mkdir -p /data/whatsapp-sessions logs
 
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]

@@ -12,8 +12,6 @@
 #   - redis port NOT exposed to host
 # =============================================================================
 
-version: '3.9'
-
 services:
   db:
     restart: always
@@ -44,8 +42,8 @@ services:
       LOG_LEVEL: info
       GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials.json
     volumes:
-      - /opt/pjtaudirabot/logs:/app/logs
-      - /opt/pjtaudirabot/google-credentials.json:/opt/google-credentials.json:ro
+      - /home/audira/pjtaudirabot/logs:/app/logs
+      - /home/audira/pjtaudirabot/google-credentials.json:/opt/google-credentials.json:ro
     deploy:
       resources:
         limits:
@@ -61,7 +59,7 @@ services:
       LOG_LEVEL: info
     volumes:
       - whatsapp_sessions:/data/whatsapp-sessions
-      - /opt/pjtaudirabot/logs:/app/logs
+      - /home/audira/pjtaudirabot/logs:/app/logs
     deploy:
       resources:
         limits:
@@ -76,7 +74,7 @@ services:
       NODE_ENV: production
       LOG_LEVEL: info
     volumes:
-      - /opt/pjtaudirabot/logs:/app/logs
+      - /home/audira/pjtaudirabot/logs:/app/logs
     deploy:
       resources:
         limits:

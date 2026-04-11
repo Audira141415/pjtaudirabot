@@ -76,6 +76,21 @@ export class WhatsAppMessageHandler {
     this.onTicketCreated = deps.onTicketCreated;
   }
 
+  private async sendReply(jid: string, senderJid: string, text: string): Promise<void> {
+    try {
+      const sent = await this.connection.sendMessage(jid, text);
+      if (sent || !jid.endsWith('@g.us') || senderJid === jid) return;
+
+      this.logger.warn('Group reply failed, falling back to direct message', { jid, senderJid });
+      await this.connection.sendMessage(
+        senderJid,
+        `⚠️ Gagal kirim ke grup, saya kirim via chat pribadi.\n\n${text}`,
+      );
+    } catch (error) {
+      this.logger.error('Reply dispatch failed', error as Error);
+    }
+  }
+
   async handle(msg: proto.IWebMessageInfo): Promise<void> {
     const startTime = Date.now();
     const text = this.extractText(msg);
@@ -110,7 +125,7 @@ export class WhatsAppMessageHandler {
           await this.userService.setRole(user.id, 'admin');
           user.role = 'admin' as any;
           this.logger.info('Auto-promoted first user to admin', { userId: user.id, platformUserId });
-          await this.connection.sendMessage(jid, '👑 Anda telah dipromosikan menjadi *admin* (user pertama otomatis admin).');
+          await this.sendReply(jid, senderJid, '👑 Anda telah dipromosikan menjadi *admin* (user pertama otomatis admin).');
         }
       }
 
@@ -119,7 +134,7 @@ export class WhatsAppMessageHandler {
         const modResult = await this.moderation.check(user.id, text, 'whatsapp');
         if (!modResult.allowed) {
           const msg = modResult.message ?? this.i18n?.t('mod_blocked') ?? '⚠️ Message blocked by moderation.';
-          await this.connection.sendMessage(jid, msg);
+          await this.sendReply(jid, senderJid, msg);
           this.eventBus?.emit('moderation.action', {
             userId: user.id, platform: 'whatsapp', action: modResult.action, rule: modResult.ruleName,
           }).catch(() => {});
@@ -131,22 +146,22 @@ export class WhatsAppMessageHandler {
       if (this.flowEngine && await this.flowEngine.hasActiveFlow(user.id, 'whatsapp')) {
         if (text === '!cancel') {
           await this.flowEngine.cancel(user.id, 'whatsapp');
-          await this.connection.sendMessage(jid, this.i18n?.t('flow_cancelled') ?? '❌ Flow cancelled.');
+          await this.sendReply(jid, senderJid, this.i18n?.t('flow_cancelled') ?? '❌ Flow cancelled.');
           return;
         }
 
         const flowResult = await this.flowEngine.processInput(user.id, 'whatsapp', text);
         if (flowResult.error) {
-          await this.connection.sendMessage(jid, `⚠️ ${flowResult.error}`);
+          await this.sendReply(jid, senderJid, `⚠️ ${flowResult.error}`);
           return;
         }
         if (flowResult.completed) {
-          await this.connection.sendMessage(jid, this.i18n?.t('flow_completed') ?? '✅ Flow completed!');
+          await this.sendReply(jid, senderJid, this.i18n?.t('flow_completed') ?? '✅ Flow completed!');
           this.eventBus?.emit('flow.completed', {
             userId: user.id, platform: 'whatsapp', data: flowResult.data,
           }).catch(() => {});
         } else if (flowResult.prompt) {
-          await this.connection.sendMessage(jid, flowResult.prompt);
+          await this.sendReply(jid, senderJid, flowResult.prompt);
         }
         return;
       }
@@ -158,7 +173,7 @@ export class WhatsAppMessageHandler {
           try {
             const dup = await this.dataExtractionService.checkDuplicate(extraction.data);
             if (dup.isDuplicate) {
-              await this.connection.sendMessage(jid,
+              await this.sendReply(jid, senderJid,
                 `⚠️ *Duplicate detected* (${Math.round(dup.similarity * 100)}% match)\nExisting ID: ${dup.duplicateId?.slice(0, 8)}`
               );
               return;
@@ -250,7 +265,7 @@ export class WhatsAppMessageHandler {
               .map(([k, v]) => `  • ${k}: ${v}`)
               .join('\n');
 
-            await this.connection.sendMessage(jid, [
+            await this.sendReply(jid, senderJid, [
               `🤖 *Auto-Extract — Ticket Created*`,
               ``,
               `📋 *${ticket.ticketNumber}*`,
@@ -281,7 +296,7 @@ export class WhatsAppMessageHandler {
             const pipelineResult = await this.chatPipeline.process(
               user.id, text, 'whatsapp', user.displayName
             );
-            await this.connection.sendMessage(jid, pipelineResult.reply);
+            await this.sendReply(jid, senderJid, pipelineResult.reply);
             this.eventBus?.emit('pipeline.processed', {
               userId: user.id, platform: 'whatsapp',
               type: pipelineResult.extraction.result.type,
@@ -289,13 +304,13 @@ export class WhatsAppMessageHandler {
             }).catch(() => {});
           } catch (pipelineErr) {
             this.logger.error('Pipeline processing failed', pipelineErr as Error);
-            await this.connection.sendMessage(jid, '⚠️ Gagal memproses pesan. Coba lagi nanti.');
+            await this.sendReply(jid, senderJid, '⚠️ Gagal memproses pesan. Coba lagi nanti.');
           }
         } else if (this.intentDetector) {
           // Legacy fallback: rule-only intent detection
           const intentResponse = await this.intentDetector.process(user.id, text, 'whatsapp');
           if (intentResponse) {
-            await this.connection.sendMessage(jid, intentResponse);
+            await this.sendReply(jid, senderJid, intentResponse);
             this.eventBus?.emit('intent.detected', {
               userId: user.id, platform: 'whatsapp', text,
             }).catch(() => {});
@@ -351,7 +366,7 @@ export class WhatsAppMessageHandler {
       const responseTime = Date.now() - startTime;
       this.analytics?.track({ eventType: 'response_sent', platform: 'whatsapp', userId: platformUserId, value: responseTime }).catch(() => {});
 
-      await this.connection.sendMessage(jid, result.message);
+      await this.sendReply(jid, senderJid, result.message);
 
       this.eventBus?.emit('command.executed', {
         userId: user.id, platform: 'whatsapp', command: commandName, responseTime,
@@ -360,7 +375,7 @@ export class WhatsAppMessageHandler {
     } catch (error) {
       this.logger.error('WhatsApp handler error', error as Error);
       this.analytics?.track({ eventType: 'error', platform: 'whatsapp', userId: platformUserId }).catch(() => {});
-      await this.connection.sendMessage(jid, this.i18n?.t('error_generic') ?? '❌ An error occurred. Please try again.');
+      await this.sendReply(jid, senderJid, this.i18n?.t('error_generic') ?? '❌ An error occurred. Please try again.');
     }
   }
 

@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # PostgreSQL Database
   db:
@@ -86,6 +84,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${DB_USER:-pjtaudi}:${DB_PASSWORD:-dev_password_change_me}@db:5432/${DB_NAME:-pjtaudi}
       REDIS_URL: redis://redis:6379
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       WHATSAPP_SESSION_DIR: /data/whatsapp-sessions
       WHATSAPP_PORT: ${WHATSAPP_PORT:-4020}
       JWT_SECRET: ${JWT_SECRET}
@@ -116,6 +116,8 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       DATABASE_URL: postgresql://${DB_USER:-pjtaudi}:${DB_PASSWORD:-dev_password_change_me}@db:5432/${DB_NAME:-pjtaudi}
       REDIS_URL: redis://redis:6379
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_PORT: ${TELEGRAM_PORT:-4010}
       JWT_SECRET: ${JWT_SECRET}

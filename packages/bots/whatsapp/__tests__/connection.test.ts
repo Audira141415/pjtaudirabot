@@ -25,11 +25,34 @@ describe('WhatsAppConnection sendMessage resilience', () => {
       sendMessage: jest.fn().mockRejectedValue(new Error('Connection Closed')),
     };
 
-    await expect(connection.sendMessage('123@g.us', 'hello')).resolves.toBeUndefined();
+    await expect(connection.sendMessage('123@g.us', 'hello')).resolves.toBe(false);
     expect(connection.socket.sendMessage).toHaveBeenCalledTimes(3);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('sendMessage failed after 3 attempts'),
       expect.objectContaining({ message: 'Connection Closed' }),
+    );
+  });
+
+  it('swallows not-acceptable errors after retries to avoid breaking message pipeline', async () => {
+    const logger = makeLogger();
+    const connection = new WhatsAppConnection(
+      {
+        sessionDir: './data/sessions-test',
+        reconnectAttempts: 3,
+        reconnectDelay: 10,
+      },
+      logger,
+    );
+
+    connection.socket = {
+      sendMessage: jest.fn().mockRejectedValue(new Error('not-acceptable')),
+    };
+
+    await expect(connection.sendMessage('123@g.us', 'hello')).resolves.toBe(false);
+    expect(connection.socket.sendMessage).toHaveBeenCalledTimes(3);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('sendMessage failed after 3 attempts'),
+      expect.objectContaining({ message: 'not-acceptable' }),
     );
   });
 

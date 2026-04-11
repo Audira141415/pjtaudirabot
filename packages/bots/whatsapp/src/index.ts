@@ -199,7 +199,9 @@ async function main(): Promise<void> {
   // ── WhatsApp Notifier ──
   const notifier = new WhatsAppNotifier(
     effectiveAdminGroupJids,
-    (jid, text) => connection.sendMessage(jid, text),
+    async (jid, text) => {
+      await connection.sendMessage(jid, text);
+    },
     logger,
   );
   if (botsConfig.whatsapp.silentMode) {
