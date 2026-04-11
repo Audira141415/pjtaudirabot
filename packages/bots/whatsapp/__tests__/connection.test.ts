@@ -1,4 +1,8 @@
-const { WhatsAppConnection } = require('../dist/connection');
+let WhatsAppConnection;
+
+beforeAll(async () => {
+  ({ WhatsAppConnection } = await import('../dist/connection.js'));
+});
 
 describe('WhatsAppConnection sendMessage resilience', () => {
   function makeLogger() {
@@ -46,10 +50,14 @@ describe('WhatsAppConnection sendMessage resilience', () => {
 
     connection.socket = {
       sendMessage: jest.fn().mockRejectedValue(new Error('not-acceptable')),
+      groupMetadata: jest.fn().mockResolvedValue({ participants: [{ id: '628123@s.whatsapp.net' }] }),
+      assertSessions: jest.fn().mockResolvedValue(undefined),
     };
 
     await expect(connection.sendMessage('123@g.us', 'hello')).resolves.toBe(false);
     expect(connection.socket.sendMessage).toHaveBeenCalledTimes(3);
+    expect(connection.socket.groupMetadata).toHaveBeenCalled();
+    expect(connection.socket.assertSessions).toHaveBeenCalled();
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining('sendMessage failed after 3 attempts'),
       expect.objectContaining({ message: 'not-acceptable' }),

@@ -219,7 +219,8 @@ docker exec pjtaudi-api npx prisma migrate deploy
 - [ ] `ADMIN_PASSWORD` bukan `admin123`
 - [ ] `TELEGRAM_BOT_TOKEN` sudah di-revoke + diganti dari @BotFather
 - [ ] `DATABASE_URL` memakai hostname `db` (bukan `localhost`)
-- [ ] `GOOGLE_SHEETS_CREDENTIALS` path = `/opt/google-credentials.json`
+- [ ] `GOOGLE_SHEETS_CREDENTIALS_HOST_PATH` terisi ke file kredensial host (contoh: `/home/audira/pjtaudirabot/google-credentials.json`)
+- [ ] `GOOGLE_SHEETS_CREDENTIALS` path = `/opt/google-credentials/google-credentials.json`
 - [ ] File `.env` mode `600` (tidak world-readable)
 - [ ] `docker ps` semua container status `healthy`
 - [ ] `curl http://localhost:4000/health` → OK

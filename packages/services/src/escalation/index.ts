@@ -146,8 +146,11 @@ export class EscalationService {
         // SLA Breach rule
         if (rule.triggerType === 'SLA_BREACH' && ticket.slaTracking) {
           if (ticket.slaTracking.responseBreached || ticket.slaTracking.resolutionBreached) {
-            await this.escalate(ticket.id, rule.targetLevel, 'SLA breached', 'SLA_BREACH');
-            break;
+            // Avoid re-escalating to the same/lower level on every scheduler tick.
+            if (LEVEL_ORDER.indexOf(currentLevel) < LEVEL_ORDER.indexOf(rule.targetLevel)) {
+              await this.escalate(ticket.id, rule.targetLevel, 'SLA breached', 'SLA_BREACH');
+              break;
+            }
           }
         }
 

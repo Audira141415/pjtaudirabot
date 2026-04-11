@@ -22,6 +22,10 @@ export interface WhatsAppConnectionConfig {
   reconnectDelay: number;
 }
 
+export interface WhatsAppSendMessageOptions {
+  quoted?: any;
+}
+
 export class WhatsAppConnection {
   private socket: WASocket | null = null;
   private reconnectCount = 0;
@@ -128,7 +132,7 @@ export class WhatsAppConnection {
     });
   }
 
-  async sendMessage(jid: string, text: string): Promise<boolean> {
+  async sendMessage(jid: string, text: string, options?: WhatsAppSendMessageOptions): Promise<boolean> {
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -136,13 +140,14 @@ export class WhatsAppConnection {
           throw new Error('WhatsApp not connected');
         }
 
-        await this.socket.sendMessage(jid, { text });
+        await this.socket.sendMessage(jid, { text }, options);
         return true;
       } catch (err: any) {
         const isRecoverableError = this.isRecoverableSendError(err);
         const isNoSession = this.isNoSessionError(err);
+        const isSessionRecoveryCandidate = isNoSession || this.isNotAcceptableError(err);
 
-        if (isNoSession && jid.endsWith('@g.us')) {
+        if (isSessionRecoveryCandidate && jid.endsWith('@g.us')) {
           await this.tryRecoverGroupSessions(jid);
         }
 
@@ -179,6 +184,12 @@ export class WhatsAppConnection {
     const normalizedName = name.toLowerCase();
 
     return normalizedMessage === 'no sessions' || normalizedName === 'sessionerror';
+  }
+
+  private isNotAcceptableError(err: unknown): boolean {
+    const message = (err as any)?.message;
+    const normalizedMessage = typeof message === 'string' ? message.toLowerCase() : '';
+    return normalizedMessage.includes('not-acceptable') || normalizedMessage.includes('not acceptable');
   }
 
   private async tryRecoverGroupSessions(groupJid: string): Promise<void> {

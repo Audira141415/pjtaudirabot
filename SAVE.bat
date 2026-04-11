@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title AUDIRA - Save & Push to GitHub
+title AUDIRA - Save ^& Push to GitHub
 
 echo.
 echo  ╔══════════════════════════════════════════╗

@@ -40,10 +40,10 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
-      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials.json
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
     volumes:
       - /home/audira/pjtaudirabot/logs:/app/logs
-      - /home/audira/pjtaudirabot/google-credentials.json:/opt/google-credentials.json:ro
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     deploy:
       resources:
         limits:
@@ -57,9 +57,13 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+      GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
     volumes:
       - whatsapp_sessions:/data/whatsapp-sessions
       - /home/audira/pjtaudirabot/logs:/app/logs
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     deploy:
       resources:
         limits:
@@ -73,8 +77,12 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+      GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
     volumes:
       - /home/audira/pjtaudirabot/logs:/app/logs
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     deploy:
       resources:
         limits:

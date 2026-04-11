@@ -11,6 +11,8 @@ import { IntentDetector, ChatPipeline } from '@pjtaudirabot/services';
 
 const COMMAND_PREFIX = '!';
 const NOC_AUTO_EXTRACT_MIN_FIELDS = 3;
+const FORCE_DM_GROUP_JIDS_DEFAULT: string[] = [];
+const FORCE_DM_LOG_COOLDOWN_MS = 5 * 60 * 1000;
 
 export interface WhatsAppHandlerDeps {
   connection: WhatsAppConnection;
@@ -53,6 +55,8 @@ export class WhatsAppMessageHandler {
   private slaService?: SLAService;
   private nocAutoExtract: boolean;
   private sheetsService?: GoogleSheetsService | null;
+  private forceDmGroupJids: Set<string>;
+  private forceDmLogTimestamps = new Map<string, number>();
   onTicketCreated?: (params: NewTicketBroadcast) => Promise<void>;
 
   constructor(deps: WhatsAppHandlerDeps) {
@@ -74,11 +78,44 @@ export class WhatsAppMessageHandler {
     this.nocAutoExtract = deps.nocAutoExtract ?? false;
     this.sheetsService = deps.sheetsService;
     this.onTicketCreated = deps.onTicketCreated;
+
+    const configuredForceDmJids = (process.env.WHATSAPP_FORCE_DM_GROUP_JIDS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.endsWith('@g.us'));
+    this.forceDmGroupJids = new Set([...FORCE_DM_GROUP_JIDS_DEFAULT, ...configuredForceDmJids]);
   }
 
-  private async sendReply(jid: string, senderJid: string, text: string): Promise<void> {
+  private async sendReply(
+    jid: string,
+    senderJid: string,
+    text: string,
+    quotedMessage?: proto.IWebMessageInfo,
+  ): Promise<void> {
     try {
-      const sent = await this.connection.sendMessage(jid, text);
+      const isGroup = jid.endsWith('@g.us');
+      if (isGroup && this.forceDmGroupJids.has(jid) && senderJid !== jid) {
+        const lastLogAt = this.forceDmLogTimestamps.get(jid) ?? 0;
+        if (Date.now() - lastLogAt >= FORCE_DM_LOG_COOLDOWN_MS) {
+          this.forceDmLogTimestamps.set(jid, Date.now());
+          this.logger.warn('Force DM enabled for group, skipping group send', { jid, senderJid });
+        }
+
+        const dmSent = await this.connection.sendMessage(
+          senderJid,
+          `⚠️ Balasan ke grup ini dialihkan ke chat pribadi untuk stabilitas.\n\n${text}`,
+        );
+        if (!dmSent) {
+          this.logger.error('Forced DM reply failed', {
+            jid,
+            senderJid,
+          } as any);
+        }
+        return;
+      }
+
+      const quoteForGroupReply = this.getQuotedForTargetJid(jid, quotedMessage);
+      const sent = await this.connection.sendMessage(jid, text, { quoted: quoteForGroupReply });
       if (sent || !jid.endsWith('@g.us') || senderJid === jid) return;
 
       this.logger.warn('Group reply failed, falling back to direct message', { jid, senderJid });
@@ -89,6 +126,17 @@ export class WhatsAppMessageHandler {
     } catch (error) {
       this.logger.error('Reply dispatch failed', error as Error);
     }
+  }
+
+  private getQuotedForTargetJid(
+    targetJid: string,
+    quotedMessage?: proto.IWebMessageInfo,
+  ): proto.IWebMessageInfo | undefined {
+    const quotedJid = quotedMessage?.key?.remoteJid;
+    if (!quotedJid || quotedJid !== targetJid) {
+      return undefined;
+    }
+    return quotedMessage;
   }
 
   async handle(msg: proto.IWebMessageInfo): Promise<void> {
@@ -125,7 +173,7 @@ export class WhatsAppMessageHandler {
           await this.userService.setRole(user.id, 'admin');
           user.role = 'admin' as any;
           this.logger.info('Auto-promoted first user to admin', { userId: user.id, platformUserId });
-          await this.sendReply(jid, senderJid, '👑 Anda telah dipromosikan menjadi *admin* (user pertama otomatis admin).');
+          await this.sendReply(jid, senderJid, '👑 Anda telah dipromosikan menjadi *admin* (user pertama otomatis admin).', msg);
         }
       }
 
@@ -133,8 +181,8 @@ export class WhatsAppMessageHandler {
       if (this.moderation) {
         const modResult = await this.moderation.check(user.id, text, 'whatsapp');
         if (!modResult.allowed) {
-          const msg = modResult.message ?? this.i18n?.t('mod_blocked') ?? '⚠️ Message blocked by moderation.';
-          await this.sendReply(jid, senderJid, msg);
+          const blockedMessage = modResult.message ?? this.i18n?.t('mod_blocked') ?? '⚠️ Message blocked by moderation.';
+          await this.sendReply(jid, senderJid, blockedMessage, msg);
           this.eventBus?.emit('moderation.action', {
             userId: user.id, platform: 'whatsapp', action: modResult.action, rule: modResult.ruleName,
           }).catch(() => {});
@@ -146,22 +194,22 @@ export class WhatsAppMessageHandler {
       if (this.flowEngine && await this.flowEngine.hasActiveFlow(user.id, 'whatsapp')) {
         if (text === '!cancel') {
           await this.flowEngine.cancel(user.id, 'whatsapp');
-          await this.sendReply(jid, senderJid, this.i18n?.t('flow_cancelled') ?? '❌ Flow cancelled.');
+          await this.sendReply(jid, senderJid, this.i18n?.t('flow_cancelled') ?? '❌ Flow cancelled.', msg);
           return;
         }
 
         const flowResult = await this.flowEngine.processInput(user.id, 'whatsapp', text);
         if (flowResult.error) {
-          await this.sendReply(jid, senderJid, `⚠️ ${flowResult.error}`);
+          await this.sendReply(jid, senderJid, `⚠️ ${flowResult.error}`, msg);
           return;
         }
         if (flowResult.completed) {
-          await this.sendReply(jid, senderJid, this.i18n?.t('flow_completed') ?? '✅ Flow completed!');
+          await this.sendReply(jid, senderJid, this.i18n?.t('flow_completed') ?? '✅ Flow completed!', msg);
           this.eventBus?.emit('flow.completed', {
             userId: user.id, platform: 'whatsapp', data: flowResult.data,
           }).catch(() => {});
         } else if (flowResult.prompt) {
-          await this.sendReply(jid, senderJid, flowResult.prompt);
+          await this.sendReply(jid, senderJid, flowResult.prompt, msg);
         }
         return;
       }
@@ -175,7 +223,7 @@ export class WhatsAppMessageHandler {
             if (dup.isDuplicate) {
               await this.sendReply(jid, senderJid,
                 `⚠️ *Duplicate detected* (${Math.round(dup.similarity * 100)}% match)\nExisting ID: ${dup.duplicateId?.slice(0, 8)}`
-              );
+              , msg);
               return;
             }
 
@@ -274,7 +322,7 @@ export class WhatsAppMessageHandler {
               `📊 Fields extracted: ${extraction.fieldCount}`,
               ``,
               fields,
-            ].join('\n'));
+            ].join('\n'), msg);
 
             this.eventBus?.emit('noc.auto_extracted', {
               userId: user.id, platform: 'whatsapp', ticketNumber: ticket.ticketNumber,
@@ -296,7 +344,7 @@ export class WhatsAppMessageHandler {
             const pipelineResult = await this.chatPipeline.process(
               user.id, text, 'whatsapp', user.displayName
             );
-            await this.sendReply(jid, senderJid, pipelineResult.reply);
+            await this.sendReply(jid, senderJid, pipelineResult.reply, msg);
             this.eventBus?.emit('pipeline.processed', {
               userId: user.id, platform: 'whatsapp',
               type: pipelineResult.extraction.result.type,
@@ -304,13 +352,13 @@ export class WhatsAppMessageHandler {
             }).catch(() => {});
           } catch (pipelineErr) {
             this.logger.error('Pipeline processing failed', pipelineErr as Error);
-            await this.sendReply(jid, senderJid, '⚠️ Gagal memproses pesan. Coba lagi nanti.');
+            await this.sendReply(jid, senderJid, '⚠️ Gagal memproses pesan. Coba lagi nanti.', msg);
           }
         } else if (this.intentDetector) {
           // Legacy fallback: rule-only intent detection
           const intentResponse = await this.intentDetector.process(user.id, text, 'whatsapp');
           if (intentResponse) {
-            await this.sendReply(jid, senderJid, intentResponse);
+            await this.sendReply(jid, senderJid, intentResponse, msg);
             this.eventBus?.emit('intent.detected', {
               userId: user.id, platform: 'whatsapp', text,
             }).catch(() => {});
@@ -366,7 +414,8 @@ export class WhatsAppMessageHandler {
       const responseTime = Date.now() - startTime;
       this.analytics?.track({ eventType: 'response_sent', platform: 'whatsapp', userId: platformUserId, value: responseTime }).catch(() => {});
 
-      await this.sendReply(jid, senderJid, result.message);
+      const replyMessage = result.message;
+      await this.sendReply(jid, senderJid, replyMessage, msg);
 
       this.eventBus?.emit('command.executed', {
         userId: user.id, platform: 'whatsapp', command: commandName, responseTime,
@@ -375,7 +424,7 @@ export class WhatsAppMessageHandler {
     } catch (error) {
       this.logger.error('WhatsApp handler error', error as Error);
       this.analytics?.track({ eventType: 'error', platform: 'whatsapp', userId: platformUserId }).catch(() => {});
-      await this.sendReply(jid, senderJid, this.i18n?.t('error_generic') ?? '❌ An error occurred. Please try again.');
+      await this.sendReply(jid, senderJid, this.i18n?.t('error_generic') ?? '❌ An error occurred. Please try again.', msg);
     }
   }
 
