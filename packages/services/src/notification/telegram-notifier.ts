@@ -56,27 +56,30 @@ export class TelegramNotifier {
   }
 
   /** Parse technical details string and extract lokasi + alokasi for display */
-  private parseAndFormatTechnicalDetails(details?: string): { lokasi?: string; alokasi?: string; other: string[] } {
-    const result: { lokasi?: string; alokasi?: string; other: string[] } = { other: [] };
+  private parseTechnicalDetails(details?: string): Record<string, string> {
+    const result: Record<string, string> = {};
     if (!details) return result;
 
     const lines = details.split('\n');
     for (const line of lines) {
-      const match = line.match(/•\s+([^:]+):\s*(.+)/);
+      const match = line.match(/^\s*(?:•\s*)?([^:]+):\s*(.+)$/);
       if (match) {
         const [, key, value] = match;
-        if (key.toLowerCase() === 'location' || key.toLowerCase() === 'lokasi') {
-          result.lokasi = value.trim();
-        } else if (key.toLowerCase() === 'alokasi') {
-          result.alokasi = value.trim();
-        } else {
-          result.other.push(line);
-        }
-      } else {
-        result.other.push(line);
+        result[key.trim().toLowerCase()] = value.trim();
       }
     }
     return result;
+  }
+
+  private combineAlokasi(technical: Record<string, string>): string | undefined {
+    if (technical.alokasi) return technical.alokasi;
+
+    const hostname = technical.hostnameswitch ?? technical.hostname ?? technical.switch;
+    const port = technical.port;
+    if (hostname && port) return `${hostname} / ${port}`;
+    if (hostname) return hostname;
+    if (port) return port;
+    return undefined;
   }
 
   /** Notify NOC Telegram group when a new ticket is created (from any source) */
@@ -87,11 +90,16 @@ export class TelegramNotifier {
       CRITICAL: '🚨', HIGH: '🔴', MEDIUM: '🟡', LOW: '🟢',
     };
     const icon = priorityEmoji[params.priority] ?? '📋';
-    const problem = params.problem.length > 300
-      ? `${params.problem.slice(0, 300)}…`
-      : params.problem;
-    
-    const parsed = this.parseAndFormatTechnicalDetails(params.technicalDetails?.trim());
+    const technical = this.parseTechnicalDetails(params.technicalDetails?.trim());
+    const lokasi = technical.location ?? technical.lokasi;
+    const customer = technical.customer ?? technical.cust;
+    const alokasi = params.alokasi ?? this.combineAlokasi(technical);
+    const vlan = technical.vlanid ?? technical.vlan;
+    const mode = technical.mode;
+    const problem = params.problem?.trim() || technical.problem;
+    const problemText = problem
+      ? (problem.length > 180 ? `${problem.slice(0, 180)}…` : problem)
+      : undefined;
 
     const text = [
       `${icon} <b>TIKET BARU — ${this.esc(params.priority)}</b>`,
@@ -102,14 +110,12 @@ export class TelegramNotifier {
       `👤 Dari: <b>${this.esc(params.createdByName)}</b>`,
       params.groupId ? `💬 Group: <code>${this.esc(params.groupId)}</code>` : null,
       ``,
-      `<i>Problem:</i>`,
-      this.esc(problem),
-      parsed.lokasi ? `` : null,
-      parsed.lokasi ? `📍 <b>Lokasi:</b> ${this.esc(parsed.lokasi)}` : null,
-      parsed.alokasi ? `🔧 <b>Alokasi:</b> ${this.esc(parsed.alokasi)}` : null,
-      parsed.other.length > 0 ? '' : null,
-      parsed.other.length > 0 ? '<i>Detail Teknis Lainnya:</i>' : null,
-      parsed.other.length > 0 ? this.esc(parsed.other.join('\n')) : null,
+      lokasi ? `📍 <b>Lokasi:</b> ${this.esc(lokasi)}` : null,
+      customer ? `👤 <b>Customer:</b> ${this.esc(customer)}` : null,
+      alokasi ? `🔧 <b>Alokasi:</b> ${this.esc(alokasi)}` : null,
+      vlan ? `🌐 <b>VLAN:</b> ${this.esc(vlan)}` : null,
+      mode ? `🧭 <b>Mode:</b> ${this.esc(mode)}` : null,
+      problemText ? `📝 <b>Problem:</b> ${this.esc(problemText)}` : null,
       ``,
       `────────────────`,
       `👉 Ambil tiket:`,

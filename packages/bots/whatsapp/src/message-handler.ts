@@ -94,11 +94,11 @@ export class WhatsAppMessageHandler {
   ): Promise<void> {
     try {
       const isGroup = jid.endsWith('@g.us');
-      if (isGroup && this.forceDmGroupJids.has(jid) && senderJid !== jid) {
+      if (isGroup && senderJid !== jid) {
         const lastLogAt = this.forceDmLogTimestamps.get(jid) ?? 0;
         if (Date.now() - lastLogAt >= FORCE_DM_LOG_COOLDOWN_MS) {
           this.forceDmLogTimestamps.set(jid, Date.now());
-          this.logger.warn('Force DM enabled for group, skipping group send', { jid, senderJid });
+          this.logger.warn('Group reply redirected to DM', { jid, senderJid });
         }
 
         const dmSent = await this.connection.sendMessage(
@@ -298,7 +298,8 @@ export class WhatsAppMessageHandler {
               title: ticket.title,
               priority,
               category: extraction.category,
-              problem: extraction.data.problem ?? text.slice(0, 200),
+              problem: extraction.data.problem,
+              alokasi: extraction.data.alokasi,
               createdByName: user.displayName ?? user.phoneNumber ?? 'Unknown',
               groupId: jid.includes('@g.us') ? jid : null,
               technicalDetails: extractedFields,
@@ -338,7 +339,7 @@ export class WhatsAppMessageHandler {
                 status: 'OPEN',
                 createdBy: user.displayName,
                 createdAt: new Date(),
-              }).catch(() => {});
+              }).catch((err) => this.logger.error('GSheet syncTicket (auto-extract) failed', err as Error));
             }
 
             await this.sendAutoExtractAck(

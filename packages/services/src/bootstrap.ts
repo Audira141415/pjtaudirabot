@@ -256,6 +256,9 @@ export async function createBotServices(
   // Google Sheets
   let sheetsService: GoogleSheetsService | null = null;
   if (config.GOOGLE_SHEETS_ENABLED === 'true' && config.GOOGLE_SHEETS_CREDENTIALS) {
+    if (!config.GOOGLE_SHEETS_SPREADSHEET_ID) {
+      logger.warn('Google Sheets is enabled but GOOGLE_SHEETS_SPREADSHEET_ID is missing; sheet sync will be disabled');
+    }
     const sheetsOpts: Record<string, any> = {
       credentials: config.GOOGLE_SHEETS_CREDENTIALS,
       spreadsheetId: config.GOOGLE_SHEETS_SPREADSHEET_ID,

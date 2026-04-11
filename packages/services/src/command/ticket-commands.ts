@@ -11,7 +11,8 @@ export interface NewTicketBroadcast {
   title: string;
   priority: string;
   category: string;
-  problem: string;
+  problem?: string;
+  alokasi?: string;
   createdByName: string;
   groupId?: string | null;
   technicalDetails?: string;

@@ -82,6 +82,33 @@ describe('WhatsAppMessageHandler reply routing', () => {
     expect(connection.sendMessage).not.toHaveBeenCalledWith('123@g.us', expect.anything(), expect.anything());
   });
 
+  it('routes group replies to DM by default', async () => {
+    process.env.WHATSAPP_FORCE_DM_GROUP_JIDS = '';
+    const { deps, connection } = makeDeps();
+    const handler = new WhatsAppMessageHandler(deps);
+
+    const msg = {
+      key: {
+        remoteJid: '321@g.us',
+        participant: '628321@s.whatsapp.net',
+        id: 'm0',
+      },
+      pushName: 'Tester',
+      message: {
+        conversation: 'halo grup',
+      },
+    };
+
+    await handler.handle(msg);
+
+    expect(connection.sendMessage).toHaveBeenCalledTimes(1);
+    expect(connection.sendMessage).toHaveBeenCalledWith(
+      '628321@s.whatsapp.net',
+      expect.stringContaining('dialihkan ke chat pribadi'),
+    );
+    expect(connection.sendMessage).not.toHaveBeenCalledWith('321@g.us', expect.anything(), expect.anything());
+  });
+
   it('passes quoted message only when target JID matches', async () => {
     process.env.WHATSAPP_FORCE_DM_GROUP_JIDS = '';
     const { deps, connection } = makeDeps();

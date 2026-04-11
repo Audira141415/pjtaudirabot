@@ -416,6 +416,9 @@ export class GoogleSheetsService {
     this.spreadsheetId = config.spreadsheetId ?? null;
     this.ticketsOnly = config.ticketsOnly ?? false;
     this.initClient(config.credentials);
+    if (!this.spreadsheetId) {
+      this.logger.warn('Google Sheets spreadsheetId is missing; sheet writes are disabled');
+    }
   }
 
   private isSheetAllowed(sheetName: string): boolean {
@@ -446,7 +449,7 @@ export class GoogleSheetsService {
   }
 
   isAvailable(): boolean {
-    return this.sheets !== null;
+    return this.sheets !== null && this.spreadsheetId !== null;
   }
 
   /**
@@ -1202,6 +1205,12 @@ export class GoogleSheetsService {
     }
 
     await this.appendRow('tickets', values);
+
+    const appendedRows = await this.readAll('tickets');
+    const appendedIndex = appendedRows.findIndex((row, index) => index > 0 && row[0] === ticket.id);
+    if (appendedIndex < 0) {
+      throw new Error(`Ticket ${ticket.ticketNumber} was not persisted to Google Sheets`);
+    }
   }
 
   async syncSLA(sla: {

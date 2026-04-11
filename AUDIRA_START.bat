@@ -94,6 +94,16 @@ echo.
 :: ----------------------------------------------------------------
 echo [2/6] Starting PostgreSQL ^& Redis (Docker)...
 
+set COMPOSE_BASE=docker/docker-compose.yml
+set COMPOSE_OVERRIDE=docker/docker-compose.prod.yml
+set COMPOSE_ARGS=-f %COMPOSE_BASE%
+if exist ".env.production" (
+    if exist "%COMPOSE_OVERRIDE%" (
+        set COMPOSE_ARGS=-f %COMPOSE_BASE% -f %COMPOSE_OVERRIDE%
+        echo  [INFO] Production compose override detected; using Sheets-ready stack.
+    )
+)
+
 :: Check if containers are already healthy (skip recreate if so)
 docker exec pjtaudi-db pg_isready -U pjtaudi >nul 2>&1
 if !errorlevel! equ 0 (
@@ -101,10 +111,10 @@ if !errorlevel! equ 0 (
     goto :db_ready
 )
 
-docker compose -f docker/docker-compose.yml up -d --no-recreate db redis 2>nul
+docker compose %COMPOSE_ARGS% up -d --no-recreate db redis 2>nul
 if !errorlevel! neq 0 (
     echo  [WARN] --no-recreate gagal, mencoba force up...
-    docker compose -f docker/docker-compose.yml up -d db redis 2>nul
+    docker compose %COMPOSE_ARGS% up -d db redis 2>nul
     if !errorlevel! neq 0 (
         echo  [ERROR] Gagal start Docker services!
         echo.
@@ -116,11 +126,11 @@ if !errorlevel! neq 0 (
             pause
             exit /b 1
         )
-        docker compose -f docker/docker-compose.yml ps --format "table {{.Name}}\t{{.State}}\t{{.Status}}" 2>nul
+        docker compose %COMPOSE_ARGS% ps --format "table {{.Name}}\t{{.State}}\t{{.Status}}" 2>nul
         echo.
         echo  SOLUSI UMUM:
-        echo    1. docker compose -f docker/docker-compose.yml down
-        echo    2. docker compose -f docker/docker-compose.yml up -d db redis
+        echo    1. docker compose %COMPOSE_ARGS% down
+        echo    2. docker compose %COMPOSE_ARGS% up -d db redis
         echo    3. Jika masih gagal, cek: docker system df (storage penuh?)
         pause
         exit /b 1
