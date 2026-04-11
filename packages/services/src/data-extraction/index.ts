@@ -316,9 +316,11 @@ export class DataExtractionService {
     ticketId?: string; extractedById?: string; platform?: string; groupId?: string;
     isDuplicate?: boolean; duplicateOfId?: string; category?: TicketCategory; priorityScore?: number;
   }) {
+    const { alokasi: _alokasi, ...persistedData } = data;
+
     return this.db.dataExtraction.create({
       data: {
-        ...data,
+        ...persistedData,
         rawMessage,
         ticketId: opts?.ticketId,
         extractedById: opts?.extractedById,

@@ -14,6 +14,7 @@ if "%SERVER_HOST%"=="" set "SERVER_HOST=audira@192.168.100.157"
 set "ROOT=%~dp0.."
 set "DOCKER_DIR=%ROOT%\docker"
 set "RELEASE_ENV=%ROOT%\scripts\release-images.env"
+if "%NPM_REGISTRY%"=="" set "NPM_REGISTRY=https://registry.npmmirror.com"
 
 set "API_IMAGE=%REGISTRY_PREFIX%/pjtaudi-api:%TAG%"
 set "WHATSAPP_IMAGE=%REGISTRY_PREFIX%/pjtaudi-whatsapp:%TAG%"
@@ -22,15 +23,15 @@ set "TELEGRAM_IMAGE=%REGISTRY_PREFIX%/pjtaudi-telegram:%TAG%"
 where docker >nul 2>&1 || goto :docker_missing
 
 call :step Build API image
-call docker build -f "%DOCKER_DIR%\Dockerfile.api" -t "%API_IMAGE%" "%ROOT%"
+call docker build --build-arg NPM_REGISTRY=%NPM_REGISTRY% -f "%DOCKER_DIR%\Dockerfile.api" -t "%API_IMAGE%" "%ROOT%"
 if errorlevel 1 goto :failed
 
 call :step Build WhatsApp image
-call docker build -f "%DOCKER_DIR%\Dockerfile.whatsapp" -t "%WHATSAPP_IMAGE%" "%ROOT%"
+call docker build --build-arg NPM_REGISTRY=%NPM_REGISTRY% -f "%DOCKER_DIR%\Dockerfile.whatsapp" -t "%WHATSAPP_IMAGE%" "%ROOT%"
 if errorlevel 1 goto :failed
 
 call :step Build Telegram image
-call docker build -f "%DOCKER_DIR%\Dockerfile.telegram" -t "%TELEGRAM_IMAGE%" "%ROOT%"
+call docker build --build-arg NPM_REGISTRY=%NPM_REGISTRY% -f "%DOCKER_DIR%\Dockerfile.telegram" -t "%TELEGRAM_IMAGE%" "%ROOT%"
 if errorlevel 1 goto :failed
 
 if /I "%MODE%"=="push" (
@@ -66,6 +67,7 @@ echo Done.
 echo   API      : %API_IMAGE%
 echo   WhatsApp : %WHATSAPP_IMAGE%
 echo   Telegram : %TELEGRAM_IMAGE%
+echo   Registry : %NPM_REGISTRY%
 echo.
 echo Next on server: /home/audira/pjtaudirabot/scripts/server-control.sh release-start
 exit /b 0

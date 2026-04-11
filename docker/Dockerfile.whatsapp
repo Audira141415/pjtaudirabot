@@ -1,5 +1,6 @@
 # Multi-stage build for WhatsApp bot
 FROM node:20-alpine AS builder
+ARG NPM_REGISTRY=https://registry.npmjs.org
 
 WORKDIR /build
 RUN apk add --no-cache git openssl
@@ -7,20 +8,25 @@ RUN apk add --no-cache git openssl
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
 RUN npm install -g pnpm \
+	&& npm config set registry ${NPM_REGISTRY} \
 	&& pnpm config set fetch-retries 6 \
 	&& pnpm config set fetch-retry-mintimeout 10000 \
 	&& pnpm config set fetch-retry-maxtimeout 120000 \
-	&& pnpm install --prefer-offline
+	&& pnpm config set registry ${NPM_REGISTRY} \
+	&& pnpm install --prefer-offline --no-optional
 
 # Copy source
 COPY . .
-RUN pnpm install --no-frozen-lockfile --prefer-offline
+RUN pnpm install --no-frozen-lockfile --prefer-offline --no-optional
 
 # Build
 # Generate Prisma client before TypeScript compilation
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/builddb
 RUN cd packages/database && pnpm exec prisma generate
-RUN pnpm run build
+RUN pnpm --filter @pjtaudirabot/core build \
+	&& pnpm --filter @pjtaudirabot/config build \
+	&& pnpm --filter @pjtaudirabot/services build \
+	&& pnpm --filter @pjtaudirabot/bots-whatsapp build
 RUN node -e "const fs=require('fs');const path=require('path');const hasExt=(s)=>/\.[a-zA-Z0-9]+$/.test(s);const resolveSpec=(spec,file)=>{if(!(spec.startsWith('./')||spec.startsWith('../'))||hasExt(spec))return spec;const base=path.resolve(path.dirname(file),spec);if(fs.existsSync(base+'.js'))return spec+'.js';if(fs.existsSync(path.join(base,'index.js')))return spec+'/index.js';return spec;};const rewrite=(src,file)=>src.replace(/(from\\s+['\"])([^'\"]+)(['\"])/g,(m,a,s,b)=>a+resolveSpec(s,file)+b).replace(/(import\\(\\s*['\"])([^'\"]+)(['\"]\\s*\\))/g,(m,a,s,b)=>a+resolveSpec(s,file)+b);const walk=(d)=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(p.endsWith('.js')){const src=fs.readFileSync(p,'utf8');const out=rewrite(src,p);if(out!==src)fs.writeFileSync(p,out);}}};walk('/build/packages');"
 RUN pnpm --prefer-offline --filter @pjtaudirabot/bots-whatsapp deploy --prod /prod/whatsapp
 RUN SRC=$(find /build/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && DST=$(find /prod/whatsapp/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && cp -R "$SRC/node_modules/.prisma" "$DST/node_modules/"
