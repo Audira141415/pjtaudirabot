@@ -119,7 +119,7 @@ $waitApiHealthy = "for i in `$(seq 1 30); do STATUS=`$(docker inspect --format='
 Invoke-SSH -Command $waitApiHealthy -Context "API tidak healthy setelah menunggu 150 detik"
 
 # Run migrations from source checkout in one-off container on the same network as DB container.
-$migrateCmd = "cd $DEPLOY_DIR && NET=`$(docker inspect -f '{{range `$k,`$v := .NetworkSettings.Networks}}{{println `$k}}{{end}}' pjtaudi-db | head -n1) && test -n `"`$NET`" && docker run --rm --network `"`$NET`" --env-file $DEPLOY_DIR/.env.production --env-file ~/.config/pjtaudi/secrets.env -v ${DEPLOY_DIR}:/workspace -w /workspace node:20-alpine sh -lc 'npm i -g pnpm >/dev/null 2>&1 && pnpm install --frozen-lockfile --ignore-scripts >/dev/null && pnpm --filter @pjtaudirabot/database exec prisma migrate deploy --schema packages/database/schema.prisma'"
+$migrateCmd = "cd $DEPLOY_DIR && NET=`$(docker inspect -f '{{range `$k,`$v := .NetworkSettings.Networks}}{{println `$k}}{{end}}' pjtaudi-db | head -n1) && test -n `"`$NET`" && docker run --rm --network `"`$NET`" --env-file $DEPLOY_DIR/.env.production --env-file ~/.config/pjtaudi/secrets.env -v ${DEPLOY_DIR}:/workspace -w /workspace node:20-alpine sh -lc 'npm i -g pnpm >/dev/null 2>&1 && pnpm install --frozen-lockfile --ignore-scripts >/dev/null && pnpm --filter @pjtaudirabot/database exec prisma migrate deploy --schema /workspace/packages/database/schema.prisma'"
 Invoke-SSH -Command $migrateCmd -Context "Database migration gagal"
 OK "Migration selesai"
 
