@@ -94,7 +94,11 @@ export class WhatsAppMessageHandler {
   ): Promise<void> {
     try {
       const isGroup = jid.endsWith('@g.us');
-      if (isGroup && senderJid !== jid) {
+      const shouldForceDm =
+        isGroup
+        && senderJid !== jid
+        && (this.forceDmGroupJids.size === 0 || this.forceDmGroupJids.has(jid));
+      if (shouldForceDm) {
         const lastLogAt = this.forceDmLogTimestamps.get(jid) ?? 0;
         if (Date.now() - lastLogAt >= FORCE_DM_LOG_COOLDOWN_MS) {
           this.forceDmLogTimestamps.set(jid, Date.now());
@@ -298,8 +302,7 @@ export class WhatsAppMessageHandler {
               title: ticket.title,
               priority,
               category: extraction.category,
-              problem: extraction.data.problem,
-              alokasi: extraction.data.alokasi,
+              problem: extraction.data.problem ?? text.slice(0, 200),
               createdByName: user.displayName ?? user.phoneNumber ?? 'Unknown',
               groupId: jid.includes('@g.us') ? jid : null,
               technicalDetails: extractedFields,

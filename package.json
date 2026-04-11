@@ -39,6 +39,11 @@
     "docker:down": "docker compose -f docker/docker-compose.yml down",
     "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
     "docker:restart": "docker compose -f docker/docker-compose.yml restart",
+    "server:start": "powershell -ExecutionPolicy Bypass -File scripts/server-control.ps1 start",
+    "server:stop": "powershell -ExecutionPolicy Bypass -File scripts/server-control.ps1 stop",
+    "server:restart": "powershell -ExecutionPolicy Bypass -File scripts/server-control.ps1 restart",
+    "server:status": "powershell -ExecutionPolicy Bypass -File scripts/server-control.ps1 status",
+    "server:logs": "powershell -ExecutionPolicy Bypass -File scripts/server-control.ps1 logs",
     "smoke:tickets-modal": "pnpm -C packages/api exec node scripts/seed-open-ticket-smoke.mjs && node scripts/playwright-tickets-bulk-modal-smoke.mjs",
     "setup": "powershell -ExecutionPolicy Bypass -File setup.ps1 setup"
   },

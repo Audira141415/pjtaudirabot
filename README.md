@@ -80,7 +80,7 @@ scripts/              # Utility scripts
 ### Docker Deployment
 
 ```bash
-# Build and start all services
+# Local source-based deployment (builds on the machine running compose)
 pnpm docker:up
 
 # View logs
@@ -88,6 +88,16 @@ pnpm docker:logs
 
 # Stop services
 pnpm docker:down
+```
+
+For production deployments, prefer the registry-based flow:
+
+```bash
+# Build, push, and upload release image refs from Windows
+scripts/build-and-push-release.cmd <registry-prefix> [tag] [push] [server-host]
+
+# On the server, start from pulled images only
+/home/audira/pjtaudirabot/scripts/server-control.sh release-start
 ```
 
 ## 📡 API Documentation

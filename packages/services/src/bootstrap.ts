@@ -270,6 +270,8 @@ export async function createBotServices(
     if (sheetsService.isAvailable()) {
       sheetsService.initializeSheets().catch((err) => logger.error('Sheets init failed', err));
       logger.info('Google Sheets integration enabled');
+    } else if (config.GOOGLE_SHEETS_ENABLED === 'true') {
+      throw new Error('Google Sheets is enabled but the service is not available; check credentials and spreadsheet ID');
     }
   }
 

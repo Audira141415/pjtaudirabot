@@ -97,6 +97,7 @@ if ($repoCheck -match "NO_REPO") {
 Step "6/9  Pasang config di server"
 Invoke-SSH -Command "mkdir -p ~/.config/pjtaudi && chmod 700 ~/.config/pjtaudi && install -m 600 $REMOTE_STAGE_DIR/.env.production $DEPLOY_DIR/.env.production && install -m 600 $REMOTE_STAGE_DIR/google-credentials.json $DEPLOY_DIR/google-credentials.json && rm -f $REMOTE_STAGE_DIR/.env.production $REMOTE_STAGE_DIR/google-credentials.json" -Context "Pasang config gagal"
 Invoke-SSH -Command "test -f ~/.config/pjtaudi/secrets.env" -Context "File ~/.config/pjtaudi/secrets.env wajib ada"
+Invoke-SSH -Command "cd $DEPLOY_DIR && grep -q '^GOOGLE_SHEETS_ENABLED=true' .env.production && grep -q '^GOOGLE_SHEETS_SPREADSHEET_ID=' .env.production && grep -q '^GOOGLE_SHEETS_CREDENTIALS_HOST_PATH=' .env.production" -Context "Konfigurasi Google Sheets tidak lengkap di .env.production"
 OK "Config terpasang"
 
 # 7. Preflight disk space

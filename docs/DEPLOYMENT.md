@@ -53,38 +53,35 @@ SENTRY_DSN=https://key@sentry.io/project
 
 ## Docker Deployment
 
-### 1. Build Images
+### Recommended Production Flow: Build -> Push -> Pull
+
+Use the registry-based workflow when deploying to the server. This avoids building on the server, which is the part that was failing because of intermittent npm / Prisma downloads.
+
+```bash
+# 1) Build and optionally push images from Windows
+scripts/build-and-push-release.cmd <registry-prefix> [tag] [push] [server-host]
+
+# 2) The script uploads ~/.config/pjtaudi/release-images.env to the server
+# 3) The server uses docker/docker-compose.release.yml and only pulls images
+/home/audira/pjtaudirabot/scripts/server-control.sh release-start
+```
+
+### Release Files
+
+- [docker/docker-compose.release.yml](../docker/docker-compose.release.yml) uses image references only, no build context.
+- [scripts/server-control.sh](../scripts/server-control.sh) now supports `release-start`, `release-stop`, `release-restart`, `release-status`, and `release-logs`.
+- [scripts/build-and-push-release.cmd](../scripts/build-and-push-release.cmd) builds images locally, pushes them, and uploads the release image refs.
+
+### Local Source-Based Flow
+
+If you still want to build directly on the machine that runs compose:
 
 ```bash
 # Build all services
 docker-compose -f docker/docker-compose.yml build
 
-# Build specific service
-docker build -f docker/Dockerfile.api -t pjtaudi-api:1.0.0 .
-```
-
-### 2. Push to Registry
-
-```bash
-# Tag images
-docker tag pjtaudi-api:1.0.0 registry.example.com/pjtaudi-api:1.0.0
-docker tag pjtaudi-whatsapp:1.0.0 registry.example.com/pjtaudi-whatsapp:1.0.0
-docker tag pjtaudi-telegram:1.0.0 registry.example.com/pjtaudi-telegram:1.0.0
-
-# Push to registry
-docker push registry.example.com/pjtaudi-api:1.0.0
-docker push registry.example.com/pjtaudi-whatsapp:1.0.0
-docker push registry.example.com/pjtaudi-telegram:1.0.0
-```
-
-### 3. Deploy Stack
-
-```bash
 # Start all services
 docker-compose -f docker/docker-compose.yml up -d
-
-# Verify services
-docker-compose -f docker/docker-compose.yml ps
 
 # View logs
 docker-compose -f docker/docker-compose.yml logs -f
