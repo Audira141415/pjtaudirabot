@@ -32,14 +32,18 @@ export function logAdminAction(
   const adminId = user?.sub ?? 'unknown';
   const ip = request.ip;
 
+  const changesData: Record<string, any> = entry.changes ?? {};
+  if (entry.details) {
+    changesData._details = entry.details;
+  }
+
   db.auditLog.create({
     data: {
       action: entry.action,
       resource: entry.resource,
       resourceId: entry.resourceId ?? null,
-      details: entry.details ?? null,
-      changes: (entry.changes ?? {}) as any,
-      performedBy: adminId,
+      changes: changesData,
+      userId: adminId !== 'unknown' ? adminId : null,
       ipAddress: ip,
       status: 'SUCCESS',
     },
