@@ -72,7 +72,11 @@ async function main(): Promise<void> {
   logger.info(`Telegram bot: ${registry.getAll().length} commands registered`);
 
   // ── Scheduler ──
-  setupMaintenanceScheduler(services, infra);
+  setupMaintenanceScheduler(services, infra, async (msgs) => {
+    if (telegramNotifier.isConfigured()) {
+      await telegramNotifier.sendMaintenanceAlert(msgs);
+    }
+  });
 
   // ── Telegram bot connection ──
   const connection = new TelegramConnection(

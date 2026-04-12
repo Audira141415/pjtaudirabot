@@ -137,8 +137,7 @@ async function main(): Promise<void> {
     logger.warn('No admin user found — the first person to message the bot will be promoted to admin');
   }
 
-  // ── Scheduler / maintenance ──
-  setupMaintenanceScheduler(services, infra);
+  // ── Connection init ──
 
   // ── WhatsApp connection ──
   const connection = new WhatsAppConnection(
@@ -238,7 +237,18 @@ async function main(): Promise<void> {
     logger.info('Telegram NOC notifier: TELEGRAM_BOT_TOKEN or TELEGRAM_NOC_CHAT_ID not set — Telegram forwarding disabled');
   }
 
-  // ── Scheduled Reports ──
+  // ── Scheduled Reports & Maintenance ──
+  setupMaintenanceScheduler(services, infra, async (msgs) => {
+    // 1. WhatsApp admins
+    for (const msg of msgs) {
+      await sendToAdminUsers(`🧰 *PREVENTIVE MAINTENANCE*\n\n${msg}`);
+    }
+    // 2. Telegram NOC (cross-platform forwarding fallback)
+    if (telegramNotifier.isConfigured()) {
+      await telegramNotifier.sendMaintenanceAlert(msgs);
+    }
+  });
+
   scheduler.register({
     name: 'daily-report-auto',
     intervalMs: 60 * 60 * 1000,

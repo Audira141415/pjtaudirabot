@@ -389,7 +389,7 @@ export function registerTicketCommands(
 
 // ─── Maintenance Scheduler ────────────────────────────────────
 
-export function setupMaintenanceScheduler(services: BotServices, infra: BotInfrastructure): void {
+export function setupMaintenanceScheduler(services: BotServices, infra: BotInfrastructure, onMaintenanceAlert?: (msgs: string[]) => Promise<void>): void {
   const { scheduler, analytics, flowEngine, maintenanceScheduleService, ticketService, slaService, sheetsService } = services;
   const { db, redis, logger } = infra;
 
@@ -429,8 +429,12 @@ export function setupMaintenanceScheduler(services: BotServices, infra: BotInfra
         logger.info(`Maintenance completion synced: ${syncedCompleted}`);
       }
 
-      for (const msg of [...dueTickets, ...reminders, ...quarterlyReminders]) {
+      const msgs = [...dueTickets, ...reminders, ...quarterlyReminders];
+      for (const msg of msgs) {
         logger.info(msg);
+      }
+      if (msgs.length > 0 && onMaintenanceAlert) {
+        await onMaintenanceAlert(msgs).catch((err) => logger.error('Maintenance alert callback failed', err));
       }
     },
   });
