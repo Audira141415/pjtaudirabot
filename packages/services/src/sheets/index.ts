@@ -14,7 +14,7 @@ const SHEET_SCHEMAS: Record<string, string[]> = {
   sla: ['ID', 'Ticket Number', 'Priority', 'Category', 'Response Target Min', 'Response Time Min', 'Response Breached', 'Resolution Target Min', 'Resolution Breached', 'Status', 'Created At'],
   uptime: ['ID', 'Target Name', 'Host', 'Check Type', 'Status', 'Response Ms', 'Uptime %', 'Last Check', 'Last Down', 'Tags'],
   handover: ['ID', 'Shift', 'Date', 'Open Tickets', 'SLA Due Soon', 'SLA Breached', 'Critical Alerts', 'Active Incidents', 'Generated At'],
-  maintenance_schedules: ['ID', 'Judul PM', 'Deskripsi', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'Status', 'Dibuat Pada'],
+  maintenance_schedules: ['ID', 'Judul PM', 'Deskripsi', 'Lokasi Perangkat', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'No. Tiket Terakhir', 'Penanggung Jawab', 'Status', 'Dibuat Pada'],
 };
 
 export interface SheetsConfig {
@@ -1218,9 +1218,12 @@ export class GoogleSheetsService {
     id: string;
     title: string;
     description?: string | null;
+    location?: string | null;
     intervalMonths: number;
     nextDueDate: Date;
     lastCreatedAt?: Date | null;
+    lastTicketNumber?: string | null;
+    assignedTo?: string | null;
     isActive: boolean;
     createdAt: Date;
   }): Promise<void> {
@@ -1242,9 +1245,12 @@ export class GoogleSheetsService {
       ID: schedule.id,
       'Judul PM': schedule.title,
       'Deskripsi': schedule.description ?? '-',
+      'Lokasi Perangkat': schedule.location ?? '-',
       'Interval': intervalLabel[schedule.intervalMonths] ?? `Per ${schedule.intervalMonths} Bulan`,
       'Jatuh Tempo Berikutnya': formatDate(schedule.nextDueDate),
       'Terakhir Dijalankan': schedule.lastCreatedAt ? formatDate(schedule.lastCreatedAt) : '-',
+      'No. Tiket Terakhir': schedule.lastTicketNumber ?? '-',
+      'Penanggung Jawab': schedule.assignedTo ?? '-',
       'Status': schedule.isActive ? 'AKTIF' : 'NON-AKTIF',
       'Dibuat Pada': formatDate(schedule.createdAt),
     };

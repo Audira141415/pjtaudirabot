@@ -101,7 +101,11 @@ export class MaintenanceScheduleService {
       anchorDay: schedule.anchorDay,
     });
 
-    this.sheetsService?.syncMaintenanceSchedule(schedule).catch(err => {
+    this.sheetsService?.syncMaintenanceSchedule({
+      ...schedule,
+      lastTicketNumber: null,
+      assignedTo: null,
+    }).catch(err => {
       this.logger.error(`Failed to sync maintenance schedule ${schedule.id} to sheet`, err);
     });
 
@@ -236,7 +240,11 @@ export class MaintenanceScheduleService {
       },
     });
 
-    this.sheetsService?.syncMaintenanceSchedule(updated).catch(err => {
+    this.sheetsService?.syncMaintenanceSchedule({
+      ...updated,
+      lastTicketNumber: null,
+      assignedTo: null,
+    }).catch(err => {
       this.logger.error(`Failed to sync maintenance schedule ${id} to sheet`, err);
     });
 
@@ -728,11 +736,19 @@ export class MaintenanceScheduleService {
     if (!this.sheetsService) return 0;
     const schedules = await this.db.maintenanceSchedule.findMany({
       orderBy: { createdAt: 'asc' },
+      include: {
+        lastTicket: { select: { ticketNumber: true, assignedTo: true } },
+      },
     });
-    
+
     let count = 0;
     for (const schedule of schedules) {
-      await this.sheetsService.syncMaintenanceSchedule(schedule).catch(() => {});
+      const { lastTicket, ...rest } = schedule as any;
+      await this.sheetsService.syncMaintenanceSchedule({
+        ...rest,
+        lastTicketNumber: lastTicket?.ticketNumber ?? null,
+        assignedTo: lastTicket?.assignedTo ?? null,
+      }).catch(() => {});
       count++;
     }
     return count;
