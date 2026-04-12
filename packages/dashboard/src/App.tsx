@@ -1,55 +1,78 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from './components/Toast';
 import Layout from './components/Layout';
-import DashboardPage from './pages/Dashboard';
-import UsersPage from './pages/Users';
-import BroadcastPage from './pages/Broadcast';
-import ModerationPage from './pages/Moderation';
-import AuditPage from './pages/Audit';
-import WebhooksPage from './pages/Webhooks';
-import FlowsPage from './pages/Flows';
-import LoginPage from './pages/Login';
-import TicketsPage from './pages/Tickets';
-import SLAMonitorPage from './pages/SLAMonitor';
-import AlertsPage from './pages/Alerts';
-import UptimeMonitorPage from './pages/UptimeMonitor';
-import NetworkHealthPage from './pages/NetworkHealth';
-import ServerStatusPage from './pages/ServerStatus';
-import ShiftHandoverPage from './pages/ShiftHandover';
-import TaskManagerPage from './pages/TaskManager';
-import ReportsPage from './pages/Reports';
-import KnowledgeBasePage from './pages/KnowledgeBase';
-import AIInsightsPage from './pages/AIInsights';
-import MemoryBrowserPage from './pages/MemoryBrowser';
-import BackupManagerPage from './pages/BackupManager';
-import BulkOperationsPage from './pages/BulkOperations';
-import ChecklistPage from './pages/Checklist';
-import RemindersPage from './pages/Reminders';
-import GroupManagementPage from './pages/GroupManagement';
-import SettingsPage from './pages/Settings';
-import SentimentAnalysisPage from './pages/SentimentAnalysis';
-import ScheduledMessagesPage from './pages/ScheduledMessages';
-import CampaignManagerPage from './pages/CampaignManager';
-import CRMContactsPage from './pages/CRMContacts';
-import PaymentManagerPage from './pages/PaymentManager';
-import UnifiedInboxPage from './pages/UnifiedInbox';
-import AutoModerationPage from './pages/AutoModeration';
-import FAQManagerPage from './pages/FAQManager';
-import TemplateManagerPage from './pages/TemplateManager';
-import ChatbotBuilderPage from './pages/ChatbotBuilder';
-import CSATSurveyPage from './pages/CSATSurvey';
-import AgentManagementPage from './pages/AgentManagement';
-import TagsLabelsPage from './pages/TagsLabels';
-import CRMPipelinePage from './pages/CRMPipeline';
-import FileManagerPage from './pages/FileManager';
-import ApiKeysPageComp from './pages/ApiKeysPage';
-import CannedResponsesPage from './pages/CannedResponses';
-import AnalyticsChartsPage from './pages/AnalyticsCharts';
-import WebhookLogsPage from './pages/WebhookLogs';
-import ExportCenterPage from './pages/ExportCenter';
-import NotificationRulesPage from './pages/NotificationRules';
-import MultiLanguagePage from './pages/MultiLanguage';
-import MaintenancePage from './pages/Maintenance';
+
+// ── Lazy-loaded pages (code-split for faster initial load) ──
+const LoginPage = lazy(() => import('./pages/Login'));
+const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const UsersPage = lazy(() => import('./pages/Users'));
+const BroadcastPage = lazy(() => import('./pages/Broadcast'));
+const ModerationPage = lazy(() => import('./pages/Moderation'));
+const AuditPage = lazy(() => import('./pages/Audit'));
+const WebhooksPage = lazy(() => import('./pages/Webhooks'));
+const FlowsPage = lazy(() => import('./pages/Flows'));
+const TicketsPage = lazy(() => import('./pages/Tickets'));
+const SLAMonitorPage = lazy(() => import('./pages/SLAMonitor'));
+const AlertsPage = lazy(() => import('./pages/Alerts'));
+const UptimeMonitorPage = lazy(() => import('./pages/UptimeMonitor'));
+const NetworkHealthPage = lazy(() => import('./pages/NetworkHealth'));
+const ServerStatusPage = lazy(() => import('./pages/ServerStatus'));
+const ShiftHandoverPage = lazy(() => import('./pages/ShiftHandover'));
+const TaskManagerPage = lazy(() => import('./pages/TaskManager'));
+const ReportsPage = lazy(() => import('./pages/Reports'));
+const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBase'));
+const AIInsightsPage = lazy(() => import('./pages/AIInsights'));
+const MemoryBrowserPage = lazy(() => import('./pages/MemoryBrowser'));
+const BackupManagerPage = lazy(() => import('./pages/BackupManager'));
+const BulkOperationsPage = lazy(() => import('./pages/BulkOperations'));
+const ChecklistPage = lazy(() => import('./pages/Checklist'));
+const RemindersPage = lazy(() => import('./pages/Reminders'));
+const GroupManagementPage = lazy(() => import('./pages/GroupManagement'));
+const SettingsPage = lazy(() => import('./pages/Settings'));
+const SentimentAnalysisPage = lazy(() => import('./pages/SentimentAnalysis'));
+const ScheduledMessagesPage = lazy(() => import('./pages/ScheduledMessages'));
+const CampaignManagerPage = lazy(() => import('./pages/CampaignManager'));
+const CRMContactsPage = lazy(() => import('./pages/CRMContacts'));
+const PaymentManagerPage = lazy(() => import('./pages/PaymentManager'));
+const UnifiedInboxPage = lazy(() => import('./pages/UnifiedInbox'));
+const AutoModerationPage = lazy(() => import('./pages/AutoModeration'));
+const FAQManagerPage = lazy(() => import('./pages/FAQManager'));
+const TemplateManagerPage = lazy(() => import('./pages/TemplateManager'));
+const ChatbotBuilderPage = lazy(() => import('./pages/ChatbotBuilder'));
+const CSATSurveyPage = lazy(() => import('./pages/CSATSurvey'));
+const AgentManagementPage = lazy(() => import('./pages/AgentManagement'));
+const TagsLabelsPage = lazy(() => import('./pages/TagsLabels'));
+const CRMPipelinePage = lazy(() => import('./pages/CRMPipeline'));
+const FileManagerPage = lazy(() => import('./pages/FileManager'));
+const ApiKeysPageComp = lazy(() => import('./pages/ApiKeysPage'));
+const CannedResponsesPage = lazy(() => import('./pages/CannedResponses'));
+const AnalyticsChartsPage = lazy(() => import('./pages/AnalyticsCharts'));
+const WebhookLogsPage = lazy(() => import('./pages/WebhookLogs'));
+const ExportCenterPage = lazy(() => import('./pages/ExportCenter'));
+const NotificationRulesPage = lazy(() => import('./pages/NotificationRules'));
+const MultiLanguagePage = lazy(() => import('./pages/MultiLanguage'));
+const MaintenancePage = lazy(() => import('./pages/Maintenance'));
+
+function PageLoader() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '60vh',
+      gap: '0.75rem',
+      color: 'rgba(255,255,255,0.6)',
+      fontSize: '0.875rem',
+    }}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+      </svg>
+      Loading...
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('admin_token');
@@ -61,6 +84,7 @@ export default function App() {
   return (
     <>
     <ToastContainer />
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route
@@ -121,6 +145,7 @@ export default function App() {
         <Route path="language" element={<MultiLanguagePage />} />
       </Route>
     </Routes>
+    </Suspense>
     </>
   );
 }

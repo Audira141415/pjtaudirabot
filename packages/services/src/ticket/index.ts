@@ -1,7 +1,8 @@
-import { PrismaClient, TicketStatus, TicketPriority, TicketCategory } from '@prisma/client';
+import { PrismaClient, Prisma, TicketStatus, TicketPriority, TicketCategory, Platform } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
 import { resolveLocation } from '../data/neucentrix-locations';
+import { TicketClusteringService } from '../clustering';
 
 export interface CreateTicketInput {
   createdById: string;
@@ -46,13 +47,16 @@ export class TicketService {
   private logger: ILogger;
   private counterKey = 'ticket:counter';
   private readonly maxCreateRetries = 5;
+  private clustering?: TicketClusteringService;
 
   constructor(
     private db: PrismaClient,
     private redis: RedisClientType,
     logger: ILogger,
+    clustering?: TicketClusteringService,
   ) {
     this.logger = logger.child({ service: 'ticket' });
+    this.clustering = clustering;
   }
 
   /**
@@ -141,7 +145,7 @@ export class TicketService {
             gateway: input.gateway,
             subnet: input.subnet,
             mode: input.mode,
-            source: input.source as any,
+            source: input.source as Platform | undefined,
             groupId: input.groupId,
             sourceMessage: input.sourceMessage,
             tags: input.tags ?? [],
@@ -150,6 +154,20 @@ export class TicketService {
         });
 
         await this.addHistory(ticket.id, 'created', undefined, undefined, undefined, input.createdById);
+        
+        // Trigger clustering if service available
+        if (this.clustering) {
+          try {
+            await this.clustering.clusterNewTicket(ticket);
+          } catch (clusterError) {
+            this.logger.warn('Clustering failed for ticket', {
+              ticketId: ticket.id,
+              error: clusterError instanceof Error ? clusterError.message : String(clusterError),
+            });
+            // Don't throw - clustering is non-critical to ticket creation
+          }
+        }
+
         this.logger.info('Ticket created', { ticketNumber, id: ticket.id, attempt });
         return ticket;
       } catch (error) {
@@ -180,7 +198,7 @@ export class TicketService {
   }
 
   async list(filters: TicketFilters = {}, limit = 20, offset = 0) {
-    const where: any = {};
+    const where: Prisma.TicketWhereInput = {};
     if (filters.status) where.status = filters.status;
     if (filters.priority) where.priority = filters.priority;
     if (filters.category) where.category = filters.category;
@@ -212,7 +230,7 @@ export class TicketService {
     const ticket = await this.db.ticket.findUnique({ where: { id: ticketId } });
     if (!ticket) return null;
 
-    const data: any = { status };
+    const data: Prisma.TicketUpdateInput = { status };
     if (status === 'RESOLVED') data.resolvedAt = new Date();
     if (status === 'CLOSED') data.closedAt = new Date();
 
@@ -256,6 +274,20 @@ export class TicketService {
 
     await this.addHistory(ticketId, 'resolved', undefined, undefined, undefined, changedById,
       `Root cause: ${rootCause}\nSolution: ${solution}`);
+
+    // Cascade resolution in cluster if service available
+    if (this.clustering) {
+      try {
+        await this.clustering.cascadeResolution(ticketId, rootCause, solution, changedById);
+      } catch (clusterError) {
+        this.logger.warn('Cascade resolution failed', {
+          ticketId,
+          error: clusterError instanceof Error ? clusterError.message : String(clusterError),
+        });
+        // Don't throw - cascade is non-critical
+      }
+    }
+
     this.logger.info('Ticket resolved', { ticketId });
     return updated;
   }
@@ -265,7 +297,7 @@ export class TicketService {
   }
 
   async getStats(filters: { dateFrom?: Date; dateTo?: Date } = {}) {
-    const where: any = {};
+    const where: Prisma.TicketWhereInput = {};
     if (filters.dateFrom || filters.dateTo) {
       where.createdAt = {};
       if (filters.dateFrom) where.createdAt.gte = filters.dateFrom;

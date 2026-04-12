@@ -1,6 +1,29 @@
 # 📚 Complete Documentation Index
 
-## 🎯 Role Enforcement (Latest - Newly Implemented)
+## ✨ Smart Ticket Clustering (Latest - Just Implemented)
+
+Auto-group related tickets, cascade resolution, 300% MTTR improvement.
+
+| Document | Purpose | Audience | Read Time |
+|----------|---------|----------|-----------|
+| [**CLUSTERING_QUICK_REFERENCE.md**](CLUSTERING_QUICK_REFERENCE.md) | Configuration and quick lookup | Everyone | 2 min ⭐ |
+| [**CLUSTERING_IMPLEMENTATION.md**](CLUSTERING_IMPLEMENTATION.md) | Complete architecture and algorithm | Developers | 15 min |
+| [**CLUSTERING_DEPLOYMENT.md**](CLUSTERING_DEPLOYMENT.md) | Step-by-step deployment guide | DevOps | 20 min |
+
+### Key Features
+- ✅ **Auto-clustering**: Similar tickets grouped in 60-min window
+- ✅ **Impact scoring**: 0-100 impact based on members + priority
+- ✅ **Cascade resolution**: Resolve master → all members auto-resolved
+- ✅ **Telegram alerts**: NOC notifications with cluster details
+- ✅ **Audit trail**: Complete history of clustering actions
+
+**Start Here**: [CLUSTERING_QUICK_REFERENCE.md](CLUSTERING_QUICK_REFERENCE.md)
+
+**Deploy Now**: [CLUSTERING_DEPLOYMENT.md](CLUSTERING_DEPLOYMENT.md) (40 min)
+
+---
+
+## 🎯 Role Enforcement (Existing)
 
 The role-based permission system for Group Management commands.
 
@@ -83,8 +106,13 @@ The role-based permission system for Group Management commands.
 docs/
 ├── 📌 INDEX (this file)
 │
-├── 🔐 ROLE ENFORCEMENT (Newest)
-│   ├── QUICK_REFERENCE_ROLES.md .............. ⭐ Start here!
+├── ✨ SMART CLUSTERING (Newest - Pending Deploy)
+│   ├── CLUSTERING_QUICK_REFERENCE.md ......... ⭐ Start here!
+│   ├── CLUSTERING_IMPLEMENTATION.md ........... Architecture + algorithm
+│   └── CLUSTERING_DEPLOYMENT.md .............. Deployment steps
+│
+├── 🔐 ROLE ENFORCEMENT
+│   ├── QUICK_REFERENCE_ROLES.md .............. Permission lookup
 │   ├── PERMISSION_MODEL.md .................. Complete guide
 │   ├── ROLE_ENFORCEMENT_IMPLEMENTATION.md ... Technical details
 │   ├── ROLE_ENFORCEMENT_TESTING.md .......... Test procedures

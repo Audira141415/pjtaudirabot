@@ -2,6 +2,15 @@
 # Jalankan: .\scripts\deploy-to-server.ps1
 
 $ErrorActionPreference = "Stop"
+
+if ($env:ALLOW_SOURCE_DEPLOY -ne "true") {
+    Write-Host "LOCKED: Source-based deployment disabled for production safety." -ForegroundColor Red
+    Write-Host "Use immutable release flow only:" -ForegroundColor Yellow
+    Write-Host "  scripts/build-and-push-release.cmd ghcr.io/<org> <tag> deploy audira@192.168.100.157" -ForegroundColor Yellow
+    Write-Host "Set ALLOW_SOURCE_DEPLOY=true only for break-glass scenarios." -ForegroundColor Yellow
+    exit 1
+}
+
 $SERVER     = "audira@192.168.100.157"
 $DEPLOY_DIR = "/home/audira/pjtaudirabot"
 $REPO_URL   = "https://github.com/Audira141415/pjtaudirabot.git"

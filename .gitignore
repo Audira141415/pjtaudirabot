@@ -68,6 +68,11 @@ coverage
 .tmp
 temp
 *.tmp
+*.tar
+*.tgz
+*.tar.gz
+api-release.tar
+release-images.tar
 
 # Prisma
 .env*.local

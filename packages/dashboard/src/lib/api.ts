@@ -6,6 +6,12 @@ export interface SystemHealthComponent {
   latency?: number;
   details?: string;
   lastCheck: string;
+  meta?: {
+    platform?: string;
+    connectionStatus?: string;
+    lastConnectedAt?: string | null;
+    ready?: boolean;
+  };
 }
 
 export interface SystemHealthData {
@@ -115,14 +121,14 @@ export interface MaintenanceScheduleItem {
   } | null;
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, base = API_BASE): Promise<T> {
   const token = localStorage.getItem('admin_token');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${base}${path}`, {
     ...options,
     headers: { ...headers, ...options?.headers },
   });
@@ -270,8 +276,8 @@ export const api = {
   getSLADashboard: () => request<{ data: Record<string, unknown> }>('/sla/dashboard'),
 
   // ─── Escalations ─────────────────────────────────────────
-  getEscalations: (page = 1) =>
-    request<{ data: Array<Record<string, unknown>>; pagination: { total: number } }>(`/escalations?page=${page}`),
+  getEscalations: (page = 1, limit = 20) =>
+    request<{ data: Array<Record<string, unknown>>; pagination: { total: number } }>(`/escalations?page=${page}&limit=${limit}`),
   getEscalationRules: () => request<{ data: Array<Record<string, unknown>> }>('/escalation-rules'),
   createEscalationRule: (rule: Record<string, unknown>) =>
     request<{ data: Record<string, unknown> }>('/escalation-rules', { method: 'POST', body: JSON.stringify(rule) }),
@@ -359,6 +365,9 @@ export const api = {
   },
   updateIncident: (id: string, data: Record<string, unknown>) =>
     request<{ data: Record<string, unknown> }>(`/incidents/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  // ─── Clusters ────────────────────────────────────────────
+  getOpenClusters: () => request<{ totalClusters: number; clusters: Array<Record<string, unknown>> }>('/open/clusters', undefined, '/api/tickets'),
 
   // ─── Backup ──────────────────────────────────────────────
   getBackups: () => request<{ data: Array<Record<string, unknown>> }>('/backups'),

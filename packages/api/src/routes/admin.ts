@@ -7,6 +7,7 @@ import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import crypto from 'node:crypto';
 import { MaintenanceScheduleService } from '@pjtaudirabot/services';
+import { auditLog } from '../utils/audit';
 
 /**
  * Admin API routes — requires JWT auth with admin role.
@@ -16,6 +17,54 @@ export async function adminRoutes(
   ctx: AppContext
 ): Promise<void> {
   const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger);
+
+  const botHealthHosts: Record<string, string[]> = {
+    TELEGRAM: [process.env.TELEGRAM_HEALTH_HOST || 'telegram', '127.0.0.1'],
+    WHATSAPP: [process.env.WHATSAPP_HEALTH_HOST || 'whatsapp', '127.0.0.1'],
+  };
+
+  async function probeBotHealth(platform: 'TELEGRAM' | 'WHATSAPP', port: number) {
+    const candidates = Array.from(new Set(botHealthHosts[platform].filter(Boolean)));
+
+    const probeCandidate = async (host: string) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 1200);
+
+      try {
+        const start = Date.now();
+        const res = await fetch(`http://${host}:${port}/`, { signal: controller.signal });
+        const latency = Date.now() - start;
+
+        if (!res.ok) {
+          throw new Error(`Health endpoint returned ${res.status}`);
+        }
+
+        const data = await res.json() as { status?: string; waConnectionState?: string };
+        const waConnected = platform === 'WHATSAPP'
+          ? data.waConnectionState === 'open'
+          : true;
+
+        return {
+          ok: true as const,
+          host,
+          latency,
+          waConnected,
+          data,
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
+
+    const settled = await Promise.allSettled(candidates.map((host) => probeCandidate(host)));
+    for (const result of settled) {
+      if (result.status === 'fulfilled' && result.value.ok) {
+        return result.value;
+      }
+    }
+
+    return { ok: false as const };
+  }
 
   // JWT auth hook for all admin routes
   app.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -40,6 +89,12 @@ export async function adminRoutes(
       latency?: number;
       details?: string;
       lastCheck: string;
+      meta?: {
+        platform?: string;
+        connectionStatus?: string;
+        lastConnectedAt?: string | null;
+        ready?: boolean;
+      };
     }> = [];
     const now = new Date().toISOString();
 
@@ -114,53 +169,61 @@ export async function adminRoutes(
       let status: 'online' | 'offline' | 'degraded' | 'error' = 'offline';
       let details = '';
       let latency: number | undefined;
+      let lastConnectedAt: Date | null = null;
 
-      // First: try pinging the bot health endpoint
       try {
-        const start = Date.now();
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(`http://127.0.0.1:${bot.port}/`, { signal: controller.signal });
-        clearTimeout(timeout);
-        latency = Date.now() - start;
+        const config = await ctx.db.botConfig.findFirst({
+          where: { platform: bot.platform as any },
+          select: { lastConnectedAt: true },
+        });
+        lastConnectedAt = config?.lastConnectedAt ?? null;
+      } catch {
+        // Ignore config lookup failures; the health response should still render.
+      }
 
-        if (res.ok) {
-          const data = await res.json() as { status?: string; waConnectionState?: string };
-          const waConnected = bot.platform === 'WHATSAPP'
-            ? data.waConnectionState === 'open'
-            : true; // Telegram uses token polling, process running = connected
-          status = waConnected ? 'online' : 'degraded';
-          details = bot.platform === 'WHATSAPP'
-            ? `Process running · WA: ${data.waConnectionState ?? 'unknown'} · port ${bot.port} · ${latency}ms`
-            : `Running on port ${bot.port} · ${latency}ms`;
-          // Also update BotConfig in DB
-          try {
-            await ctx.db.botConfig.updateMany({
-              where: { platform: bot.platform as any },
-              data: {
-                connectionStatus: waConnected ? 'CONNECTED' : 'DISCONNECTED',
-                ...(waConnected && { lastConnectedAt: new Date() }),
-              },
-            });
-          } catch { /* ignore */ }
-        } else {
-          status = 'degraded';
-          details = `Health endpoint returned ${res.status}`;
-        }
-      } catch (pingErr: any) {
+      // First: try pinging the bot health endpoint.
+      const probe = await probeBotHealth(bot.platform as 'TELEGRAM' | 'WHATSAPP', bot.port);
+
+      if (probe.ok) {
+        latency = probe.latency;
+        const waConnected = bot.platform === 'WHATSAPP' ? probe.waConnected : true;
+        status = waConnected ? 'online' : 'degraded';
+        details = bot.platform === 'WHATSAPP'
+          ? `Terhubung via ${probe.host}:${bot.port} · WA: ${(probe.data as { waConnectionState?: string }).waConnectionState ?? 'unknown'} · ${latency}ms`
+          : `Terhubung via ${probe.host}:${bot.port} · ${latency}ms`;
+
+        // Also update BotConfig in DB
+        try {
+          const connectedAt = new Date();
+          await ctx.db.botConfig.updateMany({
+            where: { platform: bot.platform as any },
+            data: {
+              connectionStatus: waConnected ? 'CONNECTED' : 'DISCONNECTED',
+              ...(waConnected && { lastConnectedAt: connectedAt }),
+            },
+          });
+          if (waConnected) {
+            lastConnectedAt = connectedAt;
+          }
+        } catch { /* ignore */ }
+      } else {
         // Bot not responding — check env for config info
         const hasToken = !!bot.envToken;
         const isEnabled = bot.envEnabled === 'true';
 
         if (!hasToken) {
           status = 'error';
-          details = `Token/config belum di-set di .env (${bot.platform}_BOT_TOKEN)`;
+          details = bot.platform === 'WHATSAPP'
+            ? `Session/config WhatsApp belum di-set di .env (WHATSAPP_SESSION_DIR)`
+            : `Token/config belum di-set di .env (${bot.platform}_BOT_TOKEN)`;
         } else if (!isEnabled) {
           status = 'offline';
           details = `Disabled di .env (${bot.platform}_ENABLED=false)`;
         } else {
           status = 'offline';
-          details = `Bot tidak berjalan — jalankan: pnpm dev:${bot.platform.toLowerCase()} (port ${bot.port})`;
+          details = process.env.NODE_ENV === 'production'
+            ? `Service ${bot.platform} tidak terjangkau di port ${bot.port} — cek container Docker atau restart servicenya.`
+            : `Service ${bot.platform} tidak terjangkau di port ${bot.port} — jalankan ulang: pnpm dev:${bot.platform.toLowerCase()}`;
         }
 
         // Update DB status
@@ -172,12 +235,26 @@ export async function adminRoutes(
         } catch { /* ignore */ }
       }
 
+      const connectionStatus = status === 'online'
+        ? 'CONNECTED'
+        : status === 'degraded'
+          ? 'DEGRADED'
+          : status === 'error'
+            ? 'ERROR'
+            : 'DISCONNECTED';
+
       components.push({
         name: `${bot.platform} Bot`,
         status,
         latency,
         details,
         lastCheck: now,
+        meta: {
+          platform: bot.platform,
+          connectionStatus,
+          lastConnectedAt: lastConnectedAt ? lastConnectedAt.toISOString() : null,
+          ready: status === 'online',
+        },
       });
     }
 
@@ -278,6 +355,7 @@ export async function adminRoutes(
       },
     });
 
+    auditLog(ctx.db, request, { action: 'update', resource: 'user', resourceId: id, changes: body });
     return reply.send({ data: user });
   });
 
@@ -482,6 +560,7 @@ export async function adminRoutes(
       },
     });
 
+    auditLog(ctx.db, request, { action: 'create', resource: 'broadcast', resourceId: broadcast.id, changes: { content: body.content, targetPlatform: body.targetPlatform, recipientCount } });
     return reply.status(201).send({ data: broadcast });
   });
 
@@ -523,6 +602,7 @@ export async function adminRoutes(
   app.delete('/moderation/rules/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     await ctx.db.moderationRule.delete({ where: { id } });
+    auditLog(ctx.db, request, { action: 'delete', resource: 'moderation_rule', resourceId: id });
     return reply.send({ success: true });
   });
 
@@ -610,6 +690,7 @@ export async function adminRoutes(
   app.delete('/webhooks/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     await ctx.db.webhookConfig.delete({ where: { id } });
+    auditLog(ctx.db, request, { action: 'delete', resource: 'webhook', resourceId: id });
     return reply.send({ success: true });
   });
 
@@ -652,6 +733,7 @@ export async function adminRoutes(
   app.delete('/flows/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string };
     await ctx.db.flowDefinition.delete({ where: { id } });
+    auditLog(ctx.db, request, { action: 'delete', resource: 'flow', resourceId: id });
     return reply.send({ success: true });
   });
 
@@ -892,6 +974,7 @@ export async function adminRoutes(
     if (body.status === 'CLOSED' && !updateData.closedAt) updateData.closedAt = new Date();
 
     const ticket = await ctx.db.ticket.update({ where: { id }, data: updateData });
+    auditLog(ctx.db, request, { action: 'update', resource: 'ticket', resourceId: id, changes: updateData });
     return reply.send({ data: ticket });
   });
 

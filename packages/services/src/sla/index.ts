@@ -1,6 +1,19 @@
-import { PrismaClient, TicketPriority, TicketCategory } from '@prisma/client';
+import { PrismaClient, Prisma, TicketPriority, TicketCategory } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
+
+const AUTO_UNASSIGNED_ENABLED = (process.env.SLA_AUTO_UNASSIGNED_ENABLED ?? 'true').toLowerCase() === 'true';
+const parsePositiveInt = (value: string | undefined, fallback: number): number => {
+  const parsed = Number.parseInt(value ?? '', 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+const AUTO_UNASSIGNED_RESPONSE_MIN = parsePositiveInt(process.env.SLA_AUTO_UNASSIGNED_RESPONSE_MIN, 15);
+const AUTO_UNASSIGNED_REOPEN_MIN = parsePositiveInt(process.env.SLA_AUTO_UNASSIGNED_REOPEN_MIN, 60);
+const AUTO_UNASSIGNED_CATEGORY_SCOPE = (process.env.SLA_AUTO_UNASSIGNED_CATEGORIES ?? '')
+  .split(',')
+  .map((item) => item.trim().toUpperCase())
+  .filter(Boolean);
+const AUTO_UNASSIGNED_ROOT_CAUSE = 'AUTO_UNASSIGNED_TIMEOUT';
 
 /**
  * neuCentrIX SLA Configuration (migrated from bot old slaConfig.js)
@@ -47,6 +60,11 @@ export class SLAService {
     logger: ILogger,
   ) {
     this.logger = logger.child({ service: 'sla' });
+  }
+
+  private isAutoUnassignedCategoryAllowed(category: TicketCategory): boolean {
+    if (AUTO_UNASSIGNED_CATEGORY_SCOPE.length === 0) return true;
+    return AUTO_UNASSIGNED_CATEGORY_SCOPE.includes(String(category).toUpperCase());
   }
 
   /** Determine SLA targets from priority + category + description */
@@ -105,7 +123,8 @@ export class SLAService {
     if (!tracking || tracking.respondedAt) return tracking;
 
     const now = new Date();
-    const responseTimeMin = (now.getTime() - tracking.createdAt.getTime()) / 60_000;
+    const responseWindowStart = tracking.responseDeadline.getTime() - (tracking.responseTargetMin * 60_000);
+    const responseTimeMin = (now.getTime() - responseWindowStart) / 60_000;
     const breached = now > tracking.responseDeadline;
 
     const updated = await this.db.sLATracking.update({
@@ -149,6 +168,63 @@ export class SLAService {
     const breaches: string[] = [];
     const now = new Date();
 
+    // Re-open tickets that were auto-resolved because no one picked them,
+    // then reset SLA response/resolution windows for another cycle.
+    if (AUTO_UNASSIGNED_ENABLED) {
+      const reopenCutoff = new Date(now.getTime() - AUTO_UNASSIGNED_REOPEN_MIN * 60_000);
+      const toReopen = await this.db.sLATracking.findMany({
+        where: {
+          respondedAt: null,
+          resolvedAt: { not: null, lte: reopenCutoff },
+          ticket: {
+            status: 'RESOLVED',
+            assignedToId: null,
+            rootCause: AUTO_UNASSIGNED_ROOT_CAUSE,
+          },
+        },
+        include: { ticket: true },
+      });
+
+      for (const t of toReopen) {
+        await this.db.ticket.update({
+          where: { id: t.ticket.id },
+          data: {
+            status: 'OPEN',
+            solution: `Dibuka kembali otomatis oleh sistem setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena tiket belum diambil.`,
+            resolvedAt: null,
+          },
+        });
+
+        await this.db.ticketHistory.create({
+          data: {
+            ticketId: t.ticket.id,
+            action: 'auto_reopened_unassigned_timeout',
+            field: 'status',
+            oldValue: 'RESOLVED',
+            newValue: 'OPEN',
+            note: `♻️ Ticket dimunculkan kembali otomatis setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena masih belum ada yang mengambil tiket.`,
+          },
+        });
+
+        await this.db.sLATracking.update({
+          where: { id: t.id },
+          data: {
+            responseTargetMin: AUTO_UNASSIGNED_RESPONSE_MIN,
+            responseBreached: false,
+            responseWarned: false,
+            responseDeadline: new Date(now.getTime() + AUTO_UNASSIGNED_RESPONSE_MIN * 60_000),
+            resolutionBreached: false,
+            resolutionWarned: false,
+            resolutionDeadline: new Date(now.getTime() + t.resolutionTargetMin * 60_000),
+            resolvedAt: null,
+            resolutionTimeMin: null,
+          },
+        });
+
+        warnings.push(`♻️ Ticket ${t.ticket.ticketNumber} dimunculkan kembali otomatis karena belum ada yang mengambil.`);
+      }
+    }
+
     // Find un-responded tickets
     const unresponded = await this.db.sLATracking.findMany({
       where: { respondedAt: null, responseBreached: false, isPaused: false },
@@ -158,9 +234,50 @@ export class SLAService {
     for (const t of unresponded) {
       const remaining = t.responseDeadline.getTime() - now.getTime();
       const total = t.responseTargetMin * 60_000;
+      const responseWindowStart = t.responseDeadline.getTime() - (t.responseTargetMin * 60_000);
+      const elapsedMin = (now.getTime() - responseWindowStart) / 60_000;
 
-      if (remaining <= 0) {
-        // Breach
+      const canAutoResolveUnassigned =
+        AUTO_UNASSIGNED_ENABLED
+        && t.ticket.assignedToId === null
+        && this.isAutoUnassignedCategoryAllowed(t.ticket.category)
+        && elapsedMin >= AUTO_UNASSIGNED_RESPONSE_MIN;
+
+      if (canAutoResolveUnassigned) {
+          await this.db.ticket.update({
+            where: { id: t.ticket.id },
+            data: {
+              status: 'RESOLVED',
+              rootCause: AUTO_UNASSIGNED_ROOT_CAUSE,
+              solution: `Diselesaikan sistem karena tidak ada yang mengambil tiket dalam ${AUTO_UNASSIGNED_RESPONSE_MIN} menit. Ticket ini akan dimunculkan kembali otomatis setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit jika masih belum ada yang mengambil.`,
+              resolvedAt: now,
+            },
+          });
+
+          await this.db.ticketHistory.create({
+            data: {
+              ticketId: t.ticket.id,
+              action: 'auto_resolved_unassigned_timeout',
+              field: 'status',
+              oldValue: t.ticket.status,
+              newValue: 'RESOLVED',
+              note: `🤖 Diselesaikan sistem karena tidak ada yang mengambil tiket dalam ${AUTO_UNASSIGNED_RESPONSE_MIN} menit. Ticket akan dimunculkan kembali otomatis setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit sampai ada yang mengambil.`,
+            },
+          });
+
+          await this.db.sLATracking.update({
+            where: { id: t.id },
+            data: {
+              responseBreached: true,
+              resolvedAt: now,
+              resolutionBreached: false,
+              resolutionTimeMin: Math.round(((now.getTime() - t.createdAt.getTime()) / 60_000) * 10) / 10,
+            },
+          });
+
+          breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ auto-resolved sistem (akan dimunculkan lagi ${AUTO_UNASSIGNED_REOPEN_MIN}m).`);
+      } else if (remaining <= 0) {
+        // Breach only (no auto-resolve)
         await this.db.sLATracking.update({
           where: { id: t.id },
           data: { responseBreached: true },
@@ -345,7 +462,7 @@ export class SLAService {
 
   /** Get SLA compliance stats */
   async getComplianceStats(dateFrom?: Date, dateTo?: Date) {
-    const where: any = {};
+    const where: Prisma.SLATrackingWhereInput = {};
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) where.createdAt.gte = dateFrom;

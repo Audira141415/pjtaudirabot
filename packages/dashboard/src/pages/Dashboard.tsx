@@ -3,6 +3,7 @@ import { api, TicketOverviewData, SystemHealthData } from '../lib/api';
 import { toast } from '../components/Toast';
 import { notificationStore, getSolution, getGeneralSolution } from '../lib/notification-store';
 import { StatusBadge, PriorityBadge, CategoryBadge } from '../lib/badge-colors';
+import OperationalOverview from '../components/OperationalOverview';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -48,6 +49,11 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({});
   const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
   const [ticketOverview, setTicketOverview] = useState<TicketOverviewData | null>(null);
+  const [slaDashboard, setSlaDashboard] = useState<Record<string, unknown> | null>(null);
+  const [alerts, setAlerts] = useState<Array<Record<string, unknown>>>([]);
+  const [incidents, setIncidents] = useState<Array<Record<string, unknown>>>([]);
+  const [escalations, setEscalations] = useState<Array<Record<string, unknown>>>([]);
+  const [openClusters, setOpenClusters] = useState<Array<Record<string, unknown>>>([]);
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -158,14 +164,28 @@ export default function DashboardPage() {
   };
 
   const loadData = async (days = selectedDays) => {
-    const [todayRes, historyRes, ticketRes] = await Promise.all([
+    const [todayRes, historyRes, ticketRes, slaRes] = await Promise.all([
       api.getStatsToday(),
       api.getStatsHistory(days),
       api.getTicketOverview(days),
+      api.getSLADashboard(),
     ]);
     setStats(todayRes.data as Stats);
     setHistory(historyRes.data);
     setTicketOverview(ticketRes.data);
+    setSlaDashboard(slaRes.data as Record<string, unknown>);
+
+    const [alertsRes, incidentsRes, escalationsRes, clustersRes] = await Promise.allSettled([
+      api.getAlerts(1, { status: 'ACTIVE' }),
+      api.getIncidents(1, { status: 'OPEN' }),
+      api.getEscalations(1, 100),
+      api.getOpenClusters(),
+    ]);
+
+    setAlerts(alertsRes.status === 'fulfilled' ? (alertsRes.value.data as Array<Record<string, unknown>>) : []);
+    setIncidents(incidentsRes.status === 'fulfilled' ? (incidentsRes.value.data as Array<Record<string, unknown>>) : []);
+    setEscalations(escalationsRes.status === 'fulfilled' ? (escalationsRes.value.data as Array<Record<string, unknown>>) : []);
+    setOpenClusters(clustersRes.status === 'fulfilled' ? ((clustersRes.value.clusters as Array<Record<string, unknown>>) ?? []) : []);
   };
 
   useEffect(() => {
@@ -226,6 +246,16 @@ export default function DashboardPage() {
         <StatCard icon={Users} label="Total Users" value={stats.totalUsers ?? 0} color="bg-emerald-500" />
         <StatCard icon={AlertTriangle} label="Errors Today" value={errors} color="bg-red-500" />
       </div>
+
+      <OperationalOverview
+        ticketOverview={ticketOverview}
+        slaDashboard={slaDashboard}
+        alerts={alerts}
+        incidents={incidents}
+        escalations={escalations}
+        openClusters={openClusters}
+        health={health}
+      />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

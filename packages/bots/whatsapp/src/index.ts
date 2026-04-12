@@ -175,8 +175,6 @@ async function main(): Promise<void> {
   await connection.connect();
 
   const effectiveAdminGroupJids = botsConfig.whatsapp.silentMode ? [] : adminGroupJids;
-  let personalSlaReminderRunning = false;
-  let autoRecoveryRunning = false;
   let boundHealthPort = portConfig.whatsapp;
 
   const sendToAdminUsers = async (message: string): Promise<number> => {
@@ -355,11 +353,14 @@ async function main(): Promise<void> {
     },
   });
 
-  // ── Interval loops ──
+  // ── Scheduled interval tasks (Redis-locked for safe multi-instance) ──
 
   // Poll reminders every 30 seconds
-  setInterval(async () => {
-    try {
+  scheduler.register({
+    name: 'reminder-poll',
+    intervalMs: 30_000,
+    runOnStart: false,
+    handler: async () => {
       await reminderService.checkAndDeliver(async (userId, text) => {
         try {
           await connection.sendMessage(userId, text);
@@ -367,14 +368,15 @@ async function main(): Promise<void> {
           logger.error(`Failed to send reminder to ${userId}`, err as Error);
         }
       });
-    } catch (err) {
-      logger.error('Reminder poll error', err as Error);
-    }
-  }, 30_000);
+    },
+  });
 
   // SLA & Escalation check every 60 seconds
-  setInterval(async () => {
-    try {
+  scheduler.register({
+    name: 'sla-escalation-check',
+    intervalMs: 60_000,
+    runOnStart: false,
+    handler: async () => {
       const { warnings, breaches } = await slaService.checkAll();
       const escalations = await escalationService.checkForEscalations();
 
@@ -404,16 +406,16 @@ async function main(): Promise<void> {
           await notifier.sendAlerts(alertNotifications);
         }
       }
-    } catch (err) {
-      logger.error('SLA/Escalation check error', err as Error);
-    }
-  }, 60_000);
+    },
+  });
 
   // Personal SLA auto-reminder every 5 minutes
-  setInterval(async () => {
-    if (personalSlaReminderRunning) return;
-    personalSlaReminderRunning = true;
-    try {
+  scheduler.register({
+    name: 'personal-sla-reminder',
+    intervalMs: 5 * 60_000,
+    runOnStart: false,
+    lockTtlMs: 4 * 60_000,
+    handler: async () => {
       const admins = await db.user.findMany({
         where: { role: 'ADMIN', platform: 'WHATSAPP' },
         select: { id: true, platformUserId: true },
@@ -425,10 +427,6 @@ async function main(): Promise<void> {
 
         const fingerprint = `${overview.breachedCount}:${overview.dueSoonCount}:${overview.rows.map((r) => r.ticketNumber).join(',')}`;
         const dedupeKey = `solo:sla:last-reminder:${admin.id}`;
-        const lockKey = `solo:sla:reminder-lock:${admin.id}`;
-
-        const lockAcquired = await redis.set(lockKey, '1', { NX: true, EX: 240 });
-        if (!lockAcquired) continue;
 
         const previous = await redis.get(dedupeKey);
         if (previous === fingerprint) continue;
@@ -464,22 +462,16 @@ async function main(): Promise<void> {
         await telegramNotifier.sendReportText(message);
         await redis.set(dedupeKey, fingerprint, { EX: 1800 });
       }
-    } catch (err) {
-      logger.error('Personal SLA auto-reminder failed', err as Error);
-    } finally {
-      personalSlaReminderRunning = false;
-    }
-  }, 5 * 60_000);
+    },
+  });
 
   // Auto-recovery reliability every 5 minutes
-  setInterval(async () => {
-    if (autoRecoveryRunning) return;
-    autoRecoveryRunning = true;
-    try {
-      const lockKey = 'solo:recovery:loop-lock';
-      const lockAcquired = await redis.set(lockKey, '1', { NX: true, EX: 240 });
-      if (!lockAcquired) return;
-
+  scheduler.register({
+    name: 'auto-recovery-check',
+    intervalMs: 5 * 60_000,
+    runOnStart: false,
+    lockTtlMs: 4 * 60_000,
+    handler: async () => {
       const checks = await devopsService.healthCheck();
       const downServices = checks.filter((item) => item.status === 'down').map((item) => item.service);
       if (downServices.length === 0) return;
@@ -507,29 +499,30 @@ async function main(): Promise<void> {
 
       await sendToAdminUsers(message);
       await redis.set(dedupeKey, fingerprint, { EX: 1800 });
-    } catch (err) {
-      logger.error('Auto-recovery reliability check failed', err as Error);
-    } finally {
-      autoRecoveryRunning = false;
-    }
-  }, 5 * 60_000);
+    },
+  });
 
   // SLA countdown warnings — every 90 seconds
-  setInterval(async () => {
-    try {
+  scheduler.register({
+    name: 'sla-countdown',
+    intervalMs: 90_000,
+    runOnStart: false,
+    handler: async () => {
       const countdowns = await slaService.checkCountdown(redis);
       if (countdowns.length > 0 && notifier.isConfigured()) {
         await notifier.sendSLACountdowns(countdowns);
       }
-    } catch (err) {
-      logger.error('SLA countdown check failed', err as Error);
-    }
-  }, 90_000);
+    },
+  });
 
   // Unassigned ticket reminder — every 5 minutes
-  setInterval(async () => {
-    if (!notifier.isConfigured()) return;
-    try {
+  scheduler.register({
+    name: 'unassigned-ticket-reminder',
+    intervalMs: 5 * 60_000,
+    runOnStart: false,
+    handler: async () => {
+      if (!notifier.isConfigured()) return;
+
       const { tickets } = await ticketService.list({ status: 'OPEN' }, 50);
       const now = Date.now();
       const toRemind: Array<{ ticketNumber: string; title: string; priority: string; minutesOpen: number }> = [];
@@ -555,10 +548,8 @@ async function main(): Promise<void> {
       if (toRemind.length > 0) {
         await notifier.sendUnassignedReminders(toRemind);
       }
-    } catch (err) {
-      logger.error('Unassigned ticket reminder failed', err as Error);
-    }
-  }, 5 * 60_000);
+    },
+  });
 
   // ── Health-check HTTP server ──
   const healthServer = http.createServer((_req, res) => {
@@ -601,13 +592,36 @@ async function main(): Promise<void> {
   process.on('SIGTERM', shutdown);
 }
 
-// Keep the bot alive despite Baileys internal errors (signal protocol, WebSocket, ECONNRESET)
+// Only swallow known Baileys transport/protocol errors — exit on truly unexpected exceptions
+const BAILEYS_ERROR_PATTERNS = [
+  'connection closed', 'timed out', 'socket closed', 'stream errored',
+  'decryption-failed', 'no sessions', 'not-acceptable', 'not acceptable',
+  'econnreset', 'epipe', 'ehostunreach', 'econnrefused', 'enotfound',
+  'bad_mac', 'invalid_session', 'websocket', 'signal', 'proto',
+];
+
+function isBaileysError(err: unknown): boolean {
+  const msg = ((err as any)?.message ?? '').toLowerCase();
+  const name = ((err as any)?.name ?? '').toLowerCase();
+  return BAILEYS_ERROR_PATTERNS.some(p => msg.includes(p) || name.includes(p));
+}
+
 process.on('uncaughtException', (err) => {
-  console.warn('[uncaughtException caught - bot continues]', err?.message ?? err);
+  if (isBaileysError(err)) {
+    console.warn('[Baileys error caught - bot continues]', err?.message);
+    return;
+  }
+  console.error('[FATAL uncaughtException - bot exiting]', err);
+  process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.warn('[unhandledRejection caught - bot continues]', (reason as any)?.message ?? reason);
+  if (isBaileysError(reason)) {
+    console.warn('[Baileys rejection caught - bot continues]', (reason as any)?.message ?? reason);
+    return;
+  }
+  console.error('[FATAL unhandledRejection - bot exiting]', reason);
+  process.exit(1);
 });
 
 main().catch((error) => {

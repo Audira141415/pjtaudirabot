@@ -66,6 +66,48 @@ scripts/build-and-push-release.cmd <registry-prefix> [tag] [push] [server-host]
 /home/audira/pjtaudirabot/scripts/server-control.sh release-start
 ```
 
+### Enforced Production Lock
+
+- Deploy path is locked to release images by default.
+- Disallowed by default in production:
+  - Source build deploy path (`scripts/deploy-to-server.ps1`)
+  - Local release path (`release-start-local`, `release-restart-local`)
+  - Manual API hotswap (`release-api`)
+- Break-glass flags:
+  - `ALLOW_SOURCE_DEPLOY=true`
+  - `ALLOW_MANUAL_HOTSWAP=true`
+
+### Health Gate + Auto Rollback
+
+Release operations now run a mandatory gate after `release-start` / `release-restart`:
+
+- `GET /health` must return `200`
+- `GET /` must return `200`
+- `GET /uptime` must return `200`
+- `GET /api/admin/system/health` must return overall healthy and both bots online
+
+If gate fails, `server-control.sh` automatically rolls back to the previous image set snapshot (`~/.config/pjtaudi/release-images.previous.env`).
+
+### Watchdog Timer (systemd)
+
+Watchdog files:
+
+- `systemd/pjtaudi-watchdog.service`
+- `systemd/pjtaudi-watchdog.timer`
+
+Install on server:
+
+```bash
+sudo /home/audira/pjtaudirabot/scripts/install-watchdog.sh
+```
+
+Behavior:
+
+- Runs every 1 minute
+- Executes `scripts/watchdog-recover.sh`
+- If health gate fails, triggers controlled `release-restart`
+- Cooldown prevents restart thrashing
+
 ### Release Files
 
 - [docker/docker-compose.release.yml](../docker/docker-compose.release.yml) uses image references only, no build context.

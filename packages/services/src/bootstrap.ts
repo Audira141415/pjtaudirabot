@@ -89,6 +89,7 @@ import { AIExtractor } from './extractor';
 import { ChatPipeline } from './pipeline';
 import { TicketService } from './ticket';
 import { SLAService } from './sla';
+import { TicketClusteringService } from './clustering';
 import { UptimeMonitorService } from './uptime-monitor';
 import { ShiftHandoverService } from './shift-handover';
 import { MaintenanceScheduleService } from './maintenance-schedule';
@@ -290,8 +291,13 @@ export async function createBotServices(
   const aiExtractor = new AIExtractor(aiService.getProvider(), logger);
   const chatPipeline = new ChatPipeline(db, aiExtractor, sheetsService, logger);
 
-  // Ticket & SLA
-  const ticketService = new TicketService(db, redis, logger);
+  // Ticket & SLA & Clustering
+  const clusteringService = new TicketClusteringService(db, logger, {
+    windowMinutes: parseInt(process.env.CLUSTERING_WINDOW_MIN ?? '60', 10),
+    similarityThreshold: parseFloat(process.env.CLUSTERING_SIMILARITY_THRESHOLD ?? '0.75'),
+    minClusterSize: parseInt(process.env.CLUSTERING_MIN_SIZE ?? '2', 10),
+  });
+  const ticketService = new TicketService(db, redis, logger, clusteringService);
   const slaService = new SLAService(db, redis, logger);
 
   // Uptime & Shift Handover

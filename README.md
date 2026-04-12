@@ -93,12 +93,38 @@ pnpm docker:down
 For production deployments, prefer the registry-based flow:
 
 ```bash
-# Build, push, and upload release image refs from Windows
-scripts/build-and-push-release.cmd <registry-prefix> [tag] [push] [server-host]
+# One command from Windows: build + push + upload refs + remote release restart + image verification
+scripts/build-and-push-release.cmd <registry-prefix> [tag] [deploy] [server-host]
 
-# On the server, start from pulled images only
+# Manual server controls (strict, pull required)
 /home/audira/pjtaudirabot/scripts/server-control.sh release-start
+
+# Local fallback when registry pull is unavailable and images already exist on server
+/home/audira/pjtaudirabot/scripts/server-control.sh release-restart-local
+
+# Hot-swap API image only (no deps)
+/home/audira/pjtaudirabot/scripts/server-control.sh release-api <api-image>
 ```
+
+### Production Safety Locks
+
+- Production deploy is locked to immutable release images by default.
+- Source-based deploy (`scripts/deploy-to-server.ps1`) is blocked unless `ALLOW_SOURCE_DEPLOY=true` is explicitly set.
+- Manual API hotswap (`server-control.sh release-api`) is blocked unless `ALLOW_MANUAL_HOTSWAP=true` is explicitly set.
+
+### Auto Recovery (Watchdog)
+
+Install watchdog on server (one-time):
+
+```bash
+sudo /home/audira/pjtaudirabot/scripts/install-watchdog.sh
+```
+
+What it does every minute:
+
+- Runs `scripts/health-gate.sh` (`/health`, `/`, `/uptime`, and admin bot health checks)
+- Triggers `server-control.sh release-restart` on failure
+- Uses release flow health gate + auto rollback if new release is unhealthy
 
 ## 📡 API Documentation
 

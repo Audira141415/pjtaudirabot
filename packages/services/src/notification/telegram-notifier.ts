@@ -287,6 +287,55 @@ export class TelegramNotifier {
     }
   }
 
+  /** Notify when ticket clustering detected (multiple related incidents from same incident) */
+  async sendClusterDetected(params: {
+    clusterNumber: string;
+    clusterUrl?: string;
+    masterTicket: { number: string; title: string; priority: string; category: string };
+    memberCount: number;  // excluding master
+    impactScore: number;
+    commonLocation?: string;
+    commonCustomer?: string;
+    commonService?: string;
+    affectedAssets?: Array<{ hostname?: string; port?: string; location?: string }>;
+  }): Promise<void> {
+    if (!this.isConfigured()) return;
+
+    const icon = params.impactScore >= 75 ? '🚨' : params.impactScore >= 50 ? '🔴' : '🟠';
+    const link = params.clusterUrl ? `<a href="${params.clusterUrl}">View Details</a>` : '';
+
+    const text = [
+      `${icon} <b>CLUSTER DETECTED — ${params.masterTicket.priority}</b>`,
+      ``,
+      `📦 <code>${this.esc(params.clusterNumber)}</code>`,
+      `🔗 linked tickets: <b>${params.memberCount + 1}</b>`,
+      ``,
+      `📋 Master Ticket`,
+      `  <code>${this.esc(params.masterTicket.number)}</code> ${this.esc(params.masterTicket.title)}`,
+      `  Category: ${this.esc(params.masterTicket.category)}`,
+      ``,
+      `📊 Impact Score: <b>${params.impactScore.toFixed(0)}/100</b>`,
+      params.commonLocation ? `📍 Location: ${this.esc(params.commonLocation)}` : null,
+      params.commonCustomer ? `👥 Customer: ${this.esc(params.commonCustomer)}` : null,
+      params.commonService ? `🔧 Service: ${this.esc(params.commonService)}` : null,
+      params.affectedAssets && params.affectedAssets.length > 0
+        ? `🖥️ Affected Assets:\n${params.affectedAssets.slice(0, 3).map((a) => `  • ${a.hostname || a.port || 'unknown'}${a.location ? ` @ ${a.location}` : ''}`).join('\n')}${params.affectedAssets.length > 3 ? `\n  ...and ${params.affectedAssets.length - 3} more` : ''}`
+        : null,
+      ``,
+      `────────────────`,
+      `⚠️ <i>Multiple related tickets detected from same incident</i>`,
+      `🎯 Action: Check all linked tickets together for faster resolution`,
+      link ? ` • ${link}` : null,
+    ].filter(Boolean).join('\n');
+
+    try {
+      await this.sendMessage(text);
+      this.logger.info('Telegram cluster detection notification sent', { clusterNumber: params.clusterNumber, memberCount: params.memberCount });
+    } catch (err) {
+      this.logger.error('Failed to send Telegram cluster notification', err as Error);
+    }
+  }
+
   private esc(text: string): string {
     return text
       .replace(/&/g, '&amp;')

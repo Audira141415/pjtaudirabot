@@ -121,6 +121,22 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo  → checking staged file sizes
+set HAS_BIG_FILE=0
+for /f "usebackq delims=" %%f in (`powershell -NoProfile -Command "$files = git diff --cached --name-only; $big = @(); foreach($f in $files){ if(Test-Path $f -PathType Leaf){ $len = (Get-Item $f).Length; if($len -gt 95MB){ $big += ($f + ' (' + [math]::Round($len/1MB,2) + ' MB)') } } }; $big | ForEach-Object { Write-Output $_ }; if($big.Count -gt 0){ exit 2 }"`) do (
+    echo  [BLOCKED] Large staged file: %%f
+    set HAS_BIG_FILE=1
+)
+
+if "%HAS_BIG_FILE%"=="1" (
+    echo.
+    echo  [ERROR] Push will be rejected by GitHub file-size limit.
+    echo  Please remove large artifacts from staging/history (e.g. *.tar, tmp/*).
+    echo  Tip: git reset HEAD -- ^<file^>
+    pause
+    exit /b 1
+)
+
 echo  → git commit
 git commit -m "%COMMIT_MSG%"
 if errorlevel 1 (

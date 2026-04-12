@@ -4,19 +4,24 @@ import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
+import fastifyRateLimit from '@fastify/rate-limit';
+import bcrypt from 'bcrypt';
 import { getServerConfig, getRedisConfig } from '@pjtaudirabot/config';
 import { createLogger } from '@pjtaudirabot/core';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from 'redis';
 import { adminRoutes } from './routes/admin';
+import { clusteringRoutes } from './routes/clustering';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import type { RedisClientType } from 'redis';
+import type { ILogger } from '@pjtaudirabot/core';
 
 export interface AppContext {
   db: PrismaClient;
-  redis: any;
-  logger: any;
+  redis: RedisClientType;
+  logger: ILogger;
 }
 
 export async function createApp() {
@@ -64,16 +69,46 @@ export async function createApp() {
   });
 
   // Register plugins
-  await app.register(fastifyHelmet);
+  const enableUpgradeInsecureRequests =
+    (process.env.ENABLE_UPGRADE_INSECURE_REQUESTS || '').toLowerCase() === 'true';
+  const enableStrictTransportSecurity =
+    (process.env.ENABLE_STRICT_TRANSPORT_SECURITY || '').toLowerCase() === 'true';
+  const enableSecureIsolationHeaders =
+    (process.env.ENABLE_SECURE_ISOLATION_HEADERS || '').toLowerCase() === 'true';
+  await app.register(fastifyHelmet, {
+    hsts: enableStrictTransportSecurity ? undefined : false,
+    crossOriginOpenerPolicy: enableSecureIsolationHeaders ? undefined : false,
+    originAgentCluster: enableSecureIsolationHeaders ? undefined : false,
+    contentSecurityPolicy: {
+      directives: {
+        upgradeInsecureRequests: enableUpgradeInsecureRequests ? [] : null,
+      },
+    },
+  });
+  // CORS — restrict origins in production, allow all in development
+  const allowedOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+    : ['http://localhost:3000', 'http://localhost:4000'];
   await app.register(fastifyCors, {
-    origin: true,
+    origin: serverConfig.env === 'development' ? true : allowedOrigins,
     credentials: true,
   });
+
+  // JWT — require a strong secret in production
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret && serverConfig.env === 'production') {
+    throw new Error('JWT_SECRET environment variable is required in production');
+  }
   await app.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET || 'dev-secret-key-change-in-production',
+    secret: jwtSecret || 'dev-secret-key-for-local-only',
     sign: {
       expiresIn: process.env.JWT_EXPIRY || '24h',
     }
+  });
+
+  // Rate limiting — used per-route (login brute-force protection)
+  await app.register(fastifyRateLimit, {
+    global: false,
   });
   await app.register(fastifyMultipart, {
     limits: {
@@ -113,14 +148,45 @@ export async function createApp() {
     return reply.send({ ready: true });
   });
 
-  // ── Auth (public — no JWT required) ───────────────────────
-  app.post('/api/admin/auth/login', async (request, reply) => {
+  // ── Auth (public — no JWT required, rate-limited) ──────────
+  app.post('/api/admin/auth/login', {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: '5 minutes',
+      },
+    },
+  }, async (request, reply) => {
     const { username, password } = request.body as { username?: string; password?: string };
-    const adminUser = process.env.ADMIN_USERNAME || 'admin';
-    const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+    if (!username || !password) {
+      return reply.status(400).send({ error: 'Username and password are required' });
+    }
 
-    if (username !== adminUser || password !== adminPass) {
+    const adminUser = process.env.ADMIN_USERNAME || 'admin';
+    if (username !== adminUser) {
       return reply.status(401).send({ error: 'Invalid username or password' });
+    }
+
+    // Use bcrypt hash comparison when ADMIN_PASSWORD_HASH is set (recommended)
+    const adminPasswordHash = process.env.ADMIN_PASSWORD_HASH;
+    if (adminPasswordHash) {
+      const isValid = await bcrypt.compare(password, adminPasswordHash);
+      if (!isValid) {
+        return reply.status(401).send({ error: 'Invalid username or password' });
+      }
+    } else {
+      // Fallback to plaintext for initial setup / development only
+      const adminPass = process.env.ADMIN_PASSWORD || 'admin123';
+      if (password !== adminPass) {
+        return reply.status(401).send({ error: 'Invalid username or password' });
+      }
+      if (serverConfig.env === 'production') {
+        logger.warn(
+          'SECURITY WARNING: ADMIN_PASSWORD_HASH is not set. '
+          + 'Using plaintext password comparison. '
+          + 'Generate a hash with: npx bcrypt-cli hash <password>'
+        );
+      }
     }
 
     const token = app.jwt.sign({ sub: 'admin', role: 'admin' });
@@ -133,9 +199,31 @@ export async function createApp() {
     { prefix: '/api/admin' }
   );
 
+  // Clustering routes (prefix: /api/tickets)
+  await app.register(
+    async (instance) => clusteringRoutes(instance, { db, logger }),
+    { prefix: '/api/tickets' }
+  );
+
   // Serve dashboard static files in production
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const dashboardPath = path.resolve(__dirname, '../../dashboard/dist');
+  const dashboardCandidates = [
+    path.resolve(__dirname, '../dashboard/dist'),
+    path.resolve(__dirname, '../../dashboard/dist'),
+    path.resolve(process.cwd(), 'dashboard/dist'),
+  ];
+
+  let dashboardPath = dashboardCandidates[0];
+  for (const candidate of dashboardCandidates) {
+    try {
+      await fs.access(candidate);
+      dashboardPath = candidate;
+      break;
+    } catch {
+      // Continue until we find an existing dashboard dist path.
+    }
+  }
+
   const uploadsPath = path.resolve(process.cwd(), 'data/uploads');
   await fs.mkdir(uploadsPath, { recursive: true });
 
@@ -146,10 +234,37 @@ export async function createApp() {
     decorateReply: false,
   });
 
+  app.get('/uptime', async (_request, reply) => {
+    return reply.sendFile('index.html', dashboardPath);
+  });
+
+  app.get('/uptime/*', async (_request, reply) => {
+    return reply.sendFile('index.html', dashboardPath);
+  });
+
   await app.register(fastifyStatic, {
     root: dashboardPath,
     prefix: '/',
     wildcard: false,
+  });
+
+  // Ensure client-side routes (e.g. /uptime) work on direct refresh/open.
+  app.get('/*', async (request, reply) => {
+    const requestPath = request.url.split('?')[0];
+    const isApiPath = requestPath.startsWith('/api/');
+    const isUploadPath = requestPath.startsWith('/uploads/');
+    const lastPathSegment = requestPath.slice(requestPath.lastIndexOf('/') + 1);
+    const hasAssetExtension = /\.[a-z0-9]{2,8}$/i.test(lastPathSegment);
+    const isKnownStaticFile = requestPath === '/favicon.ico'
+      || requestPath === '/robots.txt'
+      || requestPath === '/manifest.webmanifest';
+    const acceptsHtml = request.headers.accept?.includes('text/html') ?? false;
+
+    if (isApiPath || isUploadPath || isKnownStaticFile || hasAssetExtension || !acceptsHtml) {
+      return reply.status(404).send({ error: 'Not Found' });
+    }
+
+    return reply.sendFile('index.html', dashboardPath);
   });
 
   // SPA fallback: serve index.html for non-API routes

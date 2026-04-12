@@ -1,0 +1,11 @@
+[Unit]
+Description=PJTAudiBot health watchdog and auto-recover
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=audira
+Group=audira
+WorkingDirectory=/home/audira/pjtaudirabot
+ExecStart=/home/audira/pjtaudirabot/scripts/watchdog-recover.sh

@@ -731,6 +731,8 @@ model Ticket {
   escalations       Escalation[]
   ticketHistory     TicketHistory[]
   dataExtractions   DataExtraction[]
+  clusterMaster     TicketCluster[]  @relation("ClusterMaster")
+  clusterMembership TicketClusterMember[]  @relation("ClusterMembers")
 
   @@index([status])
   @@index([priority])
@@ -985,6 +987,100 @@ model DataExtraction {
   @@index([location])
   @@index([createdAt])
   @@index([ticketId])
+}
+
+// ── Ticket Clustering / Incident Grouping ──
+
+model TicketCluster {
+  id                String          @id @default(cuid())
+  clusterNumber     String          @unique  // e.g. CLUSTER-20260412-0001
+  masterTicketId    String
+  masterTicket      Ticket          @relation("ClusterMaster", fields: [masterTicketId], references: [id], onDelete: Cascade)
+  
+  // Cluster characteristics
+  commonLocation    String?         // shared location (if all tickets same location)
+  commonCustomer    String?         // shared customer
+  commonService     String?         // shared service type
+  commonProblem     String?         // synthesized problem summary
+  affectedAssets    Json            @default("[]")  // array of {id, hostname, port, location}
+  
+  // Status
+  status            ClusterStatus   @default(OPEN)  // OPEN, ESCALATED, RESOLVED, CLOSED
+  severity          TicketPriority  @default(MEDIUM)
+  impactScore       Float           @default(0)   // 0-100 based on: count + priority + SLA urgency
+  affectedTicketCount Int          @default(1)
+  
+  // Timeline
+  detectedAt        DateTime        @default(now())
+  escalatedAt       DateTime?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+  
+  // Resolution cascade
+  cascadeOnResolve  Boolean         @default(true)  // auto-resolve members when master resolved?
+  resolutionAlias   String?         // master resolution applied to all members
+  
+  metadata          Json            @default("{}")
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  members           TicketClusterMember[]
+  history           TicketClusterHistory[]
+  
+  @@index([status])
+  @@index([severity])
+  @@index([masterTicketId])
+  @@index([detectedAt])
+  @@index([createdAt])
+}
+
+model TicketClusterMember {
+  id                String    @id @default(cuid())
+  clusterId         String
+  cluster           TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  ticketId          String
+  ticket            Ticket    @relation("ClusterMembers", fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  // Similarity score between this ticket and master
+  similarityScore   Float     @default(0)  // 0-1, how similar to master problem
+  matchingFactors   Json      @default("[]")  // ["location", "customer", "service"]
+  
+  // Member specific tracking
+  isResolved        Boolean   @default(false)
+  resolvedAt        DateTime?
+  
+  position          Int       @default(0)  // order in cluster
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  @@unique([clusterId, ticketId])
+  @@index([clusterId])
+  @@index([ticketId])
+}
+
+model TicketClusterHistory {
+  id                String    @id @default(cuid())
+  clusterId         String
+  cluster           TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  
+  action            String    // created, member_added, escalated, resolved, closed
+  details           Json      @default("{}")
+  changedBy         String?
+  note              String?
+  
+  createdAt         DateTime  @default(now())
+  
+  @@index([clusterId])
+  @@index([createdAt])
+}
+
+enum ClusterStatus {
+  OPEN
+  ESCALATED
+  IN_RESOLUTION
+  RESOLVED
+  CLOSED
+  FALSE_POSITIVE
 }
 
 // ── Network Monitoring ──

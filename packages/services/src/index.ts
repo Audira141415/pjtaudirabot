@@ -48,6 +48,7 @@ export * from './network';
 export * from './bulk';
 export * from './backup';
 export * from './report';
+export * from './clustering';
 export * from './maintenance-schedule';
 export * from './bootstrap';
 export * from './notification';
