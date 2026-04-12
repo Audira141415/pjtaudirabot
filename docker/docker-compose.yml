@@ -43,6 +43,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
+      network: host
     container_name: pjtaudi-api
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -85,6 +86,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.whatsapp
+      network: host
     container_name: pjtaudi-whatsapp
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -127,6 +129,7 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile.telegram
+      network: host
     container_name: pjtaudi-telegram
     environment:
       NODE_ENV: ${NODE_ENV:-production}
