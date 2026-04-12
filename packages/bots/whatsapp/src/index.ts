@@ -466,41 +466,50 @@ async function main(): Promise<void> {
   });
 
   // Auto-recovery reliability every 5 minutes
-  scheduler.register({
-    name: 'auto-recovery-check',
-    intervalMs: 5 * 60_000,
-    runOnStart: false,
-    lockTtlMs: 4 * 60_000,
-    handler: async () => {
-      const checks = await devopsService.healthCheck();
-      const downServices = checks.filter((item) => item.status === 'down').map((item) => item.service);
-      if (downServices.length === 0) return;
+  // Disable with AUTO_RECOVERY_ENABLED=false (default: true on Linux, false on Windows)
+  const autoRecoveryDefault = process.platform !== 'win32' ? 'true' : 'false';
+  const autoRecoveryEnabled = (process.env.AUTO_RECOVERY_ENABLED ?? autoRecoveryDefault).toLowerCase() === 'true';
 
-      const dedupeKey = 'solo:recovery:last-fingerprint';
-      const fingerprint = downServices.slice().sort().join(',');
-      const previous = await redis.get(dedupeKey);
-      if (previous === fingerprint) return;
+  if (autoRecoveryEnabled) {
+    scheduler.register({
+      name: 'auto-recovery-check',
+      intervalMs: 5 * 60_000,
+      runOnStart: false,
+      lockTtlMs: 4 * 60_000,
+      handler: async () => {
+        const checks = await devopsService.healthCheck();
+        const downServices = checks.filter((item) => item.status === 'down').map((item) => item.service);
+        if (downServices.length === 0) return;
 
-      const recovery = await devopsService.attemptAutoRecovery(downServices);
-      const ok = recovery.filter((item) => item.success).map((item) => item.service);
-      const failed = recovery.filter((item) => !item.success).map((item) => item.service);
+        const dedupeKey = 'solo:recovery:last-fingerprint';
+        const fingerprint = downServices.slice().sort().join(',');
+        const previous = await redis.get(dedupeKey);
+        if (previous === fingerprint) return;
 
-      const message = [
-        '🛠️ *AUTO RECOVERY REPORT*',
-        `Down detected: ${downServices.join(', ')}`,
-        ok.length > 0 ? `✅ Recovered: ${ok.join(', ')}` : '✅ Recovered: -',
-        failed.length > 0 ? `❌ Need manual check: ${failed.join(', ')}` : '❌ Need manual check: -',
-        '',
-        'Aksi cepat:',
-        '• !solo-health',
-        '• !health',
-        '• !logs <service>',
-      ].join('\n');
+        const recovery = await devopsService.attemptAutoRecovery(downServices);
+        const ok = recovery.filter((item) => item.success).map((item) => item.service);
+        const failed = recovery.filter((item) => !item.success).map((item) => item.service);
 
-      await sendToAdminUsers(message);
-      await redis.set(dedupeKey, fingerprint, { EX: 1800 });
-    },
-  });
+        const message = [
+          '🛠️ *AUTO RECOVERY REPORT*',
+          `Down detected: ${downServices.join(', ')}`,
+          ok.length > 0 ? `✅ Recovered: ${ok.join(', ')}` : '✅ Recovered: -',
+          failed.length > 0 ? `❌ Need manual check: ${failed.join(', ')}` : '❌ Need manual check: -',
+          '',
+          'Aksi cepat:',
+          '• !solo-health',
+          '• !health',
+          '• !logs <service>',
+        ].join('\n');
+
+        await sendToAdminUsers(message);
+        // 6 hour dedup — don't repeat the same fingerprint for a long time
+        await redis.set(dedupeKey, fingerprint, { EX: 6 * 3600 });
+      },
+    });
+  } else {
+    logger.info('Auto-recovery disabled (AUTO_RECOVERY_ENABLED=false or Windows detected)');
+  }
 
   // SLA countdown warnings — every 90 seconds
   scheduler.register({
