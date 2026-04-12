@@ -14,7 +14,7 @@ const SHEET_SCHEMAS: Record<string, string[]> = {
   sla: ['ID', 'Ticket Number', 'Priority', 'Category', 'Response Target Min', 'Response Time Min', 'Response Breached', 'Resolution Target Min', 'Resolution Breached', 'Status', 'Created At'],
   uptime: ['ID', 'Target Name', 'Host', 'Check Type', 'Status', 'Response Ms', 'Uptime %', 'Last Check', 'Last Down', 'Tags'],
   handover: ['ID', 'Shift', 'Date', 'Open Tickets', 'SLA Due Soon', 'SLA Breached', 'Critical Alerts', 'Active Incidents', 'Generated At'],
-  maintenance_schedules: ['ID', 'Title', 'Customer', 'Location', 'AO', 'SID', 'Service', 'Interval Months', 'Next Due Date', 'Is Active', 'Created At'],
+  maintenance_schedules: ['ID', 'Judul PM', 'Deskripsi', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'Status', 'Dibuat Pada'],
 };
 
 export interface SheetsConfig {
@@ -1217,31 +1217,36 @@ export class GoogleSheetsService {
   async syncMaintenanceSchedule(schedule: {
     id: string;
     title: string;
-    customer?: string | null;
-    location?: string | null;
-    ao?: string | null;
-    sid?: string | null;
-    service?: string | null;
+    description?: string | null;
     intervalMonths: number;
     nextDueDate: Date;
+    lastCreatedAt?: Date | null;
     isActive: boolean;
     createdAt: Date;
   }): Promise<void> {
     if (!this.sheets || !this.spreadsheetId) return;
     await this.ensureSheet('maintenance_schedules');
 
+    const intervalLabel: Record<number, string> = {
+      1: 'Bulanan',
+      2: '2 Bulanan',
+      3: 'Triwulan (3 Bulan)',
+      6: 'Semesteran (6 Bulan)',
+      12: 'Tahunan',
+    };
+
+    const formatDate = (d: Date) =>
+      d.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+
     const rowData: Record<string, string> = {
       ID: schedule.id,
-      Title: schedule.title,
-      Customer: schedule.customer ?? '-',
-      Location: schedule.location ?? '-',
-      AO: schedule.ao ?? '-',
-      SID: schedule.sid ?? '-',
-      Service: schedule.service ?? '-',
-      'Interval Months': String(schedule.intervalMonths),
-      'Next Due Date': schedule.nextDueDate.toISOString(),
-      'Is Active': schedule.isActive ? 'YES' : 'NO',
-      'Created At': schedule.createdAt.toISOString(),
+      'Judul PM': schedule.title,
+      'Deskripsi': schedule.description ?? '-',
+      'Interval': intervalLabel[schedule.intervalMonths] ?? `Per ${schedule.intervalMonths} Bulan`,
+      'Jatuh Tempo Berikutnya': formatDate(schedule.nextDueDate),
+      'Terakhir Dijalankan': schedule.lastCreatedAt ? formatDate(schedule.lastCreatedAt) : '-',
+      'Status': schedule.isActive ? 'AKTIF' : 'NON-AKTIF',
+      'Dibuat Pada': formatDate(schedule.createdAt),
     };
 
     const headers = SHEET_SCHEMAS.maintenance_schedules;
