@@ -17,7 +17,7 @@ RUN npm install -g pnpm \
 
 # Copy source
 COPY . .
-RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm install --no-frozen-lockfile --prefer-offline --no-optional
+RUN pnpm install --no-frozen-lockfile --prefer-offline --no-optional
 
 # Build
 # Generate Prisma client before TypeScript compilation
