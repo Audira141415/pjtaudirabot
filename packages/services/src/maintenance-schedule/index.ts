@@ -762,16 +762,23 @@ export class MaintenanceScheduleService {
     if (!this.sheetsService) return 0;
     const schedules = await this.db.maintenanceSchedule.findMany({
       orderBy: { createdAt: 'asc' },
-      include: {
-        lastTicket: { select: { ticketNumber: true, assignedTo: true } },
-      },
     });
+
+    // Collect unique lastTicketIds to resolve ticket numbers in batch
+    const ticketIds = [...new Set(schedules.map(s => s.lastTicketId).filter(Boolean))] as string[];
+    const tickets = ticketIds.length > 0
+      ? await this.db.ticket.findMany({
+          where: { id: { in: ticketIds } },
+          select: { id: true, ticketNumber: true, assignedTo: true },
+        })
+      : [];
+    const ticketMap = new Map(tickets.map(t => [t.id, t]));
 
     let count = 0;
     for (const schedule of schedules) {
-      const { lastTicket, ...rest } = schedule as any;
+      const lastTicket = schedule.lastTicketId ? ticketMap.get(schedule.lastTicketId) : null;
       await this.sheetsService.syncMaintenanceSchedule({
-        ...rest,
+        ...schedule,
         lastTicketNumber: lastTicket?.ticketNumber ?? null,
         assignedTo: lastTicket?.assignedTo ?? null,
       }).catch(() => {});
@@ -780,3 +787,4 @@ export class MaintenanceScheduleService {
     return count;
   }
 }
+
