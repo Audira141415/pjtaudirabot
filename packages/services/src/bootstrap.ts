@@ -305,7 +305,7 @@ export async function createBotServices(
   const shiftHandoverService = new ShiftHandoverService(db, redis, logger);
 
   // Maintenance Schedule (Preventive Maintenance)
-  const maintenanceScheduleService = new MaintenanceScheduleService(db, redis, logger);
+  const maintenanceScheduleService = new MaintenanceScheduleService(db, redis, logger, sheetsService);
 
   // Scheduler
   const scheduler = new Scheduler(db, redis, logger);

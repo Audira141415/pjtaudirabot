@@ -14,6 +14,7 @@ const SHEET_SCHEMAS: Record<string, string[]> = {
   sla: ['ID', 'Ticket Number', 'Priority', 'Category', 'Response Target Min', 'Response Time Min', 'Response Breached', 'Resolution Target Min', 'Resolution Breached', 'Status', 'Created At'],
   uptime: ['ID', 'Target Name', 'Host', 'Check Type', 'Status', 'Response Ms', 'Uptime %', 'Last Check', 'Last Down', 'Tags'],
   handover: ['ID', 'Shift', 'Date', 'Open Tickets', 'SLA Due Soon', 'SLA Breached', 'Critical Alerts', 'Active Incidents', 'Generated At'],
+  maintenance_schedules: ['ID', 'Title', 'Customer', 'Location', 'AO', 'SID', 'Service', 'Interval Months', 'Next Due Date', 'Is Active', 'Created At'],
 };
 
 export interface SheetsConfig {
@@ -423,7 +424,7 @@ export class GoogleSheetsService {
 
   private isSheetAllowed(sheetName: string): boolean {
     if (!this.ticketsOnly) return true;
-    return sheetName === 'tickets' || sheetName === 'dashboard';
+    return sheetName === 'tickets' || sheetName === 'dashboard' || sheetName === 'maintenance_schedules';
   }
 
   private initClient(credentials: string): void {
@@ -1211,6 +1212,55 @@ export class GoogleSheetsService {
     if (appendedIndex < 0) {
       throw new Error(`Ticket ${ticket.ticketNumber} was not persisted to Google Sheets`);
     }
+  }
+
+  async syncMaintenanceSchedule(schedule: {
+    id: string;
+    title: string;
+    customer?: string | null;
+    location?: string | null;
+    ao?: string | null;
+    sid?: string | null;
+    service?: string | null;
+    intervalMonths: number;
+    nextDueDate: Date;
+    isActive: boolean;
+    createdAt: Date;
+  }): Promise<void> {
+    if (!this.sheets || !this.spreadsheetId) return;
+    await this.ensureSheet('maintenance_schedules');
+
+    const rowData: Record<string, string> = {
+      ID: schedule.id,
+      Title: schedule.title,
+      Customer: schedule.customer ?? '-',
+      Location: schedule.location ?? '-',
+      AO: schedule.ao ?? '-',
+      SID: schedule.sid ?? '-',
+      Service: schedule.service ?? '-',
+      'Interval Months': String(schedule.intervalMonths),
+      'Next Due Date': schedule.nextDueDate.toISOString(),
+      'Is Active': schedule.isActive ? 'YES' : 'NO',
+      'Created At': schedule.createdAt.toISOString(),
+    };
+
+    const headers = SHEET_SCHEMAS.maintenance_schedules;
+    const values = headers.map((header) => rowData[header] ?? '');
+    const rows = await this.readAll('maintenance_schedules');
+    const existingRowIndex = rows.findIndex((row, index) => index > 0 && row[0] === schedule.id);
+
+    if (existingRowIndex >= 0) {
+      const rowNumber = existingRowIndex + 1;
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `maintenance_schedules!A${rowNumber}:${this.columnLetter(headers.length)}${rowNumber}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [values] },
+      });
+      return;
+    }
+
+    await this.appendRow('maintenance_schedules', values);
   }
 
   async syncSLA(sla: {

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
+import { GoogleSheetsService } from '../sheets';
 
 export interface CreateMaintenanceScheduleInput {
   title: string;
@@ -51,6 +52,7 @@ export class MaintenanceScheduleService {
     private db: PrismaClient,
     private redis: RedisClientType,
     logger: ILogger,
+    private sheetsService?: GoogleSheetsService | null,
   ) {
     this.logger = logger.child({ service: 'maintenance-schedule' });
   }
@@ -98,6 +100,11 @@ export class MaintenanceScheduleService {
       anchorMonth: schedule.anchorMonth,
       anchorDay: schedule.anchorDay,
     });
+
+    this.sheetsService?.syncMaintenanceSchedule(schedule).catch(err => {
+      this.logger.error(`Failed to sync maintenance schedule ${schedule.id} to sheet`, err);
+    });
+
     return schedule;
   }
 
@@ -227,6 +234,10 @@ export class MaintenanceScheduleService {
           take: 5,
         },
       },
+    });
+
+    this.sheetsService?.syncMaintenanceSchedule(updated).catch(err => {
+      this.logger.error(`Failed to sync maintenance schedule ${id} to sheet`, err);
     });
 
     this.logger.info('Maintenance schedule updated', { id, cadenceChanged });
@@ -420,15 +431,17 @@ export class MaintenanceScheduleService {
 
           if (existingCycleTicket) {
             // Self-heal: ticket for this cycle already exists, so only advance schedule state.
-            const nextDue = this.calculateNextDueDate(now, cfg.intervalMonths, cfg.anchorMonth, cfg.anchorDay);
-            await this.db.maintenanceSchedule.update({
+            const updatedNextDue = this.calculateNextDueDate(now, cfg.intervalMonths, cfg.anchorMonth, cfg.anchorDay);
+            const updatedSchedule = await this.db.maintenanceSchedule.update({
               where: { id: s.id },
               data: {
-                nextDueDate: nextDue,
+                nextDueDate: updatedNextDue,
                 lastTicketId: existingCycleTicket.id,
                 lastCreatedAt: now,
               },
             });
+
+            this.sheetsService?.syncMaintenanceSchedule(updatedSchedule).catch(err => {});
           } else if (!openTicket) {
             // Due date reached — create ticket only if none is currently open.
             try {
@@ -707,5 +720,21 @@ export class MaintenanceScheduleService {
       12: 'Tahunan',
     };
     return map[months] ?? `Per ${months} Bulan`;
+  }
+  /**
+   * Resync all maintenance schedules to Google Sheets.
+   */
+  async syncAllToSheets(): Promise<number> {
+    if (!this.sheetsService) return 0;
+    const schedules = await this.db.maintenanceSchedule.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    
+    let count = 0;
+    for (const schedule of schedules) {
+      await this.sheetsService.syncMaintenanceSchedule(schedule).catch(() => {});
+      count++;
+    }
+    return count;
   }
 }
