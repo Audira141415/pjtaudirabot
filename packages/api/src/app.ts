@@ -15,12 +15,12 @@ import { clusteringRoutes } from './routes/clustering';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import type { RedisClientType } from 'redis';
+// removed RedisClientType
 import type { ILogger } from '@pjtaudirabot/core';
 
 export interface AppContext {
   db: PrismaClient;
-  redis: RedisClientType;
+  redis: ReturnType<typeof createClient>;
   logger: ILogger;
 }
 
