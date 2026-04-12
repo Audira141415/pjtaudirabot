@@ -241,7 +241,7 @@ async function main(): Promise<void> {
   setupMaintenanceScheduler(services, infra, async (msgs) => {
     // 1. WhatsApp admins
     for (const msg of msgs) {
-      await sendToAdminUsers(`🧰 *PREVENTIVE MAINTENANCE*\n\n${msg}`);
+      await sendToAdminUsers(msg);
     }
     // 2. Telegram NOC (cross-platform forwarding fallback)
     if (telegramNotifier.isConfigured()) {

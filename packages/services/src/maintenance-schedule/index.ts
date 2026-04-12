@@ -489,10 +489,17 @@ export class MaintenanceScheduleService {
               });
 
               dueTickets.push(
-                `🔧 *PM Ticket Dibuat*: ${ticket.ticketNumber}\n` +
-                `📋 *Jadwal*: ${s.title}\n` +
-                `🏢 *Customer*: ${s.customer ?? '-'} | *Lokasi*: ${s.location ?? '-'}\n` +
-                `🔁 *Interval*: ${intervalLabel} | *Berikutnya*: ${this.formatDate(nextDue)}`
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🔔 *JADWAL PM — TIKET DIBUAT*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `📋 *Jadwal*    : ${s.title}\n` +
+                `📝 *Deskripsi* : ${s.description ?? '-'}\n` +
+                `📍 *Lokasi*    : ${s.location ?? '-'}\n` +
+                `🔁 *Interval*  : ${intervalLabel}\n\n` +
+                `🎫 *No. Tiket* : ${ticket.ticketNumber}\n` +
+                `📅 *Prioritas* : MEDIUM\n` +
+                `⏰ *Jatuh Tempo Berikutnya* : ${this.formatDate(nextDue)}\n\n` +
+                `✅ _Silakan kerjakan dan update tiket setelah PM selesai dilakukan._`
               );
 
               this.logger.info('Maintenance ticket auto-created', {
@@ -508,10 +515,16 @@ export class MaintenanceScheduleService {
           // Within reminder window
           const daysLeft = Math.ceil(dueDays);
           reminders.push(
-            `📅 *Reminder PM*: ${s.title}\n` +
-            `🏢 *Customer*: ${s.customer ?? '-'} | *Lokasi*: ${s.location ?? '-'}\n` +
-            `⏰ *Due*: ${this.formatDate(s.nextDueDate)} (${daysLeft} hari lagi)\n` +
-            `🔁 *Interval*: ${this.intervalLabel(cfg.intervalMonths)}`
+            `━━━━━━━━━━━━━━━━━━━━━━\n` +
+            `⚠️ *REMINDER PM — ${daysLeft} HARI LAGI*\n` +
+            `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+            `📋 *Jadwal*    : ${s.title}\n` +
+            `📝 *Deskripsi* : ${s.description ?? '-'}\n` +
+            `📍 *Lokasi*    : ${s.location ?? '-'}\n` +
+            `🔁 *Interval*  : ${this.intervalLabel(cfg.intervalMonths)}\n\n` +
+            `⏰ *Jatuh Tempo* : ${this.formatDate(s.nextDueDate)}\n` +
+            `⏳ *Sisa Waktu*  : *${daysLeft} hari lagi*\n\n` +
+            `📌 _Segera persiapkan jadwal dan tim pelaksana PM._`
           );
         }
 
@@ -521,10 +534,16 @@ export class MaintenanceScheduleService {
           if (overdueDays > 0) {
             if (openTicket) {
               quarterlyReminders.push(
-                `📣 *Reminder Triwulan PM*: ${s.title}\n` +
-                `🎫 Ticket masih terbuka: ${openTicket.ticketNumber}\n` +
-                `⏳ Overdue: ${overdueDays} hari\n` +
-                `👷 Mohon teknisi update progress/resolve ticket.`
+                `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                `🚨 *MAINTENANCE OVERDUE*\n` +
+                `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `📋 *Jadwal*    : ${s.title}\n` +
+                `📝 *Deskripsi* : ${s.description ?? '-'}\n` +
+                `📍 *Lokasi*    : ${s.location ?? '-'}\n` +
+                `🔁 *Interval*  : ${this.intervalLabel(cfg.intervalMonths)}\n\n` +
+                `🎫 *No. Tiket* : ${openTicket.ticketNumber} _(masih terbuka)_\n` +
+                `⏳ *Overdue*   : *${overdueDays} hari*\n\n` +
+                `⚠️ _Mohon teknisi segera memperbarui progress atau menyelesaikan tiket PM ini!_`
               );
             } else if (!createdTicketNumber) {
               try {
@@ -551,9 +570,16 @@ export class MaintenanceScheduleService {
                   },
                 });
                 quarterlyReminders.push(
-                  `📣 *Reminder Triwulan PM*: ${s.title}\n` +
-                  `🎫 Ticket follow-up dibuat: ${ticket.ticketNumber}\n` +
-                  `⏳ Overdue: ${overdueDays} hari`
+                  `━━━━━━━━━━━━━━━━━━━━━━\n` +
+                  `🚨 *MAINTENANCE OVERDUE — TIKET BARU DIBUAT*\n` +
+                  `━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                  `📋 *Jadwal*    : ${s.title}\n` +
+                  `📝 *Deskripsi* : ${s.description ?? '-'}\n` +
+                  `📍 *Lokasi*    : ${s.location ?? '-'}\n` +
+                  `🔁 *Interval*  : ${this.intervalLabel(cfg.intervalMonths)}\n\n` +
+                  `🎫 *No. Tiket* : ${ticket.ticketNumber} _(follow-up)_\n` +
+                  `⏳ *Overdue*   : *${overdueDays} hari*\n\n` +
+                  `⚠️ _PM ini sudah melewati jadwal. Mohon segera tindaklanjuti!_`
                 );
               } catch (err) {
                 this.logger.error('Failed to create quarterly follow-up ticket', err as Error, { scheduleId: s.id });

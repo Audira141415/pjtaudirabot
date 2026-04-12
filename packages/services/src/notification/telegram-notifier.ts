@@ -262,22 +262,22 @@ export class TelegramNotifier {
   async sendMaintenanceAlert(messages: string[]): Promise<void> {
     if (!this.isConfigured() || messages.length === 0) return;
 
-    // The messages come formatted with markdown/emoji from the service. 
-    // Telegram parses Markdown via sendReportText. Wait, these messages might contain Markdown characters. Let's send them safely.
-    const text = [
-      `🧰 <b>PREVENTIVE MAINTENANCE</b>`,
-      `===================`,
-      ``,
-    ].join('\n') + messages.map(msg => this.esc(msg)
-      .replace(/\*(.*?)\*/g, '<b>$1</b>') // Transform basic Markdown bold to HTML for Telegram
-    ).join('\n\n');
+    // Send each PM message individually to avoid truncation
+    for (const msg of messages) {
+      // Convert WA-style *bold* to HTML <b>bold</b> for Telegram
+      const htmlMsg = this.esc(msg)
+        .replace(/\*(.*?)\*/g, '<b>$1</b>')
+        .replace(/_(.*?)_/g, '<i>$1</i>')
+        .replace(/━/g, '─');
 
-    try {
-      await this.sendMessage(text);
-      this.logger.info('Telegram maintenance alert sent');
-    } catch (err) {
-      this.logger.error('Failed to send Telegram maintenance alert', err as Error);
+      try {
+        await this.sendMessage(htmlMsg);
+      } catch (err) {
+        this.logger.error('Failed to send Telegram maintenance alert', err as Error);
+      }
     }
+
+    this.logger.info('Telegram maintenance alerts sent', { count: messages.length });
   }
 
   /** Send a scheduled report (daily/weekly/monthly) to the NOC group.
