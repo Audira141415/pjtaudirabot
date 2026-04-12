@@ -20,7 +20,7 @@ import type { ILogger } from '@pjtaudirabot/core';
 
 export interface AppContext {
   db: PrismaClient;
-  redis: ReturnType<typeof createClient>;
+  redis: any;
   logger: ILogger;
 }
 
