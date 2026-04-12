@@ -769,7 +769,7 @@ export class MaintenanceScheduleService {
     const tickets = ticketIds.length > 0
       ? await this.db.ticket.findMany({
           where: { id: { in: ticketIds } },
-          select: { id: true, ticketNumber: true, assignedTo: true },
+          select: { id: true, ticketNumber: true, assignedToId: true },
         })
       : [];
     const ticketMap = new Map(tickets.map(t => [t.id, t]));
@@ -780,7 +780,7 @@ export class MaintenanceScheduleService {
       await this.sheetsService.syncMaintenanceSchedule({
         ...schedule,
         lastTicketNumber: lastTicket?.ticketNumber ?? null,
-        assignedTo: lastTicket?.assignedTo ?? null,
+        assignedTo: lastTicket?.assignedToId ?? null,
       }).catch(() => {});
       count++;
     }
