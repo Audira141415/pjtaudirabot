@@ -58,6 +58,9 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       AI_PROVIDER: ${AI_PROVIDER:-openai}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
     depends_on:
       db:
         condition: service_healthy
@@ -72,6 +75,7 @@ services:
       retries: 3
     volumes:
       - ./logs:/app/logs
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     networks:
       - pjtaudi-network
     restart: unless-stopped
@@ -98,6 +102,9 @@ services:
       SLA_AUTO_UNASSIGNED_RESPONSE_MIN: ${SLA_AUTO_UNASSIGNED_RESPONSE_MIN:-15}
       SLA_AUTO_UNASSIGNED_REOPEN_MIN: ${SLA_AUTO_UNASSIGNED_REOPEN_MIN:-60}
       SLA_AUTO_UNASSIGNED_CATEGORIES: ${SLA_AUTO_UNASSIGNED_CATEGORIES:-INCIDENT}
+      GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
     depends_on:
       db:
         condition: service_healthy
@@ -110,6 +117,7 @@ services:
     volumes:
       - whatsapp_sessions:/data/whatsapp-sessions
       - ./logs:/app/logs
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     networks:
       - pjtaudi-network
     restart: unless-stopped
@@ -134,6 +142,9 @@ services:
       SLA_AUTO_UNASSIGNED_RESPONSE_MIN: ${SLA_AUTO_UNASSIGNED_RESPONSE_MIN:-15}
       SLA_AUTO_UNASSIGNED_REOPEN_MIN: ${SLA_AUTO_UNASSIGNED_REOPEN_MIN:-60}
       SLA_AUTO_UNASSIGNED_CATEGORIES: ${SLA_AUTO_UNASSIGNED_CATEGORIES:-INCIDENT}
+      GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
+      GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
+      GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
     depends_on:
       db:
         condition: service_healthy
@@ -145,6 +156,7 @@ services:
       - "${TELEGRAM_PORT:-4010}:${TELEGRAM_PORT:-4010}"
     volumes:
       - ./logs:/app/logs
+      - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro
     networks:
       - pjtaudi-network
     restart: unless-stopped
