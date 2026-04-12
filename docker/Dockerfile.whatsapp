@@ -22,7 +22,7 @@ RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm install --no-frozen-lockfile -
 # Build
 # Generate Prisma client before TypeScript compilation
 ENV DATABASE_URL=postgresql://build:build@localhost:5432/builddb
-RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 cd packages/database && pnpm exec prisma generate
+RUN cd packages/database && PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 pnpm exec prisma generate
 RUN pnpm --filter @pjtaudirabot/core build \
 	&& pnpm --filter @pjtaudirabot/config build \
 	&& pnpm --filter @pjtaudirabot/services build \
