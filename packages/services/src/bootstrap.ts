@@ -412,6 +412,10 @@ export function setupMaintenanceScheduler(services: BotServices, infra: BotInfra
     lockTtlMs: 60 * 60 * 1000,
     runOnStart: true,
     handler: async () => {
+      await maintenanceScheduleService.syncAllToSheets().catch(err => {
+        logger.error('Failed to sync all schedules on routine check', err);
+      });
+
       const { dueTickets, reminders, quarterlyReminders, syncedCompleted } = await maintenanceScheduleService.checkDue(
         async (opts) => {
           const ticket = await ticketService.create(opts);
