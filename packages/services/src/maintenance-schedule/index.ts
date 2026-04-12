@@ -441,7 +441,7 @@ export class MaintenanceScheduleService {
               },
             });
 
-            this.sheetsService?.syncMaintenanceSchedule(updatedSchedule).catch(err => {});
+            this.sheetsService?.syncMaintenanceSchedule(updatedSchedule).catch(() => {});
           } else if (!openTicket) {
             // Due date reached — create ticket only if none is currently open.
             try {
