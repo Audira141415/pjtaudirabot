@@ -299,7 +299,7 @@ export async function createBotServices(
     similarityThreshold: parseFloat(process.env.CLUSTERING_SIMILARITY_THRESHOLD ?? '0.75'),
     minClusterSize: parseInt(process.env.CLUSTERING_MIN_SIZE ?? '2', 10),
   });
-  const ticketService = new TicketService(db, redis, logger, clusteringService);
+  const ticketService = new TicketService(db, redis, logger, clusteringService, sheetsService);
   const slaService = new SLAService(db, redis, logger);
 
   // Uptime & Shift Handover

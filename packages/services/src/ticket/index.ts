@@ -54,6 +54,7 @@ export class TicketService {
     private redis: RedisClientType,
     logger: ILogger,
     clustering?: TicketClusteringService,
+    private sheetsService: any | null = null,
   ) {
     this.logger = logger.child({ service: 'ticket' });
     this.clustering = clustering;
@@ -380,6 +381,39 @@ export class TicketService {
       noSlaCount,
       rows,
     };
+  }
+
+  /**
+   * Delete ALL tickets and ALL SLA tracking records from the database.
+   * Also clears the 'tickets' and 'sla' tabs in Google Sheets.
+   * Resets sequential counters in Redis.
+   */
+  async purgeAllTickets(): Promise<void> {
+    this.logger.warn('DESTRUCTIVE ACTION: Purging all ticket data from database and sheets');
+
+    // 1. Clear sequential counters in Redis so new tickets start from 0001
+    const keys = await this.redis.keys(`${this.counterKey}:*`);
+    if (keys.length > 0) {
+      await this.redis.del(keys);
+      this.logger.info('Redis ticket counters reset');
+    }
+
+    // 2. Delete ALL records from DB (SLA tracking depends on Tickets, so delete it first or rely on cascade)
+    await this.db.slaTracking.deleteMany({});
+    await this.db.ticketHistory.deleteMany({});
+    await this.db.ticket.deleteMany({});
+    this.logger.info('Database ticket records cleared');
+
+    // 3. Clear Google Sheets tabs
+    if (this.sheetsService) {
+      this.logger.info('Clearing Google Sheets ticket/sla tabs...');
+      await this.sheetsService.clearTicketsSheet().catch((e: any) => this.logger.error('Failed to clear tickets sheet', e));
+      if (typeof this.sheetsService.clearGenericSheet === 'function') {
+        await this.sheetsService.clearGenericSheet('sla').catch((e: any) => this.logger.error('Failed to clear SLA sheet', e));
+      }
+    }
+
+    this.logger.info('Global ticket purge completed successfully');
   }
 
   private async addHistory(

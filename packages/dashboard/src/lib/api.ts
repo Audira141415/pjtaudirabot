@@ -683,6 +683,10 @@ export const api = {
     request<{ success: boolean; synced: number; message: string }>('/maintenance/sheets/clear', {
       method: 'POST',
     }),
+  purgeTickets: () =>
+    request<{ success: boolean; message: string }>('/tickets/purge', {
+      method: 'POST',
+    }),
   
   // ─── AI Insights ───────────────────────────────────────
   getPredictiveInsights: () =>

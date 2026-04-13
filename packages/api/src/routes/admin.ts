@@ -2712,6 +2712,18 @@ export async function adminRoutes(
     }
   });
 
+  // POST /tickets/purge — DELETE ALL TICKETS from DB and Sheets
+  app.post('/tickets/purge', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await ticketService.purgeAllTickets();
+      auditLog(ctx.db, request, { action: 'delete', resource: 'ticket', resourceId: 'all' });
+      return reply.send({ success: true, message: 'DATABASE & GSHEET TICKETS BERHASIL DIBERSIHKAN TOTAL.' });
+    } catch (err) {
+      ctx.logger.error(`Failed to purge tickets: ${String(err)}`);
+      return reply.status(500).send({ error: 'Gagal membersihkan data tiket.' });
+    }
+  });
+
   // ─── FILE MANAGER ──────────────────────────────────────────
 
   app.get('/files', async (request: FastifyRequest, reply: FastifyReply) => {

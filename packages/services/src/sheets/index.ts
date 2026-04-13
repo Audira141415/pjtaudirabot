@@ -1343,35 +1343,45 @@ export class GoogleSheetsService {
 
   /** Clear all data rows in maintenance_schedules sheet (keep header). */
   async clearMaintenanceSheet(): Promise<void> {
+    await this.clearGenericSheet('maintenance_schedules');
+  }
+
+  /** Clear all data rows in tickets sheet (keep header). */
+  async clearTicketsSheet(): Promise<void> {
+    await this.clearGenericSheet('tickets');
+  }
+
+  /** Generic clear sheet helper. */
+  private async clearGenericSheet(tabName: string): Promise<void> {
     if (!this.sheets || !this.spreadsheetId) {
-       this.logger.error('Cannot clear sheet: Sheets client or spreadsheetId missing');
+       this.logger.error(`Cannot clear sheet ${tabName}: Sheets client or spreadsheetId missing`);
        return;
     }
     
     try {
-      await this.ensureSheet('maintenance_schedules');
-      const headers = SHEET_SCHEMAS.maintenance_schedules;
+      await this.ensureSheet(tabName);
+      const headers = SHEET_SCHEMAS[tabName];
       const lastCol = this.columnLetter(headers.length);
 
-      this.logger.info('Purging maintenance_schedules tab...', { spreadsheetId: this.spreadsheetId });
+      this.logger.info(`Purging ${tabName} tab...`, { spreadsheetId: this.spreadsheetId });
 
       // 1. Clear everything from A1 down to a safe deep row
       await this.sheets.spreadsheets.values.clear({
         spreadsheetId: this.spreadsheetId,
-        range: `maintenance_schedules!A1:${lastCol}2000`,
+        range: `${tabName}!A1:${lastCol}5000`,
       });
 
       // 2. Put headers back immediately
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `maintenance_schedules!A1:${lastCol}1`,
+        range: `${tabName}!A1:${lastCol}1`,
         valueInputOption: 'USER_ENTERED',
         requestBody: { values: [headers] },
       });
       
-      this.logger.info('Maintenance sheet purged and headers restored');
+      this.logger.info(`${tabName} sheet purged and headers restored`);
     } catch (error) {
-      this.logger.error('Critical failure during sheet purge', error as Error);
+      this.logger.error(`Critical failure during ${tabName} sheet purge`, error as Error);
       throw error;
     }
   }

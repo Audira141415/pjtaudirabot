@@ -128,6 +128,21 @@ const AdminHub = () => {
     }
   };
 
+  const handlePurgeTickets = async () => {
+    if (!confirm('CRITICAL ACTION: This will DELETE ALL TICKETS from the Database and Google Sheets. This cannot be undone. Are you absolutely sure?')) return;
+    setPurging(true);
+    try {
+      const res = await api.purgeTickets();
+      alert(res.message || 'All tickets purged successfully!');
+    } catch (err) {
+      console.error('Ticket purge failed:', err);
+      alert('Failed to purge tickets');
+    } finally {
+      setPurging(false);
+      fetchHealth();
+    }
+  };
+
   if (loading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <div className="animate-spin p-2 bg-indigo-500/10 rounded-full border-t-2 border-indigo-500 w-12 h-12" />
@@ -164,10 +179,19 @@ const AdminHub = () => {
              <button 
                 onClick={handlePurgeResync}
                 disabled={syncing || purging}
+                title="Reset Maintenance Sheets"
+                className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all border border-rose-500/30 active:scale-95 text-sm"
+             >
+                <RefreshCw className={`w-4 h-4 ${purging ? 'animate-spin' : ''}`} />
+                {purging ? 'Purging...' : 'Reset PM Sheets'}
+             </button>
+             <button 
+                onClick={handlePurgeTickets}
+                disabled={syncing || purging}
                 className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20 active:scale-95 text-sm"
              >
                 <TrashIcon className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
-                {purging ? 'Purging...' : 'Purge & Resync Sheets'}
+                {purging ? 'Wiping...' : 'Wipe All Tickets'}
              </button>
              <button className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-slate-700 hover:text-white transition-all border border-slate-700">
                 <Settings className="w-5 h-5" />
