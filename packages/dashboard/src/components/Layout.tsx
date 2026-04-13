@@ -42,6 +42,7 @@ import {
   Contact,
   CreditCard,
   Inbox,
+  ShieldCheck,
   ShieldAlert,
   HelpCircle,
   FileStack,
