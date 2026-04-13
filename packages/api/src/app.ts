@@ -12,6 +12,8 @@ import { PrismaClient } from '@prisma/client';
 import { createClient } from 'redis';
 import { adminRoutes } from './routes/admin';
 import { clusteringRoutes } from './routes/clustering';
+import networkRoutes from './routes/network';
+import insightsRoutes from './routes/insights';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -203,6 +205,18 @@ export async function createApp() {
   await app.register(
     async (instance) => clusteringRoutes(instance, { db, logger }),
     { prefix: '/api/tickets' }
+  );
+
+  // Network & High-end features routes (prefix: /api/network)
+  await app.register(
+    async (instance) => networkRoutes(instance, { db, redis, logger }),
+    { prefix: '/api/network' }
+  );
+
+  // AI Insights routes (prefix: /api/insights)
+  await app.register(
+    async (instance) => insightsRoutes(instance, { db, redis, logger }),
+    { prefix: '/api/insights' }
   );
 
   // Serve dashboard static files in production

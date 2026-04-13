@@ -4,6 +4,9 @@ import { toast } from '../components/Toast';
 import { notificationStore, getSolution, getGeneralSolution } from '../lib/notification-store';
 import { StatusBadge, PriorityBadge, CategoryBadge } from '../lib/badge-colors';
 import OperationalOverview from '../components/OperationalOverview';
+import NetworkHealthMap from '../components/NetworkHealthMap';
+import ShiftHandover from '../components/ShiftHandover';
+import AIPredictiveInsights from '../components/AIPredictiveInsights';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, Legend, LineChart, Line,
@@ -259,6 +262,17 @@ export default function DashboardPage() {
         escalations={escalations}
         health={health}
       />
+
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 my-8">
+         <div className="xl:col-span-8">
+            <NetworkHealthMap />
+         </div>
+         <div className="xl:col-span-4">
+            <ShiftHandover />
+         </div>
+      </div>
+
+      <AIPredictiveInsights />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
