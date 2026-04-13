@@ -13,11 +13,11 @@ RUN npm install -g pnpm \
 	&& pnpm config set fetch-retry-mintimeout 10000 \
 	&& pnpm config set fetch-retry-maxtimeout 120000 \
 	&& pnpm config set registry ${NPM_REGISTRY} \
-	&& pnpm install --prefer-offline --no-optional
+	&& pnpm install --prefer-offline
 
 # Copy source
 COPY . .
-RUN pnpm install --no-frozen-lockfile --prefer-offline --no-optional
+RUN pnpm install --no-frozen-lockfile --prefer-offline
 
 # Build
 # Generate Prisma client before TypeScript compilation
@@ -29,7 +29,7 @@ RUN pnpm --filter @pjtaudirabot/core build \
 	&& pnpm --filter @pjtaudirabot/dashboard build \
 	&& pnpm --filter @pjtaudirabot/api build
 RUN node -e "const fs=require('fs');const path=require('path');const hasExt=(s)=>/\.[a-zA-Z0-9]+$/.test(s);const resolveSpec=(spec,file)=>{if(!(spec.startsWith('./')||spec.startsWith('../'))||hasExt(spec))return spec;const base=path.resolve(path.dirname(file),spec);if(fs.existsSync(base+'.js'))return spec+'.js';if(fs.existsSync(path.join(base,'index.js')))return spec+'/index.js';return spec;};const rewrite=(src,file)=>src.replace(/(from\\s+['\"])([^'\"]+)(['\"])/g,(m,a,s,b)=>a+resolveSpec(s,file)+b).replace(/(import\\(\\s*['\"])([^'\"]+)(['\"]\\s*\\))/g,(m,a,s,b)=>a+resolveSpec(s,file)+b);const walk=(d)=>{for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p);else if(p.endsWith('.js')){const src=fs.readFileSync(p,'utf8');const out=rewrite(src,p);if(out!==src)fs.writeFileSync(p,out);}}};walk('/build/packages');"
-RUN pnpm --prefer-offline --no-optional --filter @pjtaudirabot/api deploy --prod /prod/api
+RUN pnpm --prefer-offline --filter @pjtaudirabot/api deploy --prod /prod/api
 
 # Build result of dashboard needs to be preserved
 RUN mkdir -p /prod/api/dashboard && cp -R packages/dashboard/dist /prod/api/dashboard/
