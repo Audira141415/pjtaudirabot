@@ -179,268 +179,227 @@ export default function OperationalOverview({
   const hotClusters = [...clusters].sort((a, b) => (b.impactScore ?? 0) - (a.impactScore ?? 0)).slice(0, 3);
 
   return (
-    <section className="mt-8 space-y-5 rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50/60 p-5 shadow-sm md:p-6">
-      <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mt-8 space-y-6">
+      <div className="flex flex-col gap-4 border-b border-slate-200/60 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-slate-900">
-            <ShieldCheck className="w-5 h-5 text-sky-600" />
-            Operational Overview
+          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
+            <ShieldCheck className="w-7 h-7 text-indigo-600" />
+            Operational Command
           </h2>
-          <p className="mt-1 text-sm text-slate-500">SLA risk, incident pressure, and bot readiness in one place.</p>
+          <p className="mt-1 text-slate-500">Real-time oversight of SLA, incident pressure, and system readiness.</p>
         </div>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <Link to="/sla" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-sky-700">
-            <ArrowUpRight className="w-4 h-4" /> SLA Monitor
-          </Link>
-          <Link to="/alerts" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-sky-700">
-            <ArrowUpRight className="w-4 h-4" /> Alerts
-          </Link>
-          <Link to="/incidents" className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:text-sky-700">
-            <ArrowUpRight className="w-4 h-4" /> Incidents
-          </Link>
+        <div className="flex flex-wrap gap-2">
+          {['SLA Monitor', 'Alerts', 'Incidents'].map((label) => (
+            <Link 
+              key={label}
+              to={`/${label.toLowerCase().split(' ')[0]}`} 
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-0.5"
+            >
+              <ArrowUpRight className="w-4 h-4 text-slate-400" /> {label}
+            </Link>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <article className="flex h-full flex-col rounded-3xl border border-amber-100 bg-white p-5 shadow-sm ring-1 ring-amber-50">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-500" />
-                <h3 className="font-semibold tracking-tight text-slate-900">SLA risk + backlog</h3>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left Column: SLA & Backlog (Large Bento) */}
+        <article className="lg:col-span-7 flex flex-col rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
+                <ShieldAlert className="w-5 h-5" />
               </div>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Tickets open, breached SLA, and queue mix by priority and category.</p>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">SLA & Backlog Pressure</h3>
+                <p className="text-sm text-slate-500">Managing {ticketOverview?.openTickets ?? 0} active tickets</p>
+              </div>
             </div>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
-              {sla?.complianceRate ?? 100}% compliance
-            </span>
+            <div className="flex flex-col items-end">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ${
+                (sla?.complianceRate ?? 0) > 90 ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100'
+              }`}>
+                {sla?.complianceRate ?? 100}% Compliance
+              </span>
+            </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="Open Tickets" value={ticketOverview?.openTickets ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
-            <Metric label="Response Breaches" value={sla?.responseBreaches ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
-            <Metric label="Resolution Breaches" value={sla?.resolutionBreaches ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
-            <Metric label="Tracked SLA" value={sla?.totalTracked ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
+          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Metric label="Open Tickets" value={ticketOverview?.openTickets ?? 0} tone="bg-slate-50/50 border-slate-100" />
+            <Metric label="Response" value={sla?.responseBreaches ?? 0} tone="bg-amber-50/30 border-amber-100/50" />
+            <Metric label="Resolution" value={sla?.resolutionBreaches ?? 0} tone="bg-rose-50/30 border-rose-100/50" />
+            <Metric label="Tracked" value={sla?.totalTracked ?? 0} tone="bg-slate-50/50 border-slate-100" />
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Zap className="w-4 h-4 text-amber-500" /> Priority queue
-              </div>
-              <div className="mt-3 space-y-2 text-sm text-slate-700">
+          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <Zap className="w-3.5 h-3.5" /> Priority Mix
+              </h4>
+              <div className="space-y-2">
                 {topPriorities.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between gap-2">
-                    <span>{item.name}</span>
-                    <span className="font-semibold text-slate-900">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
+                    <span className="text-sm font-medium text-slate-600">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
                   </div>
                 ))}
-                {topPriorities.length === 0 && <p className="text-sm text-slate-400">No priority data</p>}
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Ticket className="w-4 h-4 text-amber-500" /> Category queue
-              </div>
-              <div className="mt-3 space-y-2 text-sm text-slate-700">
+            <div className="space-y-4 text-sm font-semibold text-slate-700">
+               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                <Ticket className="w-3.5 h-3.5" /> Category Mix
+              </h4>
+              <div className="space-y-2">
                 {topCategories.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{item.name}</span>
-                    <span className="font-semibold text-slate-900">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
+                    <span className="text-sm font-medium text-slate-600 truncate">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
                   </div>
                 ))}
-                {topCategories.length === 0 && <p className="text-sm text-slate-400">No category data</p>}
               </div>
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
-              <button
-                type="button"
-                onClick={() => setSlaItemsExpanded((value) => !value)}
-                className="inline-flex items-center gap-2 text-left"
-                aria-expanded={slaItemsExpanded}
-                aria-controls="urgent-sla-items"
+          {/* Urgent SLA Items */}
+          <div className="mt-8 pt-7 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
+              <span className="flex items-center gap-2">
+                <Clock3 className="w-3.5 h-3.5" /> Fast Track (SLA Near Breach)
+              </span>
+              <button 
+                onClick={() => setSlaItemsExpanded(!slaItemsExpanded)}
+                className="text-indigo-600 hover:text-indigo-700"
               >
-                <Clock3 className="w-4 h-4 text-amber-500" /> Urgent SLA items
-              </button>
-              <button
-                type="button"
-                onClick={() => setSlaItemsExpanded((value) => !value)}
-                className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-sky-200 hover:text-sky-700"
-              >
-                {slaItemsExpanded ? 'Collapse' : 'Expand'}
+                {slaItemsExpanded ? 'Hide' : 'Show'}
               </button>
             </div>
-            <div id="urgent-sla-items" className={`mt-4 space-y-3 ${slaItemsExpanded ? '' : 'hidden'}`}>
-              {urgentSla.map((item) => (
-                <div key={item.id} className="flex items-start justify-between gap-3 rounded-2xl border border-amber-100 bg-amber-50/40 p-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-brand-600">{item.ticket?.ticketNumber ?? '-'}</span>
+            {slaItemsExpanded && (
+              <div className="grid grid-cols-1 gap-3">
+                {urgentSla.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-200">
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-[11px] font-bold text-indigo-600 underline decoration-indigo-200">{item.ticket?.ticketNumber ?? '-'}</span>
+                        <span className="text-sm font-bold text-slate-800 mt-0.5">{item.ticket?.customer ?? 'N/A'}</span>
+                      </div>
                       <PriorityBadge priority={item.ticket?.priority ?? 'MEDIUM'} />
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{item.ticket?.customer ?? 'Unknown customer'}</p>
-                  </div>
-                  <div className="text-right text-xs text-slate-600">
-                    <p className={item.responseBreached || item.resolutionBreached ? 'font-semibold text-red-600' : 'font-semibold text-emerald-600'}>
-                      {formatHoursLeft(item.resolutionDeadline)}
-                    </p>
-                    <p>{formatDate(item.resolutionDeadline)}</p>
-                  </div>
-                </div>
-              ))}
-              {urgentSla.length === 0 && <p className="text-sm text-slate-400">No SLA items pending</p>}
-            </div>
-          </div>
-        </article>
-
-        <article className="flex h-full flex-col rounded-3xl border border-rose-100 bg-white p-5 shadow-sm ring-1 ring-rose-50">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-rose-500" />
-                <h3 className="font-semibold tracking-tight text-slate-900">Active incidents + alerts</h3>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Signals that need attention right now, including open incidents and unresolved escalations.</p>
-            </div>
-            <span className="rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100">
-              {openClusters.length} active clusters
-            </span>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="Active Alerts" value={activeAlerts.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
-            <Metric label="Open Incidents" value={openIncidents.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
-            <Metric label="Open Escalations" value={openEscalations.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
-            <Metric label="Open Clusters" value={openClusters.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
-          </div>
-
-          <div className="mt-5 grid grid-cols-1 gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Bell className="w-4 h-4 text-red-500" /> Alerts
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                {activeAlerts.slice(0, 3).map((alert) => (
-                  <div key={alert.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${severityClass(alert.severity)}`}>{alert.severity ?? 'INFO'}</span>
-                      <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${statusClass(alert.status)}`}>{alert.status ?? 'ACTIVE'}</span>
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-slate-900">{alert.title ?? 'Untitled alert'}</p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{alert.message ?? alert.rule?.name ?? '-'}</p>
-                  </div>
-                ))}
-                {activeAlerts.length === 0 && <p className="text-sm text-slate-400">No active alerts</p>}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <BrainCircuit className="w-4 h-4 text-red-500" /> Incidents
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                {openIncidents.slice(0, 3).map((incident) => (
-                  <div key={incident.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={`rounded px-2 py-0.5 text-[11px] font-semibold ${severityClass(incident.severity)}`}>{incident.severity ?? 'INFO'}</span>
-                      <StatusBadge status={incident.status ?? 'OPEN'} />
-                    </div>
-                    <p className="mt-2 text-sm font-medium text-slate-900">{incident.title ?? 'Untitled incident'}</p>
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{incident.description ?? incident.rootCause ?? incident.solution ?? '-'}</p>
-                  </div>
-                ))}
-                {openIncidents.length === 0 && <p className="text-sm text-slate-400">No open incidents</p>}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <Layers3 className="w-4 h-4 text-red-500" /> Clusters & escalations
-              </div>
-              <div className="mt-3 space-y-2 text-sm">
-                {hotClusters.map((cluster) => (
-                  <div key={cluster.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-semibold text-sky-700">{cluster.clusterNumber ?? cluster.id}</span>
-                        <span className="text-xs text-slate-500">{cluster.memberCount ?? 0} members</span>
-                    </div>
-                    <p className="mt-1 text-sm font-medium text-slate-900">{cluster.commonCustomer ?? cluster.commonService ?? 'Active cluster'}</p>
-                    <p className="mt-1 text-xs text-slate-500">Score: {(cluster.impactScore ?? 0).toFixed(1)} · {cluster.status ?? 'OPEN'}</p>
-                  </div>
-                ))}
-                {hotClusters.length === 0 && <p className="text-sm text-slate-400">No open clusters</p>}
-                <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Open escalations</p>
-                  <p className="mt-1 text-3xl font-semibold tracking-tight text-rose-600">{openEscalations.length}</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-500">Based on unresolved escalation records</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article className="flex h-full flex-col rounded-3xl border border-sky-100 bg-white p-5 shadow-sm ring-1 ring-sky-50">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-sky-600" />
-                <h3 className="font-semibold tracking-tight text-slate-900">Bot connectivity detail</h3>
-              </div>
-              <p className="mt-1 text-sm leading-6 text-slate-500">Telegram and WhatsApp readiness, latency, and reconnect state.</p>
-            </div>
-            <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100">
-              {readyBots}/{botComponents.length || 0} ready
-            </span>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            {botComponents.map((component) => {
-              const online = component.status === 'online';
-              const meta = component.meta;
-              return (
-                <div key={component.name} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{component.name}</h4>
-                      <p className="mt-1 text-xs leading-5 text-slate-500">{component.details ?? 'No details available'}</p>
-                    </div>
-                    <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ${online ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                      {component.status}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                    <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                      <p className="text-xs text-slate-500">Latency</p>
-                      <p className="mt-1 font-semibold text-slate-900">{component.latency != null ? `${component.latency}ms` : '-'}</p>
-                    </div>
-                    <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                      <p className="text-xs text-slate-500">Last reconnect</p>
-                      <p className="mt-1 font-semibold text-slate-900">
-                        {meta?.lastConnectedAt ? formatDate(meta.lastConnectedAt) : 'Belum pernah reconnect'}
+                    <div className="text-right">
+                      <p className={`text-sm font-bold ${item.responseBreached || item.resolutionBreached ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {formatHoursLeft(item.resolutionDeadline)}
                       </p>
-                    </div>
-                    <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                      <p className="text-xs text-slate-500">Connection</p>
-                      <p className="mt-1 font-semibold text-slate-900">{friendlyConnectionStatus(meta?.connectionStatus)}</p>
-                    </div>
-                    <div className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                      <p className="text-xs text-slate-500">Readiness</p>
-                      <p className={`mt-1 font-semibold ${online ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        {meta?.ready ? 'Ready to send/receive' : 'Needs attention'}
-                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{formatDate(item.resolutionDeadline)}</p>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-            {botComponents.length === 0 && <p className="text-sm text-slate-400">No bot health data available</p>}
+                ))}
+              </div>
+            )}
           </div>
         </article>
+
+        {/* Right Column: Alerts & Response (Incidents/Escalations) */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          <article className="flex flex-col rounded-[32px] border border-slate-200 bg-slate-900 p-7 text-white shadow-xl shadow-slate-200/50">
+             <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30">
+                  <Bell className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold">Signal Response</h3>
+                  <p className="text-sm text-slate-400">{activeAlerts.length} Attention Required</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8 grid grid-cols-2 gap-4">
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Incidents</p>
+                <p className="mt-2 text-3xl font-bold">{openIncidents.length}</p>
+              </div>
+              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Escalations</p>
+                <p className="mt-2 text-3xl font-bold text-rose-500">{openEscalations.length}</p>
+              </div>
+            </div>
+
+            {/* Signal Feed (Incidents & Alerts Combined) */}
+            <div className="mt-6 space-y-3">
+               {openIncidents.slice(0, 1).map((incident) => (
+                  <div key={incident.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden group transition-all hover:bg-white/10">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
+                    <div className="flex items-center justify-between mb-2">
+                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${severityClass(incident.severity)}`}>
+                         INCIDENT: {incident.severity}
+                       </span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-100">{incident.title}</p>
+                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{incident.description ?? 'Active incident tracking'}</p>
+                  </div>
+               ))}
+               {activeAlerts.slice(0, 1).map((alert) => (
+                  <div key={alert.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden transition-all hover:bg-white/10">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+                    <div className="flex items-center justify-between mb-2">
+                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                         ALERT: {alert.severity}
+                       </span>
+                    </div>
+                    <p className="text-sm font-bold text-slate-100">{alert.title}</p>
+                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{alert.message ?? alert.rule?.name}</p>
+                  </div>
+               ))}
+            </div>
+            <button className="mt-6 w-full py-3 rounded-2xl bg-indigo-600 font-bold text-sm tracking-wide transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30">
+              Open Signal Matrix
+            </button>
+          </article>
+
+          {/* Bot Connectivity detail (Compact) */}
+          <article className="flex-1 rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+             <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-slate-900 tracking-tight">Bot Connectivity</h3>
+                </div>
+                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                  {readyBots}/{botComponents.length} Active
+                </span>
+             </div>
+
+             <div className="space-y-4 text-sm font-semibold text-slate-700">
+                {botComponents.map((component) => (
+                  <div key={component.name} className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-md">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-bold text-slate-800">{component.name}</span>
+                      <div className="flex items-center gap-2">
+                         <div className={`w-2 h-2 rounded-full ${component.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                         <span className="text-[10px] font-black uppercase text-slate-400">{component.status}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                       <div>
+                         <p className="text-[10px] uppercase font-bold text-slate-400">Latency</p>
+                         <p className="font-bold text-slate-700">{component.latency ?? '-'}ms</p>
+                       </div>
+                       <div>
+                         <p className="text-[10px] uppercase font-bold text-slate-400">Status</p>
+                         <p className={`font-bold ${component.meta?.ready ? 'text-emerald-600' : 'text-rose-500'}`}>
+                           {component.meta?.ready ? 'Ready' : 'Issues'}
+                         </p>
+                       </div>
+                       <Link to="/status" className="ml-auto p-1.5 rounded-lg bg-slate-200/50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
+                          <ArrowUpRight className="w-4 h-4" />
+                       </Link>
+                    </div>
+                  </div>
+                ))}
+             </div>
+          </article>
+        </div>
       </div>
     </section>
+
   );
 }

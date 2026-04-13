@@ -26,20 +26,27 @@ interface Stats {
 
 const CHART_COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6', '#f97316'];
 
-function StatCard({ icon: Icon, label, value, color }: {
+function StatCard({ icon: Icon, label, value, color, delay = "0ms" }: {
   icon: React.ElementType;
   label: string;
   value: string | number;
   color: string;
+  delay?: string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-6 flex items-start gap-4">
-      <div className={`p-3 rounded-lg ${color}`}>
-        <Icon className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <p className="text-sm text-gray-500">{label}</p>
-        <p className="text-2xl font-bold mt-0.5">{value}</p>
+    <div 
+      className="group relative overflow-hidden bg-white/80 backdrop-blur-md rounded-[24px] border border-slate-200/60 p-6 transition-all duration-300 hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1"
+      style={{ transitionDelay: delay }}
+    >
+      <div className="absolute top-0 right-0 -mr-4 -mt-4 w-24 h-24 bg-gradient-to-br from-indigo-500/5 to-transparent rounded-full transition-transform group-hover:scale-110" />
+      <div className="flex items-start justify-between">
+        <div className={`p-3 rounded-2xl ${color} shadow-lg shadow-current/10 transition-transform group-hover:scale-110`}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+          <p className="text-3xl font-bold mt-1 text-slate-800 tracking-tight">{value}</p>
+        </div>
       </div>
     </div>
   );
@@ -240,11 +247,11 @@ export default function DashboardPage() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={MessageSquare} label="Messages Today" value={messages} color="bg-brand-500" />
-        <StatCard icon={Zap} label="Commands Today" value={commands} color="bg-violet-500" />
-        <StatCard icon={Users} label="Total Users" value={stats.totalUsers ?? 0} color="bg-emerald-500" />
-        <StatCard icon={AlertTriangle} label="Errors Today" value={errors} color="bg-red-500" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        <StatCard icon={MessageSquare} label="Messages Today" value={messages} color="bg-indigo-600" delay="0ms" />
+        <StatCard icon={Zap} label="Commands" value={commands} color="bg-violet-600" delay="50ms" />
+        <StatCard icon={Users} label="Total Users" value={stats.totalUsers ?? 0} color="bg-emerald-600" delay="100ms" />
+        <StatCard icon={AlertTriangle} label="System Errors" value={errors} color="bg-rose-600" delay="150ms" />
       </div>
 
       <OperationalOverview
