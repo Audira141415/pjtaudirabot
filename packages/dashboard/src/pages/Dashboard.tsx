@@ -260,7 +260,6 @@ export default function DashboardPage() {
         alerts={alerts}
         incidents={incidents}
         escalations={escalations}
-        openClusters={openClusters}
         health={health}
       />
 
