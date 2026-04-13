@@ -4,20 +4,39 @@ import { AppContext } from '../app';
 export default async function networkRoutes(app: FastifyInstance, ctx: AppContext) {
   
   app.get('/map-status', async (_request: FastifyRequest, reply: FastifyReply) => {
-    // Define main DC locations in Batam area
-    const locations = [
-      { id: 'btc', name: 'neuCentrIX Batam Center', lat: 1.1278, lng: 104.0526 },
-      { id: 'pac', name: 'PAC - neuCentrIX Panbil', lat: 1.0827, lng: 104.0375 },
-      { id: 'tuc', name: 'neuCentrIX Tanjung Uncang', lat: 1.0500, lng: 103.9300 },
-      { id: 'ngy', name: 'NOC Nagoya', lat: 1.1450, lng: 104.0150 },
-      { id: 'pbi', name: 'DC Panbil Industrial', lat: 1.0850, lng: 104.0450 }
-    ];
+    // Fetch all unique locations from the database
+    const dbLocations = await ctx.db.maintenanceSchedule.findMany({
+      where: { location: { not: null } },
+      select: { location: true },
+      distinct: ['location']
+    });
 
-    const mapData = await Promise.all(locations.map(async (loc) => {
+    // Default coordinate mapping for known areas
+    const getCoords = (name: string) => {
+      const lower = name.toLowerCase();
+      if (lower.includes('batam center')) return { lat: 1.1278, lng: 104.0526 };
+      if (lower.includes('panbil')) return { lat: 1.0827, lng: 104.0375 };
+      if (lower.includes('nagoya')) return { lat: 1.1450, lng: 104.0150 };
+      if (lower.includes('tanjung uncang')) return { lat: 1.0500, lng: 103.9300 };
+      if (lower.includes('pih')) return { lat: 1.1210, lng: 104.0510 };
+      if (lower.includes('kepri mall')) return { lat: 1.1020, lng: 104.0350 };
+      if (lower.includes('engku putri')) return { lat: 1.1250, lng: 104.0530 };
+      
+      // Random offset for others so they don't stack
+      return { 
+        lat: 1.12 + (Math.random() - 0.5) * 0.1, 
+        lng: 104.05 + (Math.random() - 0.5) * 0.1 
+      };
+    };
+
+    const mapData = await Promise.all(dbLocations.map(async (dbLoc) => {
+      const locName = dbLoc.location || 'Unknown';
+      const coords = getCoords(locName);
+
       // Check for open incidents or SLA breaches
       const criticalCount = await ctx.db.ticket.count({
         where: {
-          location: { contains: loc.name, mode: 'insensitive' },
+          location: { contains: locName, mode: 'insensitive' },
           status: { in: ['OPEN', 'ESCALATED'] },
           OR: [
             { priority: 'CRITICAL' },
@@ -33,7 +52,7 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
       
       const warningCount = await ctx.db.maintenanceSchedule.count({
         where: {
-          location: { contains: loc.name, mode: 'insensitive' },
+          location: { contains: locName, mode: 'insensitive' },
           nextDueDate: { lte: endOfDay }
         }
       });
@@ -43,7 +62,9 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
       else if (warningCount > 0) status = 'warning';
 
       return {
-        ...loc,
+        id: locName.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+        name: locName,
+        ...coords,
         status,
         metrics: {
           critical: criticalCount,
@@ -51,6 +72,12 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
         }
       };
     }));
+
+    // Sort to keep critical/warning at top of list
+    mapData.sort((a, b) => {
+      const score = (s: string) => s === 'critical' ? 2 : (s === 'warning' ? 1 : 0);
+      return score(b.status) - score(a.status);
+    });
 
     return reply.send({ data: mapData });
   });
