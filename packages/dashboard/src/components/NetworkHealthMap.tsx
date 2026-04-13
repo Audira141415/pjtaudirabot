@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ChevronRight, Activity, LayoutList } from 'lucide-react';
+import { ChevronRight, Activity, LayoutList, Map as MapIcon, Globe } from 'lucide-react';
 
 interface MapPoint {
   id: string;
