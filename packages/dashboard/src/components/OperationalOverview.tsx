@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap } from 'lucide-react';
+import { 
+  ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap,
+  ChevronDown, ChevronUp, Radio, Activity, Target
+} from 'lucide-react';
 import { PriorityBadge } from '../lib/badge-colors';
 import type { SystemHealthData, TicketOverviewData } from '../lib/api';
 
@@ -63,7 +66,6 @@ interface EscalationItem {
   };
 }
 
-
 interface OperationalOverviewProps {
   ticketOverview: TicketOverviewData | null;
   slaDashboard: Record<string, unknown> | null;
@@ -75,41 +77,39 @@ interface OperationalOverviewProps {
 
 function formatDate(dateValue?: string | null): string {
   if (!dateValue) return '-';
-  return new Date(dateValue).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+  return new Date(dateValue).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
 }
-
 
 function formatHoursLeft(dateValue?: string): string {
   if (!dateValue) return '-';
   const hoursLeft = Math.ceil((new Date(dateValue).getTime() - Date.now()) / 3600000);
-  if (hoursLeft < 0) return `${Math.abs(hoursLeft)}h overdue`;
-  if (hoursLeft === 0) return '<1h left';
-  return `${hoursLeft}h left`;
+  if (hoursLeft < 0) return `${Math.abs(hoursLeft)}h OVERDUE`;
+  if (hoursLeft === 0) return '<1h LEFT';
+  return `${hoursLeft}h LEFT`;
 }
 
 function severityClass(severity?: string): string {
   switch ((severity ?? '').toUpperCase()) {
-    case 'CRITICAL':
-      return 'bg-red-100 text-red-700';
-    case 'MAJOR':
-    case 'ERROR':
-      return 'bg-orange-100 text-orange-700';
-    case 'MINOR':
-    case 'WARNING':
-      return 'bg-amber-100 text-amber-700';
-    default:
-      return 'bg-slate-100 text-slate-700';
+    case 'CRITICAL': return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+    case 'MAJOR': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+    case 'WARNING': return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+    default: return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
   }
 }
 
-
-function Metric({ label, value, tone }: { label: string; value: string | number; tone: string }) {
-  return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${tone}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
-    </div>
-  );
+function BespokeMetric({ label, value, color }: { label: string, value: any, color: string }) {
+   const colors: any = {
+      default: 'text-slate-200 border-white/5 bg-white/5',
+      indigo: 'text-indigo-400 border-indigo-500/10 bg-indigo-500/5',
+      rose: 'text-rose-400 border-rose-500/10 bg-rose-500/5',
+      amber: 'text-amber-400 border-amber-500/10 bg-amber-500/5',
+   }
+   return (
+      <div className={`p-6 rounded-[24px] border ${colors[color]}`}>
+         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{label}</p>
+         <p className="text-3xl font-black tracking-tighter">{value}</p>
+      </div>
+   );
 }
 
 export default function OperationalOverview({
@@ -120,242 +120,188 @@ export default function OperationalOverview({
   escalations,
   health,
 }: OperationalOverviewProps) {
-  const [slaItemsExpanded, setSlaItemsExpanded] = useState(true);
+  const [slaExpanded, setSlaExpanded] = useState(true);
   const sla = slaDashboard as SlaDashboardData | null;
   const activeAlerts = alerts as unknown as AlertItem[];
   const openIncidents = incidents as unknown as IncidentItem[];
-  const openEscalations = (escalations as unknown as EscalationItem[]).filter((escalation) => !escalation.resolvedAt);
-  const botComponents = (health?.components ?? []).filter((component) => component.name.endsWith('Bot'));
-  const readyBots = botComponents.filter((component) => component.meta?.ready).length;
+  const openEscalations = (escalations as unknown as EscalationItem[]).filter((e) => !e.resolvedAt);
+  const botComponents = (health?.components ?? []).filter((c) => c.name.endsWith('Bot'));
+  const readyBots = botComponents.filter((c) => c.meta?.ready).length;
 
-  const topPriorities = [...(ticketOverview?.priorityCounts ?? [])].sort((a, b) => b.value - a.value).slice(0, 3);
-  const topCategories = [...(ticketOverview?.categoryCounts ?? [])].sort((a, b) => b.value - a.value).slice(0, 3);
   const urgentSla = [...(sla?.activeTracking ?? [])]
     .sort((a, b) => new Date(a.resolutionDeadline ?? 0).getTime() - new Date(b.resolutionDeadline ?? 0).getTime())
     .slice(0, 3);
 
   return (
-    <section className="mt-8 space-y-6">
-      <div className="flex flex-col gap-4 border-b border-slate-200/60 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
-            <ShieldCheck className="w-7 h-7 text-indigo-600" />
-            Operational Command
-          </h2>
-          <p className="mt-1 text-slate-500">Real-time oversight of SLA, incident pressure, and system readiness.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {['SLA Monitor', 'Alerts', 'Incidents'].map((label) => (
-            <Link 
-              key={label}
-              to={`/${label.toLowerCase().split(' ')[0]}`} 
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-0.5"
-            >
-              <ArrowUpRight className="w-4 h-4 text-slate-400" /> {label}
+    <section className="space-y-8">
+      {/* SECTION HEADER */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-white/5">
+         <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+               <Radio className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+               <h3 className="text-2xl font-black text-white tracking-tight">Operational Command</h3>
+               <p className="text-sm text-slate-500">Managing global service integrity and SLA compliance.</p>
+            </div>
+         </div>
+         <div className="flex items-center gap-3">
+            <Link to="/tickets" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-400 hover:bg-white/10 hover:text-white transition-all">
+               View Live Matrix <ArrowUpRight className="w-4 h-4" />
             </Link>
-          ))}
-        </div>
+         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Left Column: SLA & Backlog (Large Bento) */}
-        <article className="lg:col-span-7 flex flex-col rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
-                <ShieldAlert className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">SLA & Backlog Pressure</h3>
-                <p className="text-sm text-slate-500">Managing {ticketOverview?.openTickets ?? 0} active tickets</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ${
-                (sla?.complianceRate ?? 0) > 90 ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100'
-              }`}>
-                {sla?.complianceRate ?? 100}% Compliance
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Metric label="Open Tickets" value={ticketOverview?.openTickets ?? 0} tone="bg-slate-50/50 border-slate-100" />
-            <Metric label="Response" value={sla?.responseBreaches ?? 0} tone="bg-amber-50/30 border-amber-100/50" />
-            <Metric label="Resolution" value={sla?.resolutionBreaches ?? 0} tone="bg-rose-50/30 border-rose-100/50" />
-            <Metric label="Tracked" value={sla?.totalTracked ?? 0} tone="bg-slate-50/50 border-slate-100" />
-          </div>
-
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5" /> Priority Mix
-              </h4>
-              <div className="space-y-2">
-                {topPriorities.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
-                    <span className="text-sm font-medium text-slate-600">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+         {/* SLA & BACKLOG PANEL */}
+         <article className="xl:col-span-8 glass-panel rounded-[40px] p-8 relative overflow-hidden group">
+            <div className="relative z-10">
+               <div className="flex items-center justify-between mb-10">
+                  <div className="flex items-center gap-4">
+                     <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                        <Target className="w-6 h-6" />
+                     </div>
+                     <div>
+                        <h4 className="text-xl font-bold text-white">SLA Pressure Analytics</h4>
+                        <p className="text-sm text-slate-500">{ticketOverview?.openTickets ?? 0} active tickets in backlog</p>
+                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-4 text-sm font-semibold text-slate-700">
-               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <Ticket className="w-3.5 h-3.5" /> Category Mix
-              </h4>
-              <div className="space-y-2">
-                {topCategories.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
-                    <span className="text-sm font-medium text-slate-600 truncate">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
+                  <div className="text-right">
+                     <div className="px-4 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-widest">
+                        {sla?.complianceRate ?? 100}% Compliance
+                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          </div>
+               </div>
 
-          {/* Urgent SLA Items */}
-          <div className="mt-8 pt-7 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
-              <span className="flex items-center gap-2">
-                <Clock3 className="w-3.5 h-3.5" /> Fast Track (SLA Near Breach)
-              </span>
-              <button 
-                onClick={() => setSlaItemsExpanded(!slaItemsExpanded)}
-                className="text-indigo-600 hover:text-indigo-700"
-              >
-                {slaItemsExpanded ? 'Hide' : 'Show'}
-              </button>
-            </div>
-            {slaItemsExpanded && (
-              <div className="grid grid-cols-1 gap-3">
-                {urgentSla.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-200">
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col">
-                        <span className="font-mono text-[11px] font-bold text-indigo-600 underline decoration-indigo-200">{item.ticket?.ticketNumber ?? '-'}</span>
-                        <span className="text-sm font-bold text-slate-800 mt-0.5">{item.ticket?.customer ?? 'N/A'}</span>
-                      </div>
-                      <PriorityBadge priority={item.ticket?.priority ?? 'MEDIUM'} />
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${item.responseBreached || item.resolutionBreached ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {formatHoursLeft(item.resolutionDeadline)}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{formatDate(item.resolutionDeadline)}</p>
-                    </div>
+               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-10">
+                  <BespokeMetric label="Backlog" value={ticketOverview?.openTickets ?? 0} color="default" />
+                  <BespokeMetric label="Response Breach" value={sla?.responseBreaches ?? 0} color="amber" />
+                  <BespokeMetric label="Res. Breach" value={sla?.resolutionBreaches ?? 0} color="rose" />
+                  <BespokeMetric label="SLA Tracked" value={sla?.totalTracked ?? 0} color="indigo" />
+               </div>
+
+               {/* URGENT SLA LIST */}
+               <div className="pt-8 border-t border-white/5">
+                  <div className="flex items-center justify-between mb-6">
+                     <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-2">
+                        <Clock3 className="w-4 h-4 text-indigo-400" /> Fast-Track Priority
+                     </h5>
+                     <button onClick={() => setSlaExpanded(!slaExpanded)} className="text-slate-500 hover:text-white transition-colors">
+                        {slaExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </article>
 
-        {/* Right Column: Alerts & Response (Incidents/Escalations) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <article className="flex flex-col rounded-[32px] border border-slate-200 bg-slate-900 p-7 text-white shadow-xl shadow-slate-200/50">
-             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30">
-                  <Bell className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold">Signal Response</h3>
-                  <p className="text-sm text-slate-400">{activeAlerts.length} Attention Required</p>
-                </div>
-              </div>
+                  {slaExpanded && (
+                     <div className="space-y-3">
+                        {urgentSla.map((item) => (
+                           <div key={item.id} className="group/item flex items-center justify-between p-5 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] transition-all hover:border-white/10">
+                              <div className="flex items-center gap-6">
+                                 <div className="flex flex-col">
+                                    <span className="font-mono text-[11px] font-black text-indigo-400">{item.ticket?.ticketNumber || 'TKT-PEND'}</span>
+                                    <span className="text-sm font-bold text-white truncate max-w-[150px]">{item.ticket?.customer || 'Unknown Entity'}</span>
+                                 </div>
+                                 <div className="hidden sm:block">
+                                    <PriorityBadge priority={item.ticket?.priority || 'MEDIUM'} />
+                                 </div>
+                              </div>
+                              <div className="text-right">
+                                 <p className={`text-sm font-black tracking-tight ${item.responseBreached || item.resolutionBreached ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                    {formatHoursLeft(item.resolutionDeadline)}
+                                 </p>
+                                 <p className="text-[10px] font-bold text-slate-500 mt-1">{formatDate(item.resolutionDeadline)}</p>
+                              </div>
+                           </div>
+                        ))}
+                     </div>
+                  )}
+               </div>
             </div>
+         </article>
 
-            <div className="mt-8 grid grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Incidents</p>
-                <p className="mt-2 text-3xl font-bold">{openIncidents.length}</p>
-              </div>
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Escalations</p>
-                <p className="mt-2 text-3xl font-bold text-rose-500">{openEscalations.length}</p>
-              </div>
-            </div>
+         {/* SIGNAL FEED & BOTS */}
+         <div className="xl:col-span-4 flex flex-col gap-8">
+            <article className="glass-panel rounded-[40px] p-8 border-rose-500/10 bg-rose-500/[0.02]">
+               <div className="flex items-center gap-4 mb-8">
+                  <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500">
+                     <Bell className="w-6 h-6 animate-bounce" />
+                  </div>
+                  <div>
+                     <h4 className="text-lg font-bold text-white">Signal Response</h4>
+                     <p className="text-xs text-slate-500 uppercase font-black tracking-widest">{activeAlerts.length} High Severity Alerts</p>
+                  </div>
+               </div>
 
-            {/* Signal Feed (Incidents & Alerts Combined) */}
-            <div className="mt-6 space-y-3">
-               {openIncidents.slice(0, 1).map((incident) => (
-                  <div key={incident.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden group transition-all hover:bg-white/10">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${severityClass(incident.severity)}`}>
-                         INCIDENT: {incident.severity}
-                       </span>
-                    </div>
-                    <p className="text-sm font-bold text-slate-100">{incident.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{incident.description ?? 'Active incident tracking'}</p>
+               <div className="grid grid-cols-2 gap-4 mb-8">
+                  <div className="p-4 rounded-[24px] bg-white/5 border border-white/10">
+                     <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Incidents</p>
+                     <p className="text-2xl font-black text-rose-400">{openIncidents.length}</p>
                   </div>
-               ))}
-               {activeAlerts.slice(0, 1).map((alert) => (
-                  <div key={alert.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden transition-all hover:bg-white/10">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
-                         ALERT: {alert.severity}
-                       </span>
-                    </div>
-                    <p className="text-sm font-bold text-slate-100">{alert.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{alert.message ?? alert.rule?.name}</p>
+                  <div className="p-4 rounded-[24px] bg-white/5 border border-white/10">
+                     <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Escalated</p>
+                     <p className="text-2xl font-black text-indigo-400">{openEscalations.length}</p>
                   </div>
-               ))}
-            </div>
-            <button className="mt-6 w-full py-3 rounded-2xl bg-indigo-600 font-bold text-sm tracking-wide transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30">
-              Open Signal Matrix
-            </button>
-          </article>
+               </div>
 
-          {/* Bot Connectivity detail (Compact) */}
-          <article className="flex-1 rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
-                    <Bot className="w-5 h-5" />
-                  </div>
-                  <h3 className="font-bold text-slate-900 tracking-tight">Bot Connectivity</h3>
-                </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                  {readyBots}/{botComponents.length} Active
-                </span>
-             </div>
+               <div className="space-y-3">
+                  {openIncidents.slice(0, 2).map((inc) => (
+                     <div key={inc.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group">
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500" />
+                        <div className="flex items-center justify-between mb-2">
+                           <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${severityClass(inc.severity)}`}>
+                             INCIDENT: {inc.severity}
+                           </span>
+                        </div>
+                        <p className="text-xs font-bold text-white line-clamp-1">{inc.title}</p>
+                     </div>
+                  ))}
+               </div>
+               
+               <button className="mt-6 w-full py-4 rounded-2xl bg-rose-500 text-white font-black text-xs uppercase tracking-[0.2em] shadow-lg shadow-rose-500/20 hover:bg-rose-400 transition-all active:scale-95">
+                  Launch Signal Matrix
+               </button>
+            </article>
 
-             <div className="space-y-4 text-sm font-semibold text-slate-700">
-                {botComponents.map((component) => (
-                  <div key={component.name} className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-md">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-bold text-slate-800">{component.name}</span>
-                      <div className="flex items-center gap-2">
-                         <div className={`w-2 h-2 rounded-full ${component.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                         <span className="text-[10px] font-black uppercase text-slate-400">{component.status}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                       <div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400">Latency</p>
-                         <p className="font-bold text-slate-700">{component.latency ?? '-'}ms</p>
-                       </div>
-                       <div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400">Status</p>
-                         <p className={`font-bold ${component.meta?.ready ? 'text-emerald-600' : 'text-rose-500'}`}>
-                           {component.meta?.ready ? 'Ready' : 'Issues'}
-                         </p>
-                       </div>
-                       <Link to="/status" className="ml-auto p-1.5 rounded-lg bg-slate-200/50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                          <ArrowUpRight className="w-4 h-4" />
-                       </Link>
-                    </div>
+            <article className="glass-panel rounded-[40px] p-8 flex-1">
+               <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                     <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        <Bot className="w-6 h-6" />
+                     </div>
+                     <h4 className="font-bold text-white">Entity Connectivity</h4>
                   </div>
-                ))}
-             </div>
-          </article>
-        </div>
+                  <div className="flex items-center gap-1.5">
+                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                     <span className="text-[10px] font-black text-emerald-500 uppercase">{readyBots} OK</span>
+                  </div>
+               </div>
+
+               <div className="space-y-4">
+                  {botComponents.slice(0, 2).map((bot) => (
+                     <div key={bot.name} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="flex items-center justify-between mb-3">
+                           <span className="text-xs font-bold text-white uppercase tracking-tighter">{bot.name}</span>
+                           <span className={`text-[10px] font-black px-2 py-0.5 rounded ${bot.status === 'online' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                              {bot.status}
+                           </span>
+                        </div>
+                        <div className="flex items-center gap-6">
+                           <div>
+                              <p className="text-[9px] font-black text-slate-500 uppercase">Latency</p>
+                              <p className="text-sm font-black text-white">{bot.latency ?? '--'}ms</p>
+                           </div>
+                           <div>
+                              <p className="text-[9px] font-black text-slate-500 uppercase">Readiness</p>
+                              <p className={`text-sm font-black ${bot.meta?.ready ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                 {bot.meta?.ready ? 'OPERATIONAL' : 'ISSUE'}
+                              </p>
+                           </div>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </article>
+         </div>
       </div>
     </section>
-
   );
 }

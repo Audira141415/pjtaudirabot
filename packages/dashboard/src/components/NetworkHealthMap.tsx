@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, LayoutList, Map as MapIcon, ChevronRight } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, ChevronRight, Activity, LayoutList, Map as MapIcon, Globe } from 'lucide-react';
 
 interface MapPoint {
   id: string;
@@ -36,71 +36,76 @@ const NetworkHealthMap: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) return <div className="h-96 flex items-center justify-center bg-slate-900 rounded-[32px] text-slate-500 font-bold uppercase tracking-widest animate-pulse">Initializing Tactical Grid...</div>;
+  if (loading) return (
+     <div className="h-96 glass-panel rounded-[40px] flex flex-col items-center justify-center p-8 text-center">
+        <Globe className="w-12 h-12 text-indigo-500 animate-pulse mb-4" />
+        <p className="text-slate-500 font-black uppercase tracking-[0.4em] text-[10px]">Assembling Tactical Surface...</p>
+     </div>
+  );
 
   return (
-    <article className="flex flex-col rounded-[32px] border border-slate-800 bg-slate-950 shadow-2xl overflow-hidden relative min-h-[520px]">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between p-6 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-md z-30">
-        <div className="flex items-center gap-4">
-          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-            <MapIcon className="w-5 h-5" />
+    <article className="flex flex-col rounded-[40px] glass-panel shadow-2xl overflow-hidden relative min-h-[580px] animate-bespoke">
+      <div className="flex items-center justify-between p-8 border-b border-white/5 bg-white/[0.02] backdrop-blur-3xl z-30">
+        <div className="flex items-center gap-5">
+          <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+            <MapIcon className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-white font-bold tracking-tight">neuCentrIX Tactical Health</h3>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{points.length} Nodes Online</p>
+            <h3 className="text-white text-xl font-bold tracking-tight">Tactical Site Matrix</h3>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em]">{points.length} Active Nodes</p>
           </div>
         </div>
         
         <button 
            onClick={() => setShowList(!showList)}
-           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              showList ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+           className={`group flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all ${
+              showList ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/30' : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-white/5'
            }`}
         >
-          <LayoutList className="w-4 h-4" /> {showList ? 'Hide Site List' : 'Show 26 Sites'}
+          <LayoutList className="w-4 h-4 transition-transform group-hover:scale-110" /> 
+          {showList ? 'Collapse Registry' : 'Reveal Site Registry'}
         </button>
       </div>
 
-      <div className="flex-1 flex relative overflow-hidden">
+      <div className="flex-1 flex relative overflow-hidden bg-[#020305]">
         {/* Collapsible Sidebar Overlay */}
-        <aside className={`absolute top-0 left-0 bottom-0 z-20 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800 transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-          showList ? 'w-80 translate-x-0 opacity-100' : 'w-80 -translate-x-full opacity-0'
+        <aside className={`absolute top-0 left-0 bottom-0 z-20 bg-slate-900/90 backdrop-blur-3xl border-r border-white/5 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          showList ? 'w-80 translate-x-0' : 'w-80 -translate-x-full'
         }`}>
-          <div className="p-6 h-full overflow-y-auto custom-scrollbar">
-             <div className="space-y-2">
+          <div className="p-6 h-full overflow-y-auto">
+             <div className="space-y-3">
                 {points.map((point) => (
                   <button
                     key={point.id}
                     onClick={() => setActiveId(point.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center gap-3 ${
+                    className={`w-full text-left p-4 rounded-[20px] transition-all flex items-center gap-4 border ${
                       activeId === point.id 
-                        ? 'border-indigo-500 bg-indigo-500/10 text-white' 
-                        : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800'
+                        ? 'border-indigo-500/30 bg-indigo-600/10 text-white shadow-[inset_0_0_20px_rgba(99,102,241,0.05)]' 
+                        : 'border-white/5 bg-white/[0.02] text-slate-500 hover:text-slate-300 hover:bg-white/5 hover:border-white/10'
                     }`}
                   >
-                    <div className={`w-2 h-2 rounded-full ${
-                      point.status === 'critical' ? 'bg-rose-500 animate-pulse' : 
-                      point.status === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'
+                    <div className={`w-3 h-3 rounded-full shadow-[0_0_10px_currentColor] ${
+                      point.status === 'critical' ? 'bg-rose-500 text-rose-500' : 
+                      point.status === 'warning' ? 'bg-amber-500 text-amber-500' : 'bg-emerald-500 text-emerald-500'
                     }`} />
-                    <span className="text-xs font-bold truncate flex-1">{point.name}</span>
-                    {activeId === point.id && <ChevronRight className="w-4 h-4 text-indigo-400" />}
+                    <span className="text-sm font-bold truncate flex-1">{point.name}</span>
+                    {activeId === point.id && <ChevronRight className="w-4 h-4 text-indigo-400 animate-in slide-in-from-left-2" />}
                   </button>
                 ))}
              </div>
           </div>
         </aside>
 
-        {/* Main View: Elegant Blueprint Style Grid */}
-        <main className="flex-1 relative bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-10 flex items-center justify-center overflow-hidden">
+        {/* Main View: Cyber Schematic Grid */}
+        <main className="flex-1 relative p-12 flex items-center justify-center overflow-hidden">
            {/* Futuristic Grid Overlay */}
-           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-                style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+           <div className="absolute inset-0 opacity-[0.05] pointer-events-none" 
+                style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
            
            <div className="relative w-full h-full max-w-2xl aspect-video flex items-center justify-center">
-              {/* Central Radar Circle (Minimalist) */}
-              <div className="absolute inset-0 border border-slate-800/50 rounded-full scale-110 opacity-20" />
-              <div className="absolute inset-0 border border-slate-800/30 rounded-full scale-75 opacity-20" />
+              {/* Central Scan Lines (Minimalist Decoration) */}
+              <div className="absolute top-1/2 left-0 w-full h-[1px] bg-indigo-500/10" />
+              <div className="absolute left-1/2 top-0 h-full w-[1px] bg-indigo-500/10" />
 
               {/* Data Node Points (Luminous Beacons) */}
               {points.map((point) => {
@@ -116,25 +121,25 @@ const NetworkHealthMap: React.FC = () => {
                      onClick={() => setActiveId(point.id)}
                    >
                       {/* Glow for status */}
-                      <div className={`absolute -inset-4 rounded-full blur-xl transition-all duration-1000 ${
-                         point.status === 'critical' ? 'bg-rose-500/20 opacity-100' :
+                      <div className={`absolute -inset-6 rounded-full blur-2xl transition-all duration-1000 ${
+                         point.status === 'critical' ? 'bg-rose-500/20 opacity-100 animate-pulse' :
                          point.status === 'warning' ? 'bg-amber-500/10 opacity-60' :
                          'bg-emerald-500/5 opacity-30'
                       } ${isActive ? 'scale-150' : 'scale-100'}`} />
 
-                      <div className={`cursor-pointer w-4 h-4 rounded-full border-2 border-slate-950 shadow-2xl transition-all hover:scale-150 ${
-                         point.status === 'critical' ? 'bg-rose-500 shadow-rose-500/50' :
-                         point.status === 'warning' ? 'bg-amber-500 shadow-amber-500/50' :
-                         'bg-emerald-500 shadow-emerald-500/20'
+                      <div className={`cursor-pointer w-4 h-4 rounded-full border-2 border-black shadow-2xl transition-all hover:scale-150 ${
+                         point.status === 'critical' ? 'bg-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.5)]' :
+                         point.status === 'warning' ? 'bg-amber-500 shadow-[0_0_15px_rgba(251,191,36,0.5)]' :
+                         'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]'
                       }`} />
 
-                      {/* Site ID Badge (Pro look) */}
+                      {/* Site ID Badge */}
                       {(isActive || point.status === 'critical') && (
                         <div className="absolute top-6 left-1/2 -translate-x-1/2 whitespace-nowrap flex flex-col items-center">
-                           <div className="w-px h-4 bg-slate-700 mb-1" />
-                           <div className="px-3 py-1 rounded bg-slate-900 border border-slate-700 shadow-2xl">
-                              <p className="text-[10px] font-black text-white whitespace-nowrap uppercase italic tracking-tighter">
-                                {point.name.split(' ').slice(-2).join(' ')}
+                           <div className="w-px h-6 bg-indigo-500/30 mb-1" />
+                           <div className="px-4 py-1.5 rounded-xl bg-slate-900 border border-indigo-500/30 shadow-2xl shadow-indigo-500/20">
+                              <p className="text-[11px] font-black text-white whitespace-nowrap uppercase tracking-widest italic">
+                                {point.name.split(' ').slice(-1).join(' ')}
                               </p>
                            </div>
                         </div>
@@ -144,43 +149,43 @@ const NetworkHealthMap: React.FC = () => {
               })}
            </div>
 
-           {/* Perspective View Detail (Bottom Overlay) */}
-           <div className="absolute bottom-8 right-8 text-right pointer-events-none">
-              <h2 className="text-4xl font-black text-slate-800/50 tracking-tighter uppercase italic select-none">Batam Grid v2</h2>
-              <p className="text-[10px] text-slate-600 font-bold uppercase tracking-[0.5em]">Tactical Network Overview</p>
+           {/* Perspective View Detail */}
+           <div className="absolute bottom-10 right-10 text-right pointer-events-none select-none">
+              <h2 className="text-5xl font-black text-white/5 tracking-tighter uppercase italic">BATAM TELEMETRY</h2>
+              <p className="text-[10px] text-slate-700 font-black uppercase tracking-[0.8em] mt-2">Active Geospatial Node Matrix</p>
            </div>
         </main>
       </div>
 
-      {/* Info Panel Footer (Show only for active site) */}
+      {/* Info Panel Footer */}
       {activeId && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-xl px-6 z-40 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="absolute bottom-10 left-10 right-10 z-40 animate-in fade-in slide-in-from-bottom-8 duration-700">
            {(() => {
               const p = points.find(x => x.id === activeId);
               if (!p) return null;
               return (
-                <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 flex items-center justify-between shadow-2xl shadow-black/50">
-                   <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-2xl ${
-                        p.status === 'critical' ? 'bg-rose-500/20 text-rose-400' :
-                        p.status === 'warning' ? 'bg-amber-500/20 text-amber-400' :
-                        'bg-emerald-500/20 text-emerald-400'
+                <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/5 rounded-[32px] p-8 flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-black/80 gap-6">
+                   <div className="flex items-center gap-6">
+                      <div className={`p-4 rounded-3xl ${
+                        p.status === 'critical' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                        p.status === 'warning' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                       }`}>
-                         <Activity className="w-5 h-5" />
+                         <Activity className="w-7 h-7" />
                       </div>
                       <div>
-                         <h4 className="text-white font-bold">{p.name}</h4>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{p.status} Mode ENABLED</p>
+                         <h4 className="text-white text-xl font-bold tracking-tight">{p.name}</h4>
+                         <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">Telemetry Status: {p.status}</p>
                       </div>
                    </div>
-                   <div className="flex gap-8 pr-4">
+                   <div className="flex gap-12">
                       <div className="text-center">
-                         <p className="text-[10px] text-slate-500 font-bold uppercase">Critical</p>
-                         <p className="text-xl font-black text-rose-400">{p.metrics.critical}</p>
+                         <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mb-1">Critical Signals</p>
+                         <p className="text-3xl font-black text-rose-500">{p.metrics.critical}</p>
                       </div>
-                      <div className="text-center">
-                         <p className="text-[10px] text-slate-500 font-bold uppercase">Pending PM</p>
-                         <p className="text-xl font-black text-amber-400">{p.metrics.warning}</p>
+                      <div className="text-center pr-4">
+                         <p className="text-[10px] text-slate-600 font-black uppercase tracking-widest mb-1">Overdue Maintenance</p>
+                         <p className="text-3xl font-black text-amber-500">{p.metrics.warning}</p>
                       </div>
                    </div>
                 </div>
