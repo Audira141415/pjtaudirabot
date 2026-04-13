@@ -683,4 +683,8 @@ export const api = {
     request<{ success: boolean; synced: number; message: string }>('/maintenance/sheets/clear', {
       method: 'POST',
     }),
+  
+  // ─── AI Insights ───────────────────────────────────────
+  getPredictiveInsights: () =>
+    request<{ data: Array<{ id: string; type: string; location: string; probability: number; reason: string; recommendation: string; severity: string }> }>('/insights'),
 };

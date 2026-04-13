@@ -12,7 +12,13 @@ import {
   HardDrive,
   Activity,
   Terminal,
-  ShieldAlert
+  ShieldAlert,
+  BrainCircuit,
+  TrendingDown,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2,
+  Info
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -49,6 +55,7 @@ const AdminHub = () => {
   const [syncing, setSyncing] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [qrToken, setQrToken] = useState<string | null>(null);
+  const [predictions, setPredictions] = useState<any[]>([]);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -70,13 +77,26 @@ const AdminHub = () => {
     }
   }, []);
 
+  const fetchInsights = useCallback(async () => {
+    try {
+      const res = await api.getPredictiveInsights();
+      setPredictions(res.data);
+    } catch (err) {
+      console.error('Failed to fetch insights:', err);
+    }
+  }, []);
+
   useEffect(() => {
     fetchHealth();
+    fetchInsights();
     // Faster poll when QR is shown to catch the sequence
     const intervalTime = showQr ? 5000 : 30000;
-    const interval = setInterval(fetchHealth, intervalTime);
+    const interval = setInterval(() => {
+      fetchHealth();
+      fetchInsights();
+    }, intervalTime);
     return () => clearInterval(interval);
-  }, [fetchHealth, showQr]);
+  }, [fetchHealth, fetchInsights, showQr]);
 
   const handleManualSync = async () => {
     setSyncing(true);
