@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { AppContext } from '../app';
 
-export default async function insightsRoutes(app: FastifyInstance, ctx: AppContext) {
+export default async function insightsRoutes(app: FastifyInstance, _ctx: AppContext) {
   
   app.get('/predictive', async (_request: FastifyRequest, reply: FastifyReply) => {
     // Basic AI Predictive Logic:
