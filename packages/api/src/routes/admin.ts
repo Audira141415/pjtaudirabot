@@ -2903,18 +2903,19 @@ export async function adminRoutes(
   });
 
   app.get('/insights', async (_request: FastifyRequest, reply: FastifyReply) => {
-    const data = await insightService.getPredictiveInsights();
+    const data = await insightService.getPredictiveForecast();
     return reply.send({ data });
   });
 
   app.post('/maintenance/sheets/sync', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      await maintenanceScheduleService.syncToSheets();
+      await maintenanceScheduleService.syncAllToSheets();
       auditLog(ctx.db, request, { action: 'sync', resource: 'maintenance_sheets' });
       return reply.send({ success: true, message: 'Synchronization sequence initiated' });
     } catch (err) {
-      ctx.logger.error('Manual sheet sync failed', err);
-      return reply.status(500).send({ error: (err as Error).message });
+      const error = err instanceof Error ? err : new Error(String(err));
+      ctx.logger.error('Manual sheet sync failed', error);
+      return reply.status(500).send({ error: error.message });
     }
   });
 
