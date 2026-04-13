@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin, ShieldCheck, ShieldAlert, AlertTriangle, ChevronRight, Activity } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, ChevronRight, Activity } from 'lucide-react';
 
 interface MapPoint {
   id: string;
