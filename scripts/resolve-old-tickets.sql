@@ -3,7 +3,8 @@ UPDATE "Ticket"
 SET 
   status = 'RESOLVED', 
   "resolvedAt" = NOW(), 
-  "resolvedById" = 'admin'
+  "rootCause" = 'Cleanup SLA Breach',
+  "solution" = 'Resolved via bulk maintenance cleanup'
 WHERE "ticketNumber" IN (
   'TKT-20260412-0003', 
   'TKT-20260411-0009', 
@@ -16,7 +17,8 @@ UPDATE "Ticket"
 SET 
   status = 'RESOLVED', 
   "resolvedAt" = NOW(),
-  "resolvedById" = 'admin'
+  "rootCause" = 'Inactivity cleanup',
+  "solution" = 'System auto-resolve for old maintenance tickets'
 WHERE category = 'MAINTENANCE' 
   AND status != 'RESOLVED' 
   AND status != 'CLOSED'
