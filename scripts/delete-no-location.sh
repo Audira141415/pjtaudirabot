@@ -16,7 +16,7 @@ echo "✅ Login berhasil"
 
 echo ""
 echo "🗑️  Menghapus jadwal tanpa lokasi..."
-RESULT=$(curl -s -X DELETE "$BASE_URL/api/maintenance/bulk" \
+RESULT=$(curl -s -X DELETE "$BASE_URL/api/admin/maintenance/bulk" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"filter":"no-location"}')
@@ -24,6 +24,6 @@ echo "$RESULT"
 
 echo ""
 echo "📊 Sinkronisasi GSheet..."
-SYNC=$(curl -s -X POST "$BASE_URL/api/maintenance/sheets/sync" \
+SYNC=$(curl -s -X POST "$BASE_URL/api/admin/maintenance/sheets/sync" \
   -H "Authorization: Bearer $TOKEN")
 echo "$SYNC"
