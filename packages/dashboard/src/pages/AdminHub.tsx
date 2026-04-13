@@ -198,6 +198,54 @@ const AdminHub = () => {
               </div>
            </section>
 
+           {predictions.length > 0 && (
+             <section>
+                <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
+                   <BrainCircuit className="w-4 h-4 text-indigo-500" /> Infrastructure Risk Forecast
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {predictions.map((pred) => (
+                      <div key={pred.id} className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-xl overflow-hidden relative">
+                         <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03] pointer-events-none -mr-8 -mt-8">
+                            {pred.severity === 'critical' || pred.severity === 'high' ? <TrendingUp className="w-full h-full" /> : <TrendingDown className="w-full h-full" />}
+                         </div>
+
+                         <div className="flex items-center justify-between mb-4">
+                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                               pred.severity === 'critical' ? 'bg-rose-500/10 text-rose-500' :
+                               pred.severity === 'high' ? 'bg-orange-500/10 text-orange-500' :
+                               pred.severity === 'medium' ? 'bg-amber-500/10 text-amber-500' :
+                               'bg-emerald-500/10 text-emerald-500'
+                            }`}>
+                               {pred.severity} risk
+                               {pred.severity === 'critical' && <AlertTriangle className="inline-block w-3 h-3 ml-1" />}
+                               {pred.severity === 'low' && <CheckCircle2 className="inline-block w-3 h-3 ml-1" />}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                               <span className="text-[10px] font-black text-slate-500">PROBABILITY</span>
+                               <span className="text-sm font-black text-white">{pred.probability}%</span>
+                            </div>
+                         </div>
+
+                         <h3 className="text-lg font-black text-white mb-1">{pred.type}</h3>
+                         <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                            <Activity className="w-3 h-3" /> {pred.location}
+                         </p>
+                         
+                         <div className="bg-slate-800/40 rounded-2xl p-4 mb-4 border border-slate-800/50">
+                            <p className="text-xs text-slate-300 leading-relaxed italic">"{pred.reason}"</p>
+                         </div>
+
+                         <div className="flex items-start gap-3 p-3 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                            <p className="text-[11px] text-indigo-200 font-medium leading-normal">{pred.recommendation}</p>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+             </section>
+           )}
+
            <section>
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
                  <Terminal className="w-4 h-4" /> Logic Control Center
