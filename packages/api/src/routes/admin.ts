@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import crypto from 'node:crypto';
-import { MaintenanceScheduleService, GoogleSheetsService } from '@pjtaudirabot/services';
+import { MaintenanceScheduleService, GoogleSheetsService, InsightService } from '@pjtaudirabot/services';
 import { auditLog } from '../utils/audit';
 
 /**
@@ -21,6 +21,7 @@ export async function adminRoutes(
     ? new GoogleSheetsService({ credentials: process.env.GOOGLE_SHEETS_CREDENTIALS, spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID }, ctx.logger)
     : null;
   const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger, sheetsService);
+  const insightService = new InsightService(ctx.db, ctx.redis, ctx.logger);
 
   const botHealthHosts: Record<string, string[]> = {
     TELEGRAM: [process.env.TELEGRAM_HEALTH_HOST || 'telegram', '127.0.0.1'],
@@ -2899,6 +2900,20 @@ export async function adminRoutes(
     if (q.period) where.period = q.period;
     const data = await ctx.db.analyticsSnapshot.findMany({ where, orderBy: { date: 'desc' }, take: 30 });
     return reply.send({ data });
+  app.get('/insights', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const data = await insightService.getPredictiveInsights();
+    return reply.send({ data });
+  });
+
+  app.post('/maintenance/sheets/sync', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await maintenanceScheduleService.syncToSheets();
+      auditLog(ctx.db, request, { action: 'sync', resource: 'maintenance_sheets' });
+      return reply.send({ success: true, message: 'Synchronization sequence initiated' });
+    } catch (err) {
+      ctx.logger.error('Manual sheet sync failed', err);
+      return reply.status(500).send({ error: (err as Error).message });
+    }
   });
 
 }
