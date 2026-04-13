@@ -55,6 +55,7 @@ const AdminHub = () => {
   const [syncing, setSyncing] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [qrToken, setQrToken] = useState<string | null>(null);
+  const [purging, setPurging] = useState(false);
   const [predictions, setPredictions] = useState<any[]>([]);
 
   const fetchHealth = useCallback(async () => {
@@ -101,13 +102,28 @@ const AdminHub = () => {
   const handleManualSync = async () => {
     setSyncing(true);
     try {
-      await api.syncMaintenanceToSheets();
-      alert('Synchronization started successfully!');
+      const res = await api.syncMaintenanceToSheets();
+      alert(res.message || 'Synchronization started successfully!');
     } catch (err) {
       console.error('Sync failed:', err);
       alert('Failed to start sync');
     } finally {
       setSyncing(false);
+      fetchHealth();
+    }
+  };
+
+  const handlePurgeResync = async () => {
+    if (!confirm('This will DELETE all current rows in the GSheet tab and reload them from the DB. Continue?')) return;
+    setPurging(true);
+    try {
+      const res = await api.clearAndResyncSheets();
+      alert(res.message || 'Sheet purged and resynced successfully!');
+    } catch (err) {
+      console.error('Purge failed:', err);
+      alert('Failed to purge and resync');
+    } finally {
+      setPurging(false);
       fetchHealth();
     }
   };
@@ -139,11 +155,19 @@ const AdminHub = () => {
           <div className="flex items-center gap-3">
              <button 
                 onClick={handleManualSync}
-                disabled={syncing}
+                disabled={syncing || purging}
                 className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95 text-sm"
              >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Syncing...' : 'Sync All Data'}
+             </button>
+             <button 
+                onClick={handlePurgeResync}
+                disabled={syncing || purging}
+                className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20 active:scale-95 text-sm"
+             >
+                <TrashIcon className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
+                {purging ? 'Purging...' : 'Purge & Resync Sheets'}
              </button>
              <button className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-slate-700 hover:text-white transition-all border border-slate-700">
                 <Settings className="w-5 h-5" />
@@ -382,6 +406,12 @@ const AdminHub = () => {
 const XCircleIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
+const TrashIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
 
