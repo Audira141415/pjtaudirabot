@@ -58,9 +58,9 @@ const Dashboard: React.FC = () => {
   const loadData = async () => {
     try {
       const [statsRes, historyRes, ticketRes] = await Promise.all([
-        api.get('/admin/stats'),
-        api.get('/admin/stats/history'),
-        api.get('/tickets/overview')
+        api.get<any>('/admin/stats'),
+        api.get<any>('/admin/stats/history'),
+        api.get<any>('/tickets/overview')
       ]);
 
       setStats(statsRes.data);
@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
   const loadHealth = async () => {
     setHealthLoading(true);
     try {
-      const res = await api.get('/admin/health');
+      const res = await api.get<any>('/admin/health');
       checkHealthChanges(res.data);
       setHealth(res.data);
     } catch (err) {
