@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Badge color utilities for ticket status and priority visual representation
  * Refactored for 'Deep Space Command' Bespoke Aesthetic
