@@ -57,8 +57,9 @@ const AdminHub = () => {
       
       // Extract QR from WhatsApp component if available
       const waBot = res.data.components.find((c: any) => c.name.includes('WhatsApp'));
-      if (waBot?.meta?.qr) {
-        setQrToken(waBot.meta.qr);
+      const meta = waBot?.meta as any;
+      if (meta?.qr) {
+        setQrToken(meta.qr);
       } else {
         setQrToken(null);
       }
