@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Bell, BrainCircuit, Bot, Clock3, Layers3, ShieldAlert, ShieldCheck, Ticket, Zap } from 'lucide-react';
-import { PriorityBadge, StatusBadge } from '../lib/badge-colors';
+import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap } from 'lucide-react';
+import { PriorityBadge } from '../lib/badge-colors';
 import type { SystemHealthData, TicketOverviewData } from '../lib/api';
 
 interface SlaTrackingItem {
@@ -90,20 +90,6 @@ function formatDate(dateValue?: string | null): string {
   return new Date(dateValue).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function friendlyConnectionStatus(status?: string): string {
-  switch ((status ?? '').toUpperCase()) {
-    case 'CONNECTED':
-      return 'Connected';
-    case 'DEGRADED':
-      return 'Degraded';
-    case 'DISCONNECTED':
-      return 'Disconnected';
-    case 'ERROR':
-      return 'Error';
-    default:
-      return status ?? '-';
-  }
-}
 
 function formatHoursLeft(dateValue?: string): string {
   if (!dateValue) return '-';
@@ -128,21 +114,6 @@ function severityClass(severity?: string): string {
   }
 }
 
-function statusClass(status?: string): string {
-  switch ((status ?? '').toUpperCase()) {
-    case 'ACTIVE':
-    case 'OPEN':
-      return 'bg-red-100 text-red-700';
-    case 'INVESTIGATING':
-    case 'ACKNOWLEDGED':
-      return 'bg-amber-100 text-amber-700';
-    case 'RESOLVED':
-    case 'CLOSED':
-      return 'bg-emerald-100 text-emerald-700';
-    default:
-      return 'bg-slate-100 text-slate-700';
-  }
-}
 
 function Metric({ label, value, tone }: { label: string; value: string | number; tone: string }) {
   return (
@@ -176,7 +147,6 @@ export default function OperationalOverview({
   const urgentSla = [...(sla?.activeTracking ?? [])]
     .sort((a, b) => new Date(a.resolutionDeadline ?? 0).getTime() - new Date(b.resolutionDeadline ?? 0).getTime())
     .slice(0, 3);
-  const hotClusters = [...clusters].sort((a, b) => (b.impactScore ?? 0) - (a.impactScore ?? 0)).slice(0, 3);
 
   return (
     <section className="mt-8 space-y-6">
