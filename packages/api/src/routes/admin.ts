@@ -2633,6 +2633,15 @@ export async function adminRoutes(
       },
     });
 
+    // Auto-complete the schedule when evidence is uploaded
+    await maintenanceScheduleService.completeSchedule(id, {
+      note: notes || 'Evidence uploaded via dashboard',
+      evidenceFileId: file.id,
+      completedBy: uploader,
+    }).catch(err => {
+      ctx.logger.error(`Failed to auto-complete schedule ${id} after upload: ${String(err)}`);
+    });
+
     return reply.send({ data: file });
   });
 
