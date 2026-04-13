@@ -2693,12 +2693,14 @@ export async function adminRoutes(
 
   // POST /maintenance/sheets/clear — reset tab GSheet, dann re-sync dari DB
   app.post('/maintenance/sheets/clear', async (_request: FastifyRequest, reply: FastifyReply) => {
+    ctx.logger.info('API Call: /maintenance/sheets/clear [START]');
     try {
       const count = await maintenanceScheduleService.clearAndResyncSheets();
+      ctx.logger.info(`API Call: /maintenance/sheets/clear [SUCCESS] - Synced: ${count}`);
       return reply.send({ success: true, synced: count, message: `Tab GSheet direset & ${count} jadwal di-sync ulang.` });
     } catch (err) {
-      ctx.logger.error(`Failed to clear maintenance sheet: ${String(err)}`);
-      return reply.status(500).send({ error: 'Gagal clear/resync GSheet.' });
+      ctx.logger.error(`API Call: /maintenance/sheets/clear [FAILED]: ${err instanceof Error ? err.stack : String(err)}`);
+      return reply.status(500).send({ error: `Gagal clear/resync GSheet: ${err instanceof Error ? err.message : String(err)}` });
     }
   });
 
@@ -2715,13 +2717,15 @@ export async function adminRoutes(
 
   // POST /tickets/purge — DELETE ALL TICKETS from DB and Sheets
   app.post('/tickets/purge', async (request: FastifyRequest, reply: FastifyReply) => {
+    ctx.logger.info('API Call: /tickets/purge [START]');
     try {
       await ticketService.purgeAllTickets();
       auditLog(ctx.db, request, { action: 'delete', resource: 'ticket', resourceId: 'all' });
+      ctx.logger.info('API Call: /tickets/purge [SUCCESS]');
       return reply.send({ success: true, message: 'DATABASE & GSHEET TICKETS BERHASIL DIBERSIHKAN TOTAL.' });
     } catch (err) {
-      ctx.logger.error(`Failed to purge tickets: ${String(err)}`);
-      return reply.status(500).send({ error: 'Gagal membersihkan data tiket.' });
+      ctx.logger.error(`API Call: /tickets/purge [FAILED]: ${err instanceof Error ? err.stack : String(err)}`);
+      return reply.status(500).send({ error: `Gagal membersihkan data tiket: ${err instanceof Error ? err.message : String(err)}` });
     }
   });
 
