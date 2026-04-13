@@ -1312,4 +1312,81 @@ export class GoogleSheetsService {
     }
     return letter;
   }
+
+  /** Delete a single maintenance schedule row from the sheet by its ID. */
+  async deleteMaintenanceRow(scheduleId: string): Promise<void> {
+    if (!this.sheets || !this.spreadsheetId) return;
+    const rows = await this.readAll('maintenance_schedules');
+    // rows[0] is the header row; data starts at index 1 (sheet row 2)
+    const rowIndex = rows.findIndex((row, i) => i > 0 && row[0] === scheduleId);
+    if (rowIndex < 0) return; // row not found — nothing to do
+
+    const sheetId = await this.getSheetId('maintenance_schedules');
+    if (sheetId === null) return;
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: 'ROWS',
+              startIndex: rowIndex, // 0-indexed in Sheets API (rowIndex already accounts for header)
+              endIndex: rowIndex + 1,
+            },
+          },
+        }],
+      },
+    });
+  }
+
+  /** Clear all data rows in maintenance_schedules sheet (keep header). */
+  async clearMaintenanceSheet(): Promise<void> {
+    if (!this.sheets || !this.spreadsheetId) return;
+    await this.ensureSheet('maintenance_schedules');
+
+    const headers = SHEET_SCHEMAS.maintenance_schedules;
+    const lastCol = this.columnLetter(headers.length);
+
+    // Overwrite entire sheet with just the header row
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `maintenance_schedules!A1:${lastCol}`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [headers] },
+    });
+
+    // Delete all rows after the header
+    const rows = await this.readAll('maintenance_schedules');
+    const dataRowCount = Math.max(0, rows.length - 1);
+    if (dataRowCount === 0) return;
+
+    const sheetId = await this.getSheetId('maintenance_schedules');
+    if (sheetId === null) return;
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId: this.spreadsheetId,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId,
+              dimension: 'ROWS',
+              startIndex: 1,              // keep row 0 (header)
+              endIndex: 1 + dataRowCount,
+            },
+          },
+        }],
+      },
+    });
+  }
+
+  /** Helper: get the numeric sheetId for a named tab. */
+  private async getSheetId(tabName: string): Promise<number | null> {
+    if (!this.sheets || !this.spreadsheetId) return null;
+    const meta = await this.sheets.spreadsheets.get({ spreadsheetId: this.spreadsheetId });
+    const sheet = meta.data.sheets?.find(s => s.properties?.title === tabName);
+    return sheet?.properties?.sheetId ?? null;
+  }
 }

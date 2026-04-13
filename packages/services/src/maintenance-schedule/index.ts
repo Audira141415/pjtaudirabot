@@ -786,5 +786,44 @@ export class MaintenanceScheduleService {
     }
     return count;
   }
+
+  /** Delete a single maintenance schedule and remove its row from Google Sheets. */
+  async delete(id: string): Promise<void> {
+    const schedule = await this.db.maintenanceSchedule.findUnique({ where: { id } });
+    if (!schedule) throw new Error(`Maintenance schedule ${id} not found`);
+
+    // Delete evidence files first (FK constraint)
+    await this.db.mediaFile.deleteMany({ where: { maintenanceScheduleId: id } });
+    await this.db.maintenanceSchedule.delete({ where: { id } });
+
+    // Remove row from Google Sheets
+    if (this.sheetsService) {
+      await this.sheetsService.deleteMaintenanceRow(id).catch(() => {});
+    }
+
+    this.logger.info('Maintenance schedule deleted', { id, title: schedule.title });
+  }
+
+  /** Delete multiple maintenance schedules at once. Returns count of deleted items. */
+  async deleteMany(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    await this.db.mediaFile.deleteMany({ where: { maintenanceScheduleId: { in: ids } } });
+    const result = await this.db.maintenanceSchedule.deleteMany({ where: { id: { in: ids } } });
+
+    // Refresh sheet after bulk delete
+    if (this.sheetsService) {
+      await this.clearAndResyncSheets().catch(() => {});
+    }
+
+    this.logger.info('Maintenance schedules bulk-deleted', { count: result.count });
+    return result.count;
+  }
+
+  /** Clear all rows (excluding header) in the maintenance_schedules sheet, then resync DB → Sheet. */
+  async clearAndResyncSheets(): Promise<number> {
+    if (!this.sheetsService) return 0;
+    await this.sheetsService.clearMaintenanceSheet();
+    return this.syncAllToSheets();
+  }
 }
 

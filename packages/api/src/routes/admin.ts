@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import crypto from 'node:crypto';
-import { MaintenanceScheduleService } from '@pjtaudirabot/services';
+import { MaintenanceScheduleService, GoogleSheetsService } from '@pjtaudirabot/services';
 import { auditLog } from '../utils/audit';
 
 /**
@@ -16,7 +16,11 @@ export async function adminRoutes(
   app: FastifyInstance,
   ctx: AppContext
 ): Promise<void> {
-  const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger);
+  const sheetsEnabled = process.env.GOOGLE_SHEETS_ENABLED === 'true';
+  const sheetsService = sheetsEnabled && process.env.GOOGLE_SHEETS_CREDENTIALS && process.env.GOOGLE_SHEETS_SPREADSHEET_ID
+    ? new GoogleSheetsService({ credentials: process.env.GOOGLE_SHEETS_CREDENTIALS, spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID }, ctx.logger)
+    : null;
+  const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger, sheetsService);
 
   const botHealthHosts: Record<string, string[]> = {
     TELEGRAM: [process.env.TELEGRAM_HEALTH_HOST || 'telegram', '127.0.0.1'],
@@ -2630,6 +2634,71 @@ export async function adminRoutes(
     });
 
     return reply.send({ data: file });
+  });
+
+  // DELETE /maintenance/:id — hapus satu jadwal PM + hapus baris dari GSheet
+  app.delete('/maintenance/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    try {
+      await maintenanceScheduleService.delete(id);
+      auditLog(ctx.db, request, { action: 'delete', resource: 'maintenance_schedule', resourceId: id });
+      return reply.send({ success: true, message: `Jadwal PM ${id} berhasil dihapus.` });
+    } catch (err: any) {
+      if (err.message?.includes('not found')) return reply.status(404).send({ error: err.message });
+      ctx.logger.error('Failed to delete maintenance schedule', { id, err });
+      return reply.status(500).send({ error: 'Gagal menghapus jadwal PM.' });
+    }
+  });
+
+  // DELETE /maintenance/bulk — hapus banyak jadwal sekaligus
+  // Body: { ids: string[] }  OR  { filter: 'no-location' } untuk hapus semua tanpa lokasi
+  app.delete('/maintenance/bulk', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { ids?: string[]; filter?: string };
+
+    let ids: string[] = [];
+
+    if (body.filter === 'no-location') {
+      // Hapus semua jadwal yang field location-nya kosong/null
+      const found = await ctx.db.maintenanceSchedule.findMany({
+        where: { OR: [{ location: null }, { location: '' }] },
+        select: { id: true },
+      });
+      ids = found.map(s => s.id);
+    } else if (Array.isArray(body.ids) && body.ids.length > 0) {
+      ids = body.ids;
+    } else {
+      return reply.status(400).send({ error: 'Berikan ids[] atau filter="no-location"' });
+    }
+
+    if (ids.length === 0) {
+      return reply.send({ success: true, deleted: 0, message: 'Tidak ada jadwal yang dihapus.' });
+    }
+
+    const deleted = await maintenanceScheduleService.deleteMany(ids);
+    auditLog(ctx.db, request, { action: 'delete', resource: 'maintenance_schedule', resourceId: ids.join(',') });
+    return reply.send({ success: true, deleted, message: `${deleted} jadwal PM berhasil dihapus.` });
+  });
+
+  // POST /maintenance/sheets/clear — reset tab GSheet, dann re-sync dari DB
+  app.post('/maintenance/sheets/clear', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const count = await maintenanceScheduleService.clearAndResyncSheets();
+      return reply.send({ success: true, synced: count, message: `Tab GSheet direset & ${count} jadwal di-sync ulang.` });
+    } catch (err) {
+      ctx.logger.error('Failed to clear maintenance sheet', { err });
+      return reply.status(500).send({ error: 'Gagal clear/resync GSheet.' });
+    }
+  });
+
+  // POST /maintenance/sheets/sync — sync semua jadwal DB → GSheet tanpa clear
+  app.post('/maintenance/sheets/sync', async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const count = await maintenanceScheduleService.syncAllToSheets();
+      return reply.send({ success: true, synced: count, message: `${count} jadwal di-sync ke GSheet.` });
+    } catch (err) {
+      ctx.logger.error('Failed to sync maintenance to sheets', { err });
+      return reply.status(500).send({ error: 'Gagal sync ke GSheet.' });
+    }
   });
 
   // ─── FILE MANAGER ──────────────────────────────────────────
