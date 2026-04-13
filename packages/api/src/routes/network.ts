@@ -1,9 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AppContext } from '../types';
+import { AppContext } from '../app';
 
 export default async function networkRoutes(app: FastifyInstance, ctx: AppContext) {
   
-  app.get('/map-status', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/map-status', async (_request: FastifyRequest, reply: FastifyReply) => {
     // Define main DC locations in Batam area
     const locations = [
       { id: 'btc', name: 'neuCentrIX Batam Center', lat: 1.1278, lng: 104.0526 },
@@ -57,7 +57,7 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
   });
 
   // Feature 4: Shift Handover Summary
-  app.get('/shift-handover', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/shift-handover', async (_request: FastifyRequest, reply: FastifyReply) => {
     const openTickets = await ctx.db.ticket.findMany({
       where: { status: { notIn: ['RESOLVED', 'CLOSED'] } },
       orderBy: { createdAt: 'desc' },
@@ -67,8 +67,8 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
     const summary = {
       timestamp: new Date().toISOString(),
       openTicketCount: openTickets.length,
-      criticalCount: openTickets.filter(t => t.priority === 'CRITICAL').length,
-      tickets: openTickets.map(t => ({
+      criticalCount: openTickets.filter((t: any) => t.priority === 'CRITICAL').length,
+      tickets: openTickets.map((t: any) => ({
         number: t.ticketNumber,
         customer: t.customer,
         priority: t.priority,

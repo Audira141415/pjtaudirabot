@@ -1,9 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { AppContext } from '../types';
+import { AppContext } from '../app';
 
 export default async function insightsRoutes(app: FastifyInstance, ctx: AppContext) {
   
-  app.get('/predictive', async (request: FastifyRequest, reply: FastifyReply) => {
+  app.get('/predictive', async (_request: FastifyRequest, reply: FastifyReply) => {
     // Basic AI Predictive Logic:
     // 1. Analyze frequency of "Temperature" or "Power" issues by location.
     // 2. Cross-reference with current month/season.
