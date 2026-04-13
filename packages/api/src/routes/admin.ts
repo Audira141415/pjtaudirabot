@@ -2645,7 +2645,7 @@ export async function adminRoutes(
       return reply.send({ success: true, message: `Jadwal PM ${id} berhasil dihapus.` });
     } catch (err: any) {
       if (err.message?.includes('not found')) return reply.status(404).send({ error: err.message });
-      ctx.logger.error('Failed to delete maintenance schedule', { id, err });
+      ctx.logger.error(`Failed to delete maintenance schedule ${id}: ${String(err)}`);
       return reply.status(500).send({ error: 'Gagal menghapus jadwal PM.' });
     }
   });
@@ -2685,7 +2685,7 @@ export async function adminRoutes(
       const count = await maintenanceScheduleService.clearAndResyncSheets();
       return reply.send({ success: true, synced: count, message: `Tab GSheet direset & ${count} jadwal di-sync ulang.` });
     } catch (err) {
-      ctx.logger.error('Failed to clear maintenance sheet', { err });
+      ctx.logger.error(`Failed to clear maintenance sheet: ${String(err)}`);
       return reply.status(500).send({ error: 'Gagal clear/resync GSheet.' });
     }
   });
@@ -2696,7 +2696,7 @@ export async function adminRoutes(
       const count = await maintenanceScheduleService.syncAllToSheets();
       return reply.send({ success: true, synced: count, message: `${count} jadwal di-sync ke GSheet.` });
     } catch (err) {
-      ctx.logger.error('Failed to sync maintenance to sheets', { err });
+      ctx.logger.error(`Failed to sync maintenance to sheets: ${String(err)}`);
       return reply.status(500).send({ error: 'Gagal sync ke GSheet.' });
     }
   });
