@@ -138,7 +138,6 @@ export default function OperationalOverview({
   const activeAlerts = alerts as unknown as AlertItem[];
   const openIncidents = incidents as unknown as IncidentItem[];
   const openEscalations = (escalations as unknown as EscalationItem[]).filter((escalation) => !escalation.resolvedAt);
-  const clusters = openClusters as unknown as ClusterItem[];
   const botComponents = (health?.components ?? []).filter((component) => component.name.endsWith('Bot'));
   const readyBots = botComponents.filter((component) => component.meta?.ready).length;
 
