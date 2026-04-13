@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, TrendingUp, AlertCircle, ShieldCheck, Zap, ArrowRight, BrainCircuit } from 'lucide-react';
+import { Sparkles, TrendingUp, AlertCircle, Zap, ArrowRight, BrainCircuit } from 'lucide-react';
 
 interface Prediction {
   id: string;
