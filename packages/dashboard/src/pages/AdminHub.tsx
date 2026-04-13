@@ -22,7 +22,13 @@ interface SystemComponent {
   latency?: number;
   details?: string;
   lastCheck: string;
-  meta?: any;
+  meta?: {
+    platform?: string;
+    connectionStatus?: string;
+    lastConnectedAt?: string | null;
+    ready?: boolean;
+    qr?: string;
+  };
 }
 
 interface SystemMetrics {
