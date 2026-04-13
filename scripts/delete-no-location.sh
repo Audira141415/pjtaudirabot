@@ -3,7 +3,7 @@
 BASE_URL="${1:-http://localhost:4000}"
 
 echo "🔑 Logging in..."
-TOKEN=$(curl -s -X POST "$BASE_URL/api/auth/login" \
+TOKEN=$(curl -s -X POST "$BASE_URL/api/admin/auth/login" \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"Audira@2026!"}' \
   | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))")
