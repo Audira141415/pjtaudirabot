@@ -17,7 +17,7 @@ export interface SystemHealthComponent {
 export interface SystemHealthData {
   overallStatus: 'healthy' | 'unhealthy' | 'degraded';
   components: SystemHealthComponent[];
-  metrics: {
+  metrics?: {
     memoryUsedPct: number;
     memoryUsedGB: number;
     memoryTotalGB: number;
