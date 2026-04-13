@@ -258,6 +258,7 @@ export async function adminRoutes(
           connectionStatus,
           lastConnectedAt: lastConnectedAt ? lastConnectedAt.toISOString() : null,
           ready: status === 'online',
+          qr: bot.platform === 'WHATSAPP' && status !== 'online' ? (probe as any).data?.qr : undefined,
         },
       });
     }

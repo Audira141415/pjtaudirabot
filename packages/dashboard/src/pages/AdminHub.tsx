@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   ShieldCheck, 
   Cpu, 
@@ -41,23 +42,34 @@ const AdminHub = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [qrToken, setQrToken] = useState<string | null>(null);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async () => {
     try {
       const res = await api.getSystemHealth();
       setHealth(res.data);
+      
+      // Extract QR from WhatsApp component if available
+      const waBot = res.data.components.find((c: any) => c.name.includes('WhatsApp'));
+      if (waBot?.meta?.qr) {
+        setQrToken(waBot.meta.qr);
+      } else {
+        setQrToken(null);
+      }
     } catch (err) {
       console.error('Failed to fetch system health:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchHealth();
-    const interval = setInterval(fetchHealth, 30000);
+    // Faster poll when QR is shown to catch the sequence
+    const intervalTime = showQr ? 5000 : 30000;
+    const interval = setInterval(fetchHealth, intervalTime);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchHealth, showQr]);
 
   const handleManualSync = async () => {
     setSyncing(true);
@@ -261,12 +273,28 @@ const AdminHub = () => {
               <h3 className="text-2xl font-black text-slate-900 mb-2">Snap to Connect</h3>
               <p className="text-sm text-slate-500 font-medium mb-8">Scan this QR code with your WhatsApp to link AudiraBot.</p>
               
-              <div className="aspect-square bg-slate-50 flex items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 mb-8 p-12">
-                 <QrCode className="w-full h-full text-slate-300 animate-pulse" />
+              <div className="aspect-square bg-slate-50 flex items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 mb-8 p-8">
+                 {qrToken ? (
+                    <QRCodeSVG 
+                      value={qrToken} 
+                      size={256} 
+                      level="H"
+                      includeMargin={true}
+                      className="w-full h-full"
+                    />
+                 ) : (
+                    <div className="text-center space-y-4">
+                       <QrCode className="w-16 h-16 text-slate-300 mx-auto animate-pulse" />
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating Token...</p>
+                    </div>
+                 )}
               </div>
               
-              <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs">
-                 Refresh QR Code
+              <button 
+                onClick={() => fetchHealth()}
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
+              >
+                 Refresh QR Status
               </button>
            </div>
         </div>

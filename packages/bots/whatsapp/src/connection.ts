@@ -31,6 +31,7 @@ export class WhatsAppConnection {
   private reconnectCount = 0;
   private onMessageCallback: ((msg: any) => Promise<void>) | null = null;
   public connectionState: 'open' | 'connecting' | 'close' = 'connecting';
+  private lastQR: string | null = null;
 
   constructor(
     private config: WhatsAppConnectionConfig,
@@ -78,6 +79,7 @@ export class WhatsAppConnection {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
+        this.lastQR = qr;
         this.logger.info('QR Code received — scan with WhatsApp');
       }
 
@@ -243,5 +245,9 @@ export class WhatsAppConnection {
 
   getSocket(): WASocket | null {
     return this.socket;
+  }
+
+  getLastQR(): string | null {
+    return this.lastQR;
   }
 }

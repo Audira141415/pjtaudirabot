@@ -578,6 +578,7 @@ async function main(): Promise<void> {
       service: 'whatsapp-bot',
       status: waState === 'open' ? 'healthy' : 'degraded',
       waConnectionState: waState,
+      qr: connection.getLastQR(),
       port: boundHealthPort,
       uptime: process.uptime(),
       timestamp: new Date().toISOString(),
