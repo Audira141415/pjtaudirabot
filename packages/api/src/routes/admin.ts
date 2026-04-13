@@ -2907,16 +2907,4 @@ export async function adminRoutes(
     return reply.send({ data });
   });
 
-  app.post('/maintenance/sheets/sync', async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      await maintenanceScheduleService.syncAllToSheets();
-      auditLog(ctx.db, request, { action: 'sync', resource: 'maintenance_sheets' });
-      return reply.send({ success: true, message: 'Synchronization sequence initiated' });
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      ctx.logger.error('Manual sheet sync failed', error);
-      return reply.status(500).send({ error: error.message });
-    }
-  });
-
 }
