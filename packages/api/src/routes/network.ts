@@ -34,8 +34,7 @@ export default async function networkRoutes(app: FastifyInstance, ctx: AppContex
       const warningCount = await ctx.db.maintenanceSchedule.count({
         where: {
           location: { contains: loc.name, mode: 'insensitive' },
-          nextRun: { lte: endOfDay },
-          lastStatus: { not: 'COMPLETED' }
+          nextDueDate: { lte: endOfDay }
         }
       });
 

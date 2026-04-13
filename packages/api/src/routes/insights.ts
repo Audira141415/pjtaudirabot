@@ -9,21 +9,6 @@ export default async function insightsRoutes(app: FastifyInstance, ctx: AppConte
     // 2. Cross-reference with current month/season.
     // 3. Return a list of "High Risk" predictions.
 
-    const historicalTickets = await ctx.db.ticket.findMany({
-      where: {
-        OR: [
-          { rootCause: { contains: 'temperature', mode: 'insensitive' } },
-          { rootCause: { contains: 'power', mode: 'insensitive' } },
-          { rootCause: { contains: 'fan', mode: 'insensitive' } },
-          { rootCause: { contains: 'ups', mode: 'insensitive' } }
-        ]
-      },
-      select: {
-        location: true,
-        rootCause: true,
-        createdAt: true
-      }
-    });
 
     const predictions = [
       {
