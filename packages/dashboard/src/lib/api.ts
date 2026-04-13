@@ -17,7 +17,7 @@ export interface SystemHealthComponent {
 export interface SystemHealthData {
   overallStatus: 'healthy' | 'unhealthy' | 'degraded';
   components: SystemHealthComponent[];
-  metrics?: {
+  metrics: {
     memoryUsedPct: number;
     memoryUsedGB: number;
     memoryTotalGB: number;
@@ -170,7 +170,6 @@ async function uploadRequest<T>(path: string, body: FormData): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
   // Auth
   login: (username: string, password: string) =>
     request<{ token: string }>('/auth/login', {

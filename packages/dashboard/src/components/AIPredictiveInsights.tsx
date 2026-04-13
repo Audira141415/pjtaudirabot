@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Sparkles, TrendingUp, AlertCircle, Zap, ArrowRight, BrainCircuit } from 'lucide-react';
+import { BrainCircuit, Sparkles, TrendingUp, Info, CheckCircle2, ChevronRight } from 'lucide-react';
 
 interface Prediction {
   id: string;
   type: string;
   location: string;
   probability: number;
-  expectedDate: string;
+  reason: string;
   recommendation: string;
-  sentiment: 'critical' | 'warning' | 'info';
 }
 
 const AIPredictiveInsights: React.FC = () => {
@@ -30,71 +29,65 @@ const AIPredictiveInsights: React.FC = () => {
     fetchInsights();
   }, []);
 
-  if (loading) return (
-     <div className="glass-panel p-8 rounded-[40px] flex items-center justify-center gap-4 border-white/5 bg-white/[0.02]">
-        <BrainCircuit className="w-8 h-8 text-indigo-500 animate-pulse" />
-        <span className="text-slate-500 font-bold uppercase tracking-widest text-xs">AI Core Initializing...</span>
-     </div>
-  );
+  if (loading) return null;
 
   return (
-    <article className="glass-panel rounded-[40px] p-10 relative overflow-hidden group animate-bespoke">
-      <div className="absolute top-[-20%] right-[-10%] w-[400px] h-[400px] bg-indigo-600/5 blur-[100px] pointer-events-none" />
+    <article className="mt-8 rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600">
+            <BrainCircuit className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+              AI Predictive Insights <div className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-black uppercase">Alpha Beta</div>
+            </h3>
+            <p className="text-sm text-slate-500">Forecasting potential failures before they breach SLA</p>
+          </div>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-400">
+           <Sparkles className="w-4 h-4 text-amber-400" /> Powered by Adaptive Pattern Analytics
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {predictions.map((pred) => (
+          <div key={pred.id} className="relative group p-6 rounded-[24px] bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-xl hover:shadow-violet-500/5 hover:border-violet-200">
+             <div className="flex items-start justify-between mb-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-violet-500 mb-1">{pred.type}</span>
+                  <h4 className="font-bold text-slate-800">{pred.location}</h4>
+                </div>
+                <div className="text-right">
+                   <div className="text-2xl font-black text-slate-900">{pred.probability}%</div>
+                   <div className="text-[10px] font-bold text-slate-400 uppercase">Risk Level</div>
+                </div>
+             </div>
+
+             <div className="p-4 rounded-xl bg-white border border-slate-100 mb-4 text-xs leading-relaxed text-slate-600">
+                <div className="flex items-center gap-2 text-slate-400 mb-2 font-bold uppercase tracking-tighter text-[10px]">
+                   <Info className="w-3.5 h-3.5" /> Pattern Discovery
+                </div>
+                {pred.reason}
+             </div>
+
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                   <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                   <span className="text-xs font-bold text-slate-800">Action Recommended</span>
+                </div>
+                <button className="flex items-center gap-1 text-xs font-bold text-violet-600 group-hover:translate-x-1 transition-transform">
+                   Optimize Schedule <ChevronRight className="w-4 h-4" />
+                </button>
+             </div>
+          </div>
+        ))}
+      </div>
       
-      <div className="relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div className="flex items-center gap-5">
-            <div className="p-4 rounded-3xl bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-              <Sparkles className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-black text-white tracking-tighter">AI Predictive Analysis</h3>
-              <p className="text-sm text-slate-500 font-medium">Algorithmic risk forecasting and preemptive protocols.</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4 bg-white/5 px-6 py-2.5 rounded-2xl border border-white/10">
-             <div className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
-             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Neural Logic Active</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {predictions.map((item) => (
-            <div key={item.id} className={`group/card p-8 rounded-[32px] border glass-panel transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1 ${
-               item.sentiment === 'critical' ? 'border-rose-500/20 bg-rose-500/[0.02]' : 
-               item.sentiment === 'warning' ? 'border-amber-500/20 bg-amber-500/[0.02]' : 
-               'border-indigo-500/20 bg-indigo-500/[0.02]'
-            }`}>
-              <div className="flex items-center justify-between mb-8">
-                <div className={`text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-xl border ${
-                  item.sentiment === 'critical' ? 'bg-rose-500/20 text-rose-500 border-rose-500/30' : 
-                  item.sentiment === 'warning' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : 
-                  'bg-indigo-500/20 text-indigo-500 border-indigo-500/30'
-                }`}>
-                  Risk Level: {item.probability}%
-                </div>
-                {item.sentiment === 'critical' ? <AlertCircle className="w-5 h-5 text-rose-500" /> : <Zap className="w-5 h-5 text-indigo-500" />}
-              </div>
-
-              <h4 className="text-lg font-black text-white mb-2 leading-tight">{item.type}</h4>
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-6 flex items-center gap-2">
-                 <TrendingUp className="w-3 h-3" /> {item.location}
-              </p>
-
-              <div className="space-y-4 pt-6 border-t border-white/5">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 p-1 rounded bg-white/5">
-                    <ArrowRight className="w-3 h-3 text-indigo-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-600 font-black uppercase mb-1">Recommended Action</p>
-                    <p className="text-sm font-bold text-slate-300 leading-relaxed">{item.recommendation}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+      <div className="mt-8 flex items-center justify-center py-4 border-t border-slate-50">
+         <button className="text-sm font-bold text-slate-400 hover:text-slate-600 flex items-center gap-2 transition-colors">
+             <TrendingUp className="w-4 h-4" /> View Comprehensive Pattern History
+         </button>
       </div>
     </article>
   );
