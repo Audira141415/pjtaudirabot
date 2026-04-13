@@ -1349,36 +1349,18 @@ export class GoogleSheetsService {
     const headers = SHEET_SCHEMAS.maintenance_schedules;
     const lastCol = this.columnLetter(headers.length);
 
-    // Overwrite entire sheet with just the header row
-    await this.sheets.spreadsheets.values.update({
+    // 1. Clear everything from A1 down to Z1000 to be safe and fast (1 write request)
+    await this.sheets.spreadsheets.values.clear({
       spreadsheetId: this.spreadsheetId,
-      range: `maintenance_schedules!A1:${lastCol}`,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [headers] },
+      range: `maintenance_schedules!A1:${lastCol}1000`,
     });
 
-    // Delete all rows after the header
-    const rows = await this.readAll('maintenance_schedules');
-    const dataRowCount = Math.max(0, rows.length - 1);
-    if (dataRowCount === 0) return;
-
-    const sheetId = await this.getSheetId('maintenance_schedules');
-    if (sheetId === null) return;
-
-    await this.sheets.spreadsheets.batchUpdate({
+    // 2. Put headers back (1 write request)
+    await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      requestBody: {
-        requests: [{
-          deleteDimension: {
-            range: {
-              sheetId,
-              dimension: 'ROWS',
-              startIndex: 1,              // keep row 0 (header)
-              endIndex: 1 + dataRowCount,
-            },
-          },
-        }],
-      },
+      range: `maintenance_schedules!A1:${lastCol}1`,
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values: [headers] },
     });
   }
 
