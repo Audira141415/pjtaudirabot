@@ -216,7 +216,7 @@ export default function OperationalOverview({
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Metric label="Open Tickets" value={ticketOverview?.openTickets ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
             <Metric label="Response Breaches" value={sla?.responseBreaches ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
             <Metric label="Resolution Breaches" value={sla?.resolutionBreaches ?? 0} tone="bg-amber-50/40 text-slate-900 border-amber-100" />
@@ -310,14 +310,14 @@ export default function OperationalOverview({
             </span>
           </div>
 
-          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Metric label="Active Alerts" value={activeAlerts.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
             <Metric label="Open Incidents" value={openIncidents.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
             <Metric label="Open Escalations" value={openEscalations.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
             <Metric label="Open Clusters" value={openClusters.length} tone="bg-rose-50/40 text-slate-900 border-rose-100" />
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-1 gap-4">
             <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                 <Bell className="w-4 h-4 text-red-500" /> Alerts
