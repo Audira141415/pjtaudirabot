@@ -63,17 +63,6 @@ interface EscalationItem {
   };
 }
 
-interface ClusterItem {
-  id: string;
-  clusterNumber?: string;
-  status?: string;
-  severity?: string;
-  memberCount?: number;
-  impactScore?: number;
-  commonCustomer?: string;
-  commonService?: string;
-  detectedAt?: string;
-}
 
 interface OperationalOverviewProps {
   ticketOverview: TicketOverviewData | null;
@@ -81,7 +70,6 @@ interface OperationalOverviewProps {
   alerts: Array<Record<string, unknown>>;
   incidents: Array<Record<string, unknown>>;
   escalations: Array<Record<string, unknown>>;
-  openClusters: Array<Record<string, unknown>>;
   health: SystemHealthData | null;
 }
 
@@ -130,7 +118,6 @@ export default function OperationalOverview({
   alerts,
   incidents,
   escalations,
-  openClusters,
   health,
 }: OperationalOverviewProps) {
   const [slaItemsExpanded, setSlaItemsExpanded] = useState(true);
