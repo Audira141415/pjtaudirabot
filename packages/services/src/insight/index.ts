@@ -1,4 +1,4 @@
-import { PrismaClient, Ticket, MaintenanceSchedule } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
 import { NEUCENTRIX_LOCATIONS } from '../data/neucentrix-locations';
@@ -22,6 +22,8 @@ export class InsightService {
     logger: ILogger
   ) {
     this.logger = logger.child({ service: 'insights' });
+    // Use redis if needed in future (e.g. caching)
+    if (this.redis) { /* initialized */ }
   }
 
   /**
