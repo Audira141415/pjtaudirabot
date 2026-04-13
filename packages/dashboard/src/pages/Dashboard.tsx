@@ -60,7 +60,6 @@ export default function DashboardPage() {
   const [alerts, setAlerts] = useState<Array<Record<string, unknown>>>([]);
   const [incidents, setIncidents] = useState<Array<Record<string, unknown>>>([]);
   const [escalations, setEscalations] = useState<Array<Record<string, unknown>>>([]);
-  const [openClusters, setOpenClusters] = useState<Array<Record<string, unknown>>>([]);
   const [health, setHealth] = useState<SystemHealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -182,17 +181,15 @@ export default function DashboardPage() {
     setTicketOverview(ticketRes.data);
     setSlaDashboard(slaRes.data as Record<string, unknown>);
 
-    const [alertsRes, incidentsRes, escalationsRes, clustersRes] = await Promise.allSettled([
+    const [alertsRes, incidentsRes, escalationsRes] = await Promise.allSettled([
       api.getAlerts(1, { status: 'ACTIVE' }),
       api.getIncidents(1, { status: 'OPEN' }),
       api.getEscalations(1, 100),
-      api.getOpenClusters(),
     ]);
 
     setAlerts(alertsRes.status === 'fulfilled' ? (alertsRes.value.data as Array<Record<string, unknown>>) : []);
     setIncidents(incidentsRes.status === 'fulfilled' ? (incidentsRes.value.data as Array<Record<string, unknown>>) : []);
     setEscalations(escalationsRes.status === 'fulfilled' ? (escalationsRes.value.data as Array<Record<string, unknown>>) : []);
-    setOpenClusters(clustersRes.status === 'fulfilled' ? ((clustersRes.value.clusters as Array<Record<string, unknown>>) ?? []) : []);
   };
 
   useEffect(() => {
