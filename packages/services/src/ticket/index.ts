@@ -399,7 +399,7 @@ export class TicketService {
     }
 
     // 2. Delete ALL records from DB (SLA tracking depends on Tickets, so delete it first or rely on cascade)
-    await this.db.slaTracking.deleteMany({});
+    await (this.db as any).sLATracking.deleteMany({});
     await this.db.ticketHistory.deleteMany({});
     await this.db.ticket.deleteMany({});
     this.logger.info('Database ticket records cleared');
