@@ -1,22 +1,20 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  AreaChart, Area, PieChart, Pie, Cell, Legend
+  AreaChart, Area
 } from 'recharts';
 import { 
   Activity, Users, MessageSquare, Zap, AlertTriangle, TrendingUp, Clock, 
-  RefreshCw, Power, Shield, Bell, LayoutDashboard, Database, HardDrive,
-  Menu, X, Globe, Cpu, Loader2, Sparkles, Server
+  RefreshCw, Shield, Bell, LayoutDashboard, Database,
+  Menu, X, Server, Sparkles
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { toast } from '../components/Toast';
-import { notificationStore, getSolution, getGeneralSolution } from '../lib/notification-store';
+import { getSolution } from '../lib/notification-store';
 import OperationalOverview from '../components/OperationalOverview';
 import NetworkHealthMap from '../components/NetworkHealthMap';
 import ShiftHandover from '../components/ShiftHandover';
 import AIPredictiveInsights from '../components/AIPredictiveInsights';
-
-const CHART_COLORS = ['#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f43f5e', '#f97316', '#fbbf24', '#22c55e', '#06b6d4', '#3b82f6'];
 
 interface SystemHealthData {
   overallStatus: 'healthy' | 'degraded' | 'unhealthy';
