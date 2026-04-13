@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck,
+  ArrowUpRight, Bell, Bot, Clock3,
   ChevronDown, ChevronUp, Radio, Target
 } from 'lucide-react';
 import { PriorityBadge } from '../lib/badge-colors';
