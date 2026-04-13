@@ -2900,6 +2900,8 @@ export async function adminRoutes(
     if (q.period) where.period = q.period;
     const data = await ctx.db.analyticsSnapshot.findMany({ where, orderBy: { date: 'desc' }, take: 30 });
     return reply.send({ data });
+  });
+
   app.get('/insights', async (_request: FastifyRequest, reply: FastifyReply) => {
     const data = await insightService.getPredictiveInsights();
     return reply.send({ data });
