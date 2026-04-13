@@ -1,6 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Ticket, MaintenanceSchedule } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
+import { NEUCENTRIX_LOCATIONS } from '../data/neucentrix-locations';
 
 export interface MaintenancePrediction {
   id: string;
@@ -33,7 +34,7 @@ export class InsightService {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const [tickets, schedules, neucentrixLocations] = await Promise.all([
+      const [tickets, schedules] = await Promise.all([
         this.db.ticket.findMany({
           where: { createdAt: { gte: sixMonthsAgo } },
           select: { title: true, problem: true, location: true, createdAt: true, category: true },
@@ -42,7 +43,6 @@ export class InsightService {
           where: { isActive: true },
           select: { title: true, location: true, nextDueDate: true, lastMaintainedAt: true, intervalMonths: true },
         }),
-        this.db.branchLocation.findMany({ select: { branchName: true } }),
       ]);
 
       const predictions: MaintenancePrediction[] = [];
@@ -50,19 +50,15 @@ export class InsightService {
       const currentMonth = now.getMonth();
 
       // --- Logic 1: Seasonal Temperature Analysis ---
-      // Many sites experience cooling issues in April/May (transition to summer/dry season)
       const tempRelatedKeywords = ['temp', 'suhu', 'ac', 'cooling', 'overheat', 'panas'];
-      const targetLocations = neucentrixLocations.length > 0 
-        ? neucentrixLocations.map(l => l.branchName) 
-        : ['DC Batam Center', 'Panbil', 'PAC Nagoya'];
+      const targetLocations = NEUCENTRIX_LOCATIONS.map(l => l.fullName);
 
       for (const loc of targetLocations) {
-        const locTickets = tickets.filter(t => t.location === loc);
-        const tempIssues = locTickets.filter(t => 
-          tempRelatedKeywords.some(k => t.title.toLowerCase().includes(k) || t.problem.toLowerCase().includes(k))
+        const locTickets = tickets.filter((t: any) => t.location === loc);
+        const tempIssues = locTickets.filter((t: any) => 
+          tempRelatedKeywords.some(k => (t.title || '').toLowerCase().includes(k) || (t.problem || '').toLowerCase().includes(k))
         );
 
-        // If high frequency of temp issues in the same month historically
         const isSeasonPeak = [3, 4, 5].includes(currentMonth); // April, May, June
         
         if (tempIssues.length > 2 || (isSeasonPeak && tempIssues.length > 0)) {
@@ -79,7 +75,7 @@ export class InsightService {
       }
 
       // --- Logic 2: Maintenance Gap Analysis ---
-      for (const schedule of schedules) {
+      for (const schedule of (schedules as any[])) {
         if (!schedule.location) continue;
 
         const overdueDays = schedule.nextDueDate < now 
@@ -102,8 +98,8 @@ export class InsightService {
       // --- Logic 3: Power Fluctuation Trends ---
       const powerKeywords = ['ups', 'pln', 'listrik', 'power', 'genset', 'voltage'];
       for (const loc of targetLocations) {
-        const powerIssues = tickets.filter(t => 
-          t.location === loc && powerKeywords.some(k => t.title.toLowerCase().includes(k))
+        const powerIssues = tickets.filter((t: any) => 
+          t.location === loc && powerKeywords.some(k => (t.title || '').toLowerCase().includes(k))
         );
 
         if (powerIssues.length >= 3) {
@@ -119,7 +115,6 @@ export class InsightService {
         }
       }
 
-      // If no data-driven predictions, provide based on standard seasonality
       if (predictions.length === 0) {
         predictions.push({
           id: 'pred-default-1',
