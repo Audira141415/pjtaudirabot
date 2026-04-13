@@ -7,7 +7,6 @@ import {
   Wifi, 
   WifiOff, 
   AlertCircle, 
-  CheckCircle2, 
   Clock, 
   Settings, 
   QrCode, 
@@ -66,7 +65,7 @@ const AdminHub = () => {
   const handleManualSync = async () => {
     setSyncing(true);
     try {
-      await api.syncMaintenanceSchedules();
+      await api.syncMaintenanceToSheets();
       alert('Synchronization started successfully!');
     } catch (err) {
       console.error('Sync failed:', err);

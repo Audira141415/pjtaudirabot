@@ -673,4 +673,14 @@ export const api = {
     if (period) params.set('period', period);
     return request<{ data: Array<Record<string, unknown>> }>(`/analytics/snapshots?${params}`);
   },
+
+  // ─── Google Sheets Sync ─────────────────────────────────
+  syncMaintenanceToSheets: () =>
+    request<{ success: boolean; synced: number; message: string }>('/maintenance/sheets/sync', {
+      method: 'POST',
+    }),
+  clearAndResyncSheets: () =>
+    request<{ success: boolean; synced: number; message: string }>('/maintenance/sheets/clear', {
+      method: 'POST',
+    }),
 };
