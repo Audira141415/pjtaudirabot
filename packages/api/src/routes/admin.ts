@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import crypto from 'node:crypto';
-import { MaintenanceScheduleService, GoogleSheetsService, InsightService } from '@pjtaudirabot/services';
+import { MaintenanceScheduleService, GoogleSheetsService, InsightService, TicketService } from '@pjtaudirabot/services';
 import { auditLog } from '../utils/audit';
 
 /**
@@ -21,6 +21,7 @@ export async function adminRoutes(
     ? new GoogleSheetsService({ credentials: process.env.GOOGLE_SHEETS_CREDENTIALS, spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID }, ctx.logger)
     : null;
   const maintenanceScheduleService = new MaintenanceScheduleService(ctx.db, ctx.redis, ctx.logger, sheetsService);
+  const ticketService = new TicketService(ctx.db, ctx.redis, ctx.logger, undefined, sheetsService);
   const insightService = new InsightService(ctx.db, ctx.redis, ctx.logger);
 
   const botHealthHosts: Record<string, string[]> = {
