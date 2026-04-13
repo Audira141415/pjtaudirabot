@@ -756,13 +756,15 @@ export class MaintenanceScheduleService {
     return map[months] ?? `Per ${months} Bulan`;
   }
   /**
-   * Resync all maintenance schedules to Google Sheets.
+   * Resync all maintenance schedules to Google Sheets using batch operation.
    */
   async syncAllToSheets(): Promise<number> {
     if (!this.sheetsService) return 0;
     const schedules = await this.db.maintenanceSchedule.findMany({
       orderBy: { createdAt: 'asc' },
     });
+
+    if (schedules.length === 0) return 0;
 
     // Collect unique lastTicketIds to resolve ticket numbers in batch
     const ticketIds = [...new Set(schedules.map(s => s.lastTicketId).filter(Boolean))] as string[];
@@ -774,17 +776,30 @@ export class MaintenanceScheduleService {
       : [];
     const ticketMap = new Map(tickets.map(t => [t.id, t]));
 
-    let count = 0;
-    for (const schedule of schedules) {
+    const rows = schedules.map(schedule => {
       const lastTicket = schedule.lastTicketId ? ticketMap.get(schedule.lastTicketId) : null;
-      await this.sheetsService.syncMaintenanceSchedule({
-        ...schedule,
-        lastTicketNumber: lastTicket?.ticketNumber ?? null,
-        assignedTo: lastTicket?.assignedToId ?? null,
-      }).catch(() => {});
-      count++;
-    }
-    return count;
+      
+      // Order: ['ID', 'Judul PM', 'Deskripsi', 'Lokasi Perangkat', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'No. Tiket Terakhir', 'Penanggung Jawab', 'Status', 'Dibuat Pada']
+      return [
+        schedule.id,
+        schedule.title,
+        schedule.description ?? '-',
+        schedule.location ?? '-',
+        this.intervalLabel(schedule.intervalMonths),
+        this.formatDate(schedule.nextDueDate),
+        schedule.lastCreatedAt ? this.formatDate(schedule.lastCreatedAt) : '-',
+        lastTicket?.ticketNumber ?? '-',
+        lastTicket?.assignedToId ?? '-',
+        schedule.isActive ? 'AKTIF' : 'NON-AKTIF',
+        this.formatDate(schedule.createdAt),
+      ];
+    });
+
+    // We clear first then append all
+    await this.sheetsService.clearMaintenanceSheet();
+    await this.sheetsService.appendRows('maintenance_schedules', rows);
+
+    return schedules.length;
   }
 
   /** Delete a single maintenance schedule and remove its row from Google Sheets. */
