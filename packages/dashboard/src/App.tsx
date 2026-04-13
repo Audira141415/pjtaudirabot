@@ -53,6 +53,7 @@ const ExportCenterPage = lazy(() => import('./pages/ExportCenter'));
 const NotificationRulesPage = lazy(() => import('./pages/NotificationRules'));
 const MultiLanguagePage = lazy(() => import('./pages/MultiLanguage'));
 const MaintenancePage = lazy(() => import('./pages/Maintenance'));
+const AdminHubPage = lazy(() => import('./pages/AdminHub'));
 
 function PageLoader() {
   return (
@@ -96,6 +97,7 @@ export default function App() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="admin" element={<AdminHubPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="broadcast" element={<BroadcastPage />} />
         <Route path="moderation" element={<ModerationPage />} />

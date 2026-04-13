@@ -132,6 +132,7 @@ const sections = [
   {
     title: 'System',
     items: [
+      { to: '/admin', icon: ShieldCheck, label: 'Admin Hub' },
       { to: '/flows', icon: GitBranch, label: 'Flows' },
       { to: '/webhooks', icon: Webhook, label: 'Webhooks' },
       { to: '/webhook-logs', icon: ScrollText, label: 'Webhook Logs' },
