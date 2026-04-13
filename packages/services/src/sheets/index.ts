@@ -1343,25 +1343,37 @@ export class GoogleSheetsService {
 
   /** Clear all data rows in maintenance_schedules sheet (keep header). */
   async clearMaintenanceSheet(): Promise<void> {
-    if (!this.sheets || !this.spreadsheetId) return;
-    await this.ensureSheet('maintenance_schedules');
+    if (!this.sheets || !this.spreadsheetId) {
+       this.logger.error('Cannot clear sheet: Sheets client or spreadsheetId missing');
+       return;
+    }
+    
+    try {
+      await this.ensureSheet('maintenance_schedules');
+      const headers = SHEET_SCHEMAS.maintenance_schedules;
+      const lastCol = this.columnLetter(headers.length);
 
-    const headers = SHEET_SCHEMAS.maintenance_schedules;
-    const lastCol = this.columnLetter(headers.length);
+      this.logger.info('Purging maintenance_schedules tab...', { spreadsheetId: this.spreadsheetId });
 
-    // 1. Clear everything from A1 down to Z1000 to be safe and fast (1 write request)
-    await this.sheets.spreadsheets.values.clear({
-      spreadsheetId: this.spreadsheetId,
-      range: `maintenance_schedules!A1:${lastCol}1000`,
-    });
+      // 1. Clear everything from A1 down to a safe deep row
+      await this.sheets.spreadsheets.values.clear({
+        spreadsheetId: this.spreadsheetId,
+        range: `maintenance_schedules!A1:${lastCol}2000`,
+      });
 
-    // 2. Put headers back (1 write request)
-    await this.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: `maintenance_schedules!A1:${lastCol}1`,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [headers] },
-    });
+      // 2. Put headers back immediately
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `maintenance_schedules!A1:${lastCol}1`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [headers] },
+      });
+      
+      this.logger.info('Maintenance sheet purged and headers restored');
+    } catch (error) {
+      this.logger.error('Critical failure during sheet purge', error as Error);
+      throw error;
+    }
   }
 
   /** Helper: get the numeric sheetId for a named tab. */
