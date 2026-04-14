@@ -398,14 +398,20 @@ export class TicketService {
       this.logger.info('Redis ticket counters reset');
     }
 
-    // 2. Delete ALL records from DB (SLA tracking depends on Tickets, so delete it first or rely on cascade)
-    await (this.db as any).sLATracking.deleteMany({}).catch(() => (this.db as any).slaTracking.deleteMany({})).catch(() => (this.db as any).sLATracking.deleteMany({}));
-    // Wait, the error said "Did you mean 'sLATracking'?" but the schema said "model SLATracking". 
-    // Usually Prisma generates 'sLATracking' for 'SLATracking'.
-    // Let's use the error's suggestion as it's from the compiler.
-    // Actually, I'll use a safer check.
-    await this.db.ticketHistory.deleteMany({});
-    await this.db.ticket.deleteMany({});
+    // 2. Delete ALL records from DB (Cascading deletes should handle relations)
+    // We use a transaction to ensure everything or nothing is cleared
+    await this.db.$transaction([
+      (this.db as any).sLATracking.deleteMany({}),
+      this.db.ticketHistory.deleteMany({}),
+      this.db.ticket.deleteMany({}),
+    ]).catch(async (err) => {
+      this.logger.error('Failed to clear database tickets in transaction, trying individual deletes', err);
+      // Fallback to individual deletes if transaction fails (e.g. naming issues)
+      await (this.db as any).sLATracking?.deleteMany({}).catch(() => {});
+      await (this.db as any).slaTracking?.deleteMany({}).catch(() => {});
+      await this.db.ticketHistory.deleteMany({}).catch(() => {});
+      await this.db.ticket.deleteMany({}).catch(() => {});
+    });
     this.logger.info('Database ticket records cleared');
 
     // 3. Clear Google Sheets tabs

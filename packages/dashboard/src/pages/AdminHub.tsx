@@ -18,7 +18,8 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  Info
+  Info,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../lib/api';
 
@@ -143,6 +144,21 @@ const AdminHub = () => {
     }
   };
 
+  const handleCleanupSchedules = async () => {
+    if (!confirm('Hapus semua jadwal PM yang tidak memiliki lokasi? Ini biasanya data sampah hasil testing.')) return;
+    setPurging(true);
+    try {
+      const res = await api.bulkDeleteMaintenanceSchedules({ filter: 'no-location' });
+      alert(res.message || 'Cleanup completed!');
+    } catch (err) {
+      console.error('Cleanup failed:', err);
+      alert('Failed to cleanup schedules');
+    } finally {
+      setPurging(false);
+      fetchHealth();
+    }
+  };
+
   if (loading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <div className="animate-spin p-2 bg-indigo-500/10 rounded-full border-t-2 border-indigo-500 w-12 h-12" />
@@ -192,6 +208,14 @@ const AdminHub = () => {
              >
                 <TrashIcon className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
                 {purging ? 'Wiping...' : 'Wipe All Tickets'}
+             </button>
+             <button 
+                onClick={handleCleanupSchedules}
+                disabled={syncing || purging}
+                title="Cleanup Invalid PM Schedules"
+                className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-rose-900 hover:text-white transition-all border border-slate-700"
+             >
+                <Trash2 className="w-5 h-5" />
              </button>
              <button className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-slate-700 hover:text-white transition-all border border-slate-700">
                 <Settings className="w-5 h-5" />

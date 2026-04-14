@@ -24,6 +24,7 @@ import {
   FileImage,
   FileText,
   ChevronDown,
+  Trash2,
 } from 'lucide-react';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
@@ -292,6 +293,21 @@ export default function MaintenancePage() {
       setSelected(res.data);
       setEvidenceFile(null);
       await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    if (!confirm(`Hapus jadwal "${selected.title}"? Aksi ini tidak dapat dibatalkan dan akan menghapus sinkronisasi di Google Sheets.`)) return;
+    setSaving(true);
+    try {
+      await api.deleteMaintenanceSchedule(selected.id);
+      closeDetail();
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal menghapus jadwal.');
     } finally {
       setSaving(false);
     }
@@ -672,7 +688,11 @@ export default function MaintenancePage() {
                     <span className="text-gray-500">Deskripsi</span>
                     <textarea className="min-h-[100px] w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
                   </label>
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 flex items-center justify-between">
+                    <button onClick={handleDelete} disabled={saving} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50">
+                      <Trash2 className="h-4 w-4" />
+                      Hapus Jadwal
+                    </button>
                     <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60">
                       {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
                       Simpan Perubahan

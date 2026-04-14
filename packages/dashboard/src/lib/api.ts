@@ -124,9 +124,12 @@ export interface MaintenanceScheduleItem {
 async function request<T>(path: string, options?: RequestInit, base = API_BASE): Promise<T> {
   const token = localStorage.getItem('admin_token');
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+
+  if (options?.body) {
+    headers['Content-Type'] = 'application/json';
+  }
 
   const res = await fetch(`${base}${path}`, {
     ...options,
@@ -603,6 +606,13 @@ export const api = {
     uploadRequest<{ data: MaintenanceEvidenceFile }>(`/maintenance/${id}/evidence`, formData),
   getMaintenanceHistory: (id: string) =>
     request<{ data: MaintenanceHistoryEvent[] }>(`/maintenance/${id}/history`),
+  deleteMaintenanceSchedule: (id: string) =>
+    request<{ success: boolean }>(`/maintenance/${id}`, { method: 'DELETE' }),
+  bulkDeleteMaintenanceSchedules: (payload: { ids?: string[]; filter?: string }) =>
+    request<{ success: boolean; deleted: number; message: string }>('/maintenance/bulk', { 
+      method: 'DELETE',
+      body: JSON.stringify(payload)
+    }),
 
   // ─── File Manager ───────────────────────────────────────
   getFiles: (category?: string, page = 1) => {
