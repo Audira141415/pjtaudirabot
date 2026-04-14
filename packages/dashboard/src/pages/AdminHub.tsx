@@ -57,7 +57,44 @@ const AdminHub = () => {
   const [showQr, setShowQr] = useState(false);
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [purging, setPurging] = useState(false);
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [selectedModules, setSelectedModules] = useState<string[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
+
+  const PURGE_OPTIONS = [
+    { id: 'tickets', label: 'Tickets & SLA', desc: 'Semua tiket, history, dan data SLA tracking.', icon: <Terminal className="w-4 h-4" /> },
+    { id: 'maintenance', label: 'PM Schedules', desc: 'Jadwal Preventive Maintenance & Evidence.', icon: <Activity className="w-4 h-4" /> },
+    { id: 'tasks', label: 'Tasks', desc: 'Semua daftar tugas user.', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { id: 'incidents', label: 'Incidents', desc: 'Data kejadian/insiden jaringan.', icon: <AlertTriangle className="w-4 h-4" /> },
+    { id: 'broadcasts', label: 'Broadcasts', desc: 'Daftar pesan siaran dan tanda terima.', icon: <Zap className="w-4 h-4" /> },
+    { id: 'logs', label: 'Audit Logs', desc: 'Catatan aktivitas sistem dan user.', icon: <Settings className="w-4 h-4" /> },
+    { id: 'reminders', label: 'Reminders', desc: 'Semua pengingat jadwal bot.', icon: <Clock className="w-4 h-4" /> },
+    { id: 'notes', label: 'Notes', desc: 'Catatan/memo user.', icon: <Info className="w-4 h-4" /> },
+  ];
+
+  const handleModularPurge = async () => {
+    if (selectedModules.length === 0) return;
+    if (!confirm(`Hapus permanen data: ${selectedModules.length} kategori terpilih? Aksi ini tidak dapat dibatalkan.`)) return;
+    
+    setPurging(true);
+    try {
+      const res = await api.purgeModularData(selectedModules);
+      alert(res.message);
+      setShowPurgeModal(false);
+      setSelectedModules([]);
+      fetchHealth();
+    } catch (err) {
+      alert('Gagal membersihkan data modular.');
+    } finally {
+      setPurging(false);
+    }
+  };
+
+  const toggleModule = (id: string) => {
+    setSelectedModules(prev => 
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -168,6 +205,66 @@ const AdminHub = () => {
 
   return (
     <div className="space-y-8 pb-12">
+      {/* Selective Purge Modal */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selective Purge Center</h2>
+                <p className="text-slate-500 text-sm font-medium">Pilih kategori data yang ingin dihapus permanen dari Database & GSheets.</p>
+              </div>
+              <button onClick={() => setShowPurgeModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <Settings className="w-6 h-6 text-slate-400 rotate-45" />
+              </button>
+            </div>
+
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto">
+              {PURGE_OPTIONS.map((opt) => (
+                <div 
+                  key={opt.id}
+                  onClick={() => toggleModule(opt.id)}
+                  className={`p-5 rounded-[24px] border-2 cursor-pointer transition-all ${
+                    selectedModules.includes(opt.id) 
+                      ? 'border-rose-500 bg-rose-50' 
+                      : 'border-slate-100 hover:border-slate-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-xl ${selectedModules.includes(opt.id) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {opt.icon}
+                    </div>
+                    <span className={`font-bold ${selectedModules.includes(opt.id) ? 'text-rose-700' : 'text-slate-700'}`}>{opt.label}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{opt.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-400">
+                {selectedModules.length} CATEGORIES SELECTED
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowPurgeModal(false)}
+                  className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleModularPurge}
+                  disabled={selectedModules.length === 0 || purging}
+                  className="px-8 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-300 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95"
+                >
+                  {purging ? 'Purging...' : 'Execute Purge'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Panel */}
       <div className="bg-slate-900 rounded-[32px] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
@@ -202,12 +299,12 @@ const AdminHub = () => {
                 {purging ? 'Purging...' : 'Reset PM Sheets'}
              </button>
              <button 
-                onClick={handlePurgeTickets}
+                onClick={() => setShowPurgeModal(true)}
                 disabled={syncing || purging}
                 className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20 active:scale-95 text-sm"
              >
-                <TrashIcon className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
-                {purging ? 'Wiping...' : 'Wipe All Tickets'}
+                <Trash2 className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
+                Purge Center
              </button>
              <button 
                 onClick={handleCleanupSchedules}
@@ -444,6 +541,65 @@ const AdminHub = () => {
                  Refresh QR Status
               </button>
            </div>
+        </div>
+      )}
+      {/* Selective Purge Modal */}
+      {showPurgeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200">
+            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selective Purge Center</h2>
+                <p className="text-slate-500 text-sm font-medium">Pilih kategori data yang ingin dihapus permanen dari Database & GSheets.</p>
+              </div>
+              <button onClick={() => setShowPurgeModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <Settings className="w-6 h-6 text-slate-400 rotate-45" />
+              </button>
+            </div>
+
+            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto">
+              {PURGE_OPTIONS.map((opt) => (
+                <div 
+                  key={opt.id}
+                  onClick={() => toggleModule(opt.id)}
+                  className={`p-5 rounded-[24px] border-2 cursor-pointer transition-all ${
+                    selectedModules.includes(opt.id) 
+                      ? 'border-rose-500 bg-rose-50' 
+                      : 'border-slate-100 hover:border-slate-200 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className={`p-2 rounded-xl ${selectedModules.includes(opt.id) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                      {opt.icon}
+                    </div>
+                    <span className={`font-bold ${selectedModules.includes(opt.id) ? 'text-rose-700' : 'text-slate-700'}`}>{opt.label}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{opt.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-400">
+                {selectedModules.length} CATEGORIES SELECTED
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowPurgeModal(false)}
+                  className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleModularPurge}
+                  disabled={selectedModules.length === 0 || purging}
+                  className="px-8 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-300 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95"
+                >
+                  {purging ? 'Purging...' : 'Execute Purge'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

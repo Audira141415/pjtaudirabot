@@ -697,6 +697,7 @@ export const api = {
     request<{ success: boolean; message: string }>('/tickets/purge', {
       method: 'POST',
     }),
+  purgeModularData: (modules: string[]) => request<{ success: boolean; message: string }>('/purge-modular', { method: 'POST', body: JSON.stringify({ modules }) }),
   
   // ─── AI Insights ───────────────────────────────────────
   getPredictiveInsights: () =>

@@ -1352,7 +1352,7 @@ export class GoogleSheetsService {
   }
 
   /** Generic clear sheet helper. */
-  private async clearGenericSheet(tabName: string): Promise<void> {
+  async clearGenericSheet(tabName: string): Promise<void> {
     if (!this.sheets || !this.spreadsheetId) {
        this.logger.error(`Cannot clear sheet ${tabName}: Sheets client or spreadsheetId missing`);
        return;

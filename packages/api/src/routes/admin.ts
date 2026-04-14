@@ -2729,6 +2729,69 @@ export async function adminRoutes(
     }
   });
 
+  // POST /admin/purge-modular — Delete selected modules from DB and Sheets
+  app.post('/purge-modular', async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { modules: string[] };
+    const modules = body.modules || [];
+    ctx.logger.info(`API Call: /purge-modular [START] - Modules: ${modules.join(', ')}`);
+
+    try {
+      const results: string[] = [];
+      
+      for (const mod of modules) {
+        switch (mod) {
+          case 'tickets':
+            await ticketService.purgeAllTickets();
+            results.push('Tickets (includes SLA & History)');
+            break;
+          case 'maintenance':
+            await ctx.db.maintenanceEvidenceFile.deleteMany({});
+            await ctx.db.maintenanceSchedule.deleteMany({});
+            if (sheetsService) await sheetsService.clearMaintenanceSheet();
+            results.push('Maintenance Schedules');
+            break;
+          case 'tasks':
+            await ctx.db.task.deleteMany({});
+            if (sheetsService) await sheetsService.clearGenericSheet('tasks');
+            results.push('Tasks');
+            break;
+          case 'incidents':
+            await ctx.db.incident.deleteMany({});
+            if (sheetsService) await sheetsService.clearGenericSheet('incidents');
+            results.push('Incidents');
+            break;
+          case 'broadcasts':
+            await ctx.db.broadcastReceipt.deleteMany({});
+            await ctx.db.broadcastMessage.deleteMany({});
+            results.push('Broadcasts');
+            break;
+          case 'logs':
+            await ctx.db.auditLog.deleteMany({});
+            if (sheetsService) await sheetsService.clearGenericSheet('logs');
+            results.push('Audit Logs');
+            break;
+          case 'reminders':
+            await ctx.db.reminder.deleteMany({});
+            if (sheetsService) await sheetsService.clearGenericSheet('reminders');
+            results.push('Reminders');
+            break;
+          case 'notes':
+            await ctx.db.note.deleteMany({});
+            if (sheetsService) await sheetsService.clearGenericSheet('notes');
+            results.push('Notes');
+            break;
+        }
+      }
+
+      auditLog(ctx.db, request, { action: 'delete', resource: 'system_data', resourceId: modules.join(',') });
+      ctx.logger.info('API Call: /purge-modular [SUCCESS]');
+      return reply.send({ success: true, message: `Berhasil membersihkan: ${results.join(', ')}` });
+    } catch (err) {
+      ctx.logger.error(`API Call: /purge-modular [FAILED]: ${err instanceof Error ? err.stack : String(err)}`);
+      return reply.status(500).send({ error: `Gagal membersihkan data: ${err instanceof Error ? err.message : String(err)}` });
+    }
+  });
+
   // ─── FILE MANAGER ──────────────────────────────────────────
 
   app.get('/files', async (request: FastifyRequest, reply: FastifyReply) => {
