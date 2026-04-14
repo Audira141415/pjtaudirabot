@@ -366,6 +366,24 @@ export async function adminRoutes(
     return reply.send({ data: user });
   });
 
+  app.delete('/users/:id', async (request: FastifyRequest, reply: FastifyReply) => {
+    const { id } = request.params as { id: string };
+    
+    // Prevent self-deletion
+    const currentUser = request.user as { payload: { id: string } };
+    if (currentUser.payload.id === id) {
+      return reply.status(400).send({ error: 'Tidak dapat menghapus diri sendiri.' });
+    }
+
+    try {
+      await ctx.db.user.delete({ where: { id } });
+      auditLog(ctx.db, request, { action: 'delete', resource: 'user', resourceId: id });
+      return reply.send({ success: true, message: 'User berhasil dihapus permanently.' });
+    } catch (err) {
+      return reply.status(500).send({ error: `Gagal menghapus user: ${(err as Error).message}` });
+    }
+  });
+
   // ─── Analytics & Stats ──────────────────────────────────────
 
   app.get('/stats/today', async (_request: FastifyRequest, reply: FastifyReply) => {

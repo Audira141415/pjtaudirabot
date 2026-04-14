@@ -201,6 +201,7 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
+  deleteUser: (id: string) => request<{ success: boolean; message: string }>(`/users/${id}`, { method: 'DELETE' }),
 
   // Broadcasts
   getBroadcasts: () => request<{ data: Array<Record<string, unknown>> }>('/broadcasts'),
