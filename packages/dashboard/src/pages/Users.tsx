@@ -14,7 +14,6 @@ import {
   MessageCircle, 
   Send,
   Filter,
-  Download,
   Clock,
   Ban,
   Monitor
