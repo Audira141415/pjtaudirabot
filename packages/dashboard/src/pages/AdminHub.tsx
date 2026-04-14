@@ -166,20 +166,7 @@ const AdminHub = () => {
     }
   };
 
-  const handlePurgeTickets = async () => {
-    if (!confirm('CRITICAL ACTION: This will DELETE ALL TICKETS from the Database and Google Sheets. This cannot be undone. Are you absolutely sure?')) return;
-    setPurging(true);
-    try {
-      const res = await api.purgeTickets();
-      alert(res.message || 'All tickets purged successfully!');
-    } catch (err) {
-      console.error('Ticket purge failed:', err);
-      alert('Failed to purge tickets');
-    } finally {
-      setPurging(false);
-      fetchHealth();
-    }
-  };
+
 
   const handleCleanupSchedules = async () => {
     if (!confirm('Hapus semua jadwal PM yang tidak memiliki lokasi? Ini biasanya data sampah hasil testing.')) return;
@@ -613,10 +600,6 @@ const XCircleIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const TrashIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-  </svg>
-);
+
 
 export default AdminHub;
