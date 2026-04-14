@@ -2745,19 +2745,19 @@ export async function adminRoutes(
             results.push('Tickets (includes SLA & History)');
             break;
           case 'maintenance':
-            await ctx.db.maintenanceEvidenceFile.deleteMany({});
+            await ctx.db.managedFile.deleteMany({ where: { category: 'maintenance' } });
             await ctx.db.maintenanceSchedule.deleteMany({});
-            if (sheetsService) await sheetsService.clearMaintenanceSheet();
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('maintenance_schedules');
             results.push('Maintenance Schedules');
             break;
           case 'tasks':
             await ctx.db.task.deleteMany({});
-            if (sheetsService) await sheetsService.clearGenericSheet('tasks');
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('tasks');
             results.push('Tasks');
             break;
           case 'incidents':
             await ctx.db.incident.deleteMany({});
-            if (sheetsService) await sheetsService.clearGenericSheet('incidents');
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('incidents');
             results.push('Incidents');
             break;
           case 'broadcasts':
@@ -2767,17 +2767,17 @@ export async function adminRoutes(
             break;
           case 'logs':
             await ctx.db.auditLog.deleteMany({});
-            if (sheetsService) await sheetsService.clearGenericSheet('logs');
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('logs');
             results.push('Audit Logs');
             break;
           case 'reminders':
             await ctx.db.reminder.deleteMany({});
-            if (sheetsService) await sheetsService.clearGenericSheet('reminders');
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('reminders');
             results.push('Reminders');
             break;
           case 'notes':
             await ctx.db.note.deleteMany({});
-            if (sheetsService) await sheetsService.clearGenericSheet('notes');
+            if (sheetsService) await (sheetsService as any).clearGenericSheet('notes');
             results.push('Notes');
             break;
         }
