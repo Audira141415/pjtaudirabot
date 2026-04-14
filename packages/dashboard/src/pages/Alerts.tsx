@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api';
 import { 
-  Bell, 
   Check, 
   Eye, 
   Plus, 
@@ -13,8 +12,6 @@ import {
   Layers, 
   Clock, 
   Target, 
-  ArrowRight,
-  AlertCircle,
   X,
   Code
 } from 'lucide-react';

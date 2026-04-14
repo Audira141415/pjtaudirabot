@@ -5,9 +5,7 @@ import {
   Search, 
   ChevronLeft, 
   ChevronRight, 
-  Eye, 
   X, 
-  Filter, 
   Zap, 
   Clock, 
   ShieldAlert, 
@@ -16,8 +14,7 @@ import {
   User, 
   MapPin, 
   Activity,
-  ArrowRight,
-  MoreHorizontal
+  ArrowRight
 } from 'lucide-react';
 
 // Premium Badge Components
@@ -66,7 +63,6 @@ export default function TicketsPage() {
   const [bulkResolving, setBulkResolving] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [bulkModalStep, setBulkModalStep] = useState<1 | 2>(1);
   const [bulkCandidateCount, setBulkCandidateCount] = useState(0);
   const [bulkConfirmText, setBulkConfirmText] = useState('');
   const [bulkFilterSnapshot, setBulkFilterSnapshot] = useState<any>({});
@@ -120,7 +116,6 @@ export default function TicketsPage() {
       const preview = await api.bulkResolveTickets({ filter, dryRun: true });
       setBulkCandidateCount(preview.data.candidateCount || 0);
       setBulkFilterSnapshot(filter);
-      setBulkModalStep(1);
       setBulkModalOpen(true);
     } catch (err) {
       setBulkMessage({ type: 'error', text: 'Gagal melakukan preview bulk resolve.' });

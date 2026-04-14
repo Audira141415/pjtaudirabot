@@ -9,7 +9,6 @@ import {
   Zap, 
   Monitor, 
   Timer,
-  CheckCircle2,
   XCircle,
   ArrowRight
 } from 'lucide-react';
