@@ -1,11 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api';
-import { Bell, Check, Eye, Plus, Trash2 } from 'lucide-react';
+import { 
+  Bell, 
+  Check, 
+  Eye, 
+  Plus, 
+  Trash2, 
+  ShieldAlert, 
+  Activity, 
+  Zap, 
+  Settings, 
+  Layers, 
+  Clock, 
+  Target, 
+  ArrowRight,
+  AlertCircle,
+  X,
+  Code
+} from 'lucide-react';
 
 export default function AlertsPage() {
   const [tab, setTab] = useState<'alerts' | 'rules'>('alerts');
-  const [alerts, setAlerts] = useState<Array<Record<string, any>>>([]);
-  const [rules, setRules] = useState<Array<Record<string, any>>>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [rules, setRules] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -13,27 +30,27 @@ export default function AlertsPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', alertType: 'CUSTOM', conditions: '{}', cooldownMin: 5 });
 
-  const loadAlerts = async () => {
-    const filters: Record<string, string> = {};
+  const loadAlerts = useCallback(async () => {
+    const filters: any = {};
     if (statusFilter) filters.status = statusFilter;
     const res = await api.getAlerts(page, filters);
-    setAlerts(res.data as any);
+    setAlerts(res.data);
     setTotal(res.pagination.total);
-  };
+  }, [page, statusFilter]);
 
-  const loadRules = async () => {
+  const loadRules = useCallback(async () => {
     const res = await api.getAlertRules();
-    setRules(res.data as any);
-  };
+    setRules(res.data);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
     Promise.all([loadAlerts(), loadRules()]).finally(() => setLoading(false));
-  }, [page, statusFilter]);
+  }, [loadAlerts, loadRules]);
 
   const handleAck = async (id: string) => { await api.acknowledgeAlert(id); loadAlerts(); };
   const handleResolve = async (id: string) => { await api.resolveAlert(id); loadAlerts(); };
-  const handleDeleteRule = async (id: string) => { if (confirm('Delete this rule?')) { await api.deleteAlertRule(id); loadRules(); } };
+  const handleDeleteRule = async (id: string) => { if (confirm('Purge this security rule?')) { await api.deleteAlertRule(id); loadRules(); } };
   const handleCreateRule = async () => {
     try {
       await api.createAlertRule({ ...form, conditions: JSON.parse(form.conditions), actions: [] });
@@ -43,113 +60,265 @@ export default function AlertsPage() {
     } catch (err) { alert(String(err)); }
   };
 
-  const severityColor = (s: string) => {
+  const getSeverityStyle = (s: string) => {
     switch (s) {
-      case 'CRITICAL': return 'bg-red-100 text-red-700';
-      case 'ERROR': return 'bg-orange-100 text-orange-700';
-      case 'WARNING': return 'bg-amber-100 text-amber-700';
-      default: return 'bg-blue-100 text-blue-700';
+      case 'CRITICAL': return 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]';
+      case 'ERROR': return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+      case 'WARNING': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+      default: return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
     }
   };
 
-  const statusColor = (s: string) => {
+  const getStatusStyle = (s: string) => {
     switch (s) {
-      case 'ACTIVE': return 'bg-red-100 text-red-700';
-      case 'ACKNOWLEDGED': return 'bg-amber-100 text-amber-700';
-      case 'RESOLVED': return 'bg-emerald-100 text-emerald-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'ACTIVE': return 'text-rose-500 font-black animate-pulse';
+      case 'ACKNOWLEDGED': return 'text-amber-500 font-black italic';
+      case 'RESOLVED': return 'text-emerald-500 font-black';
+      default: return 'text-slate-500 font-bold';
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>;
+  if (loading && alerts.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <div className="w-10 h-10 border-4 border-slate-800 border-t-rose-500 rounded-full animate-spin" />
+        <span className="text-[10px] font-black text-rose-500/50 uppercase tracking-[0.3em]">Decoding Signals...</span>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-6">
-        <Bell className="w-6 h-6 text-brand-500" />
-        <h1 className="text-2xl font-bold">Alerts & Escalation</h1>
-      </div>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 font-primary">
+      {/* Header Intelligence */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-4 h-4 text-rose-500" />
+            <span className="text-rose-400 text-[10px] font-black uppercase tracking-[0.3em]">Threat Detection</span>
+          </div>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1">Global Alert Grid</h1>
+          <p className="text-slate-500 font-medium text-sm">Automated monitoring, notification escalation, and incident response center.</p>
+        </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-        {(['alerts', 'rules'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded text-sm font-medium transition-colors ${tab === t ? 'bg-white shadow-sm text-brand-600' : 'text-gray-600'}`}>
-            {t === 'alerts' ? `Alerts (${total})` : `Rules (${rules.length})`}
-          </button>
-        ))}
+        <div className="flex gap-4">
+           {(['alerts', 'rules'] as const).map((t) => (
+             <button 
+                key={t}
+                onClick={() => setTab(t)}
+                className={`relative px-8 py-4 rounded-[28px] text-[10px] font-black uppercase tracking-[0.2em] transition-all border outline-none active:scale-95 ${
+                  tab === t 
+                    ? 'bg-rose-600/10 border-rose-500/30 text-rose-500 shadow-xl shadow-rose-600/5' 
+                    : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-white hover:border-slate-700'
+                }`}
+             >
+                {t === 'alerts' ? 'Live Feeds' : 'Constraint Rules'}
+                <div className={`absolute top-0 right-0 w-2 h-2 rounded-full transform -translate-y-1/2 translate-x-1/2 ${t === 'alerts' && alerts.some(a => a.status === 'ACTIVE') ? 'bg-rose-500 animate-ping' : 'bg-transparent'}`} />
+             </button>
+           ))}
+        </div>
       </div>
 
       {tab === 'alerts' && (
-        <>
-          <div className="flex gap-3 mb-4">
-            <select className="border rounded-lg px-3 py-2 text-sm" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
-              <option value="">All Status</option>
-              {['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'].map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+        <div className="space-y-6">
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-center bg-slate-900/40 border border-slate-800 p-4 rounded-[32px] backdrop-blur-xl">
+             <div className="flex-1 px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest italic">
+                Real-time Signal Stream: <span className="text-white">{total} detections cached</span>
+             </div>
+             <div className="flex gap-3">
+                <select 
+                  className="bg-slate-950/50 border border-slate-800 text-slate-300 px-6 py-3 rounded-2xl outline-none text-[10px] font-black uppercase tracking-widest cursor-pointer hover:border-slate-600 transition-colors"
+                  value={statusFilter} 
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                >
+                  <option value="">Filter Status</option>
+                  {['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'].map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+             </div>
           </div>
-          <div className="space-y-3">
+
+          {/* Alert Stream */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {alerts.map((a) => (
-              <div key={a.id} className="bg-white rounded-xl border p-4 flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${severityColor(a.severity)}`}>{a.severity}</span>
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusColor(a.status)}`}>{a.status}</span>
-                    <span className="text-xs text-gray-400">{a.rule?.name}</span>
+              <div 
+                key={a.id} 
+                className={`group relative bg-slate-950/40 border border-slate-800/80 p-8 rounded-[40px] hover:bg-slate-900 transition-all duration-500 overflow-hidden backdrop-blur-2xl ${
+                  a.status === 'ACTIVE' ? 'ring-2 ring-rose-500/10' : ''
+                }`}
+              >
+                {/* Background Glow */}
+                <div className={`absolute -right-8 -top-8 w-32 h-32 blur-[60px] opacity-20 group-hover:opacity-40 transition-all ${
+                  a.severity === 'CRITICAL' ? 'bg-rose-600' : 'bg-indigo-600'
+                }`} />
+
+                <div className="relative z-10">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getSeverityStyle(a.severity)}`}>
+                        {a.severity}
+                      </span>
+                      <span className={`text-[10px] uppercase tracking-widest ${getStatusStyle(a.status)}`}>
+                        {a.status}
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-black text-slate-700 uppercase tracking-widest group-hover:text-slate-500 transition-colors">
+                      {new Date(a.createdAt).toLocaleTimeString()} · Signal Source ID: {a.id.slice(0, 6)}
+                    </div>
                   </div>
-                  <h3 className="font-medium">{a.title}</h3>
-                  <p className="text-sm text-gray-500 mt-1">{a.message}</p>
-                  <p className="text-xs text-gray-400 mt-1">{new Date(a.createdAt).toLocaleString()}</p>
-                </div>
-                <div className="flex gap-1 ml-4">
-                  {a.status === 'ACTIVE' && (
-                    <button onClick={() => handleAck(a.id)} className="p-2 hover:bg-amber-50 rounded" title="Acknowledge"><Eye className="w-4 h-4 text-amber-600" /></button>
-                  )}
-                  {a.status !== 'RESOLVED' && (
-                    <button onClick={() => handleResolve(a.id)} className="p-2 hover:bg-emerald-50 rounded" title="Resolve"><Check className="w-4 h-4 text-emerald-600" /></button>
-                  )}
+
+                  <h3 className="text-xl font-black text-white italic truncate group-hover:text-rose-400 transition-colors mb-3 uppercase tracking-tight underline decoration-slate-800 decoration-2 underline-offset-8 group-hover:decoration-rose-500/30">
+                    {a.title}
+                  </h3>
+                  <p className="text-slate-400 font-medium text-sm leading-relaxed mb-8 max-w-[80%] line-clamp-2 italic">
+                    {a.message}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-6 border-t border-slate-800/50">
+                    <div className="flex items-center gap-3">
+                       <div className="p-2 bg-slate-900 rounded-xl border border-slate-800 group-hover:border-rose-500/20 transition-all">
+                          <Target className="w-3.5 h-3.5 text-slate-500 group-hover:text-rose-500" />
+                       </div>
+                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-slate-300 transition-colors">Rule: {a.rule?.name || 'Manual Signal'}</span>
+                    </div>
+
+                    <div className="flex gap-2">
+                       {a.status === 'ACTIVE' && (
+                         <button 
+                            onClick={() => handleAck(a.id)}
+                            className="p-3 bg-slate-900 text-amber-500 rounded-2xl border border-slate-800 hover:bg-amber-500 hover:text-white transition-all active:scale-90 shadow-lg shadow-amber-500/5"
+                            title="Acknowledge Intelligence"
+                         >
+                            <Eye className="w-4 h-4" />
+                         </button>
+                       )}
+                       {a.status !== 'RESOLVED' && (
+                         <button 
+                            onClick={() => handleResolve(a.id)}
+                            className="p-3 bg-slate-900 text-emerald-500 rounded-2xl border border-slate-800 hover:bg-emerald-500 hover:text-white transition-all active:scale-90 shadow-lg shadow-emerald-500/5"
+                            title="Commit Resolve"
+                         >
+                            <Check className="w-4 h-4" />
+                         </button>
+                       )}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
-            {alerts.length === 0 && <div className="text-center py-12 text-gray-400">No alerts found</div>}
+            {alerts.length === 0 && (
+              <div className="col-span-full py-40 text-center bg-slate-950/20 rounded-[48px] border border-dashed border-slate-800 opacity-50 grayscale">
+                 <ShieldAlert className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                 <h3 className="text-xl font-black text-slate-500 uppercase tracking-[0.4em] italic leading-tight">No Anomalies Encountered</h3>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
 
       {tab === 'rules' && (
-        <>
-          <div className="flex justify-end mb-4">
-            <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white rounded-lg text-sm">
-              <Plus className="w-4 h-4" /> Add Rule
+        <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
+          <div className="flex justify-between items-center bg-slate-900/40 border border-slate-800 p-6 rounded-[32px] backdrop-blur-xl">
+            <div className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest italic flex items-center gap-3">
+               <Layers className="w-4 h-4 text-indigo-500" />
+               Logic Gate Repository: <span className="text-white">{rules.length} active monitors</span>
+            </div>
+            <button 
+              onClick={() => setShowForm(!showForm)} 
+              className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 shadow-2xl ${
+                showForm 
+                  ? 'bg-rose-600 text-white shadow-rose-600/20' 
+                  : 'bg-indigo-600 text-white shadow-indigo-600/20 hover:bg-indigo-500'
+              }`}
+            >
+              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {showForm ? 'Abort Rule Entry' : 'Inject Security Rule'}
             </button>
           </div>
+
           {showForm && (
-            <div className="bg-white rounded-xl border p-4 mb-4 space-y-3">
-              <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Rule name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-              <input className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-              <select className="border rounded-lg px-3 py-2 text-sm" value={form.alertType} onChange={(e) => setForm({ ...form, alertType: e.target.value })}>
-                {['SLA_VIOLATION', 'KEYWORD', 'THRESHOLD', 'SCHEDULE', 'CUSTOM'].map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <textarea className="w-full border rounded-lg px-3 py-2 text-sm" rows={2} placeholder='Conditions JSON' value={form.conditions} onChange={(e) => setForm({ ...form, conditions: e.target.value })} />
-              <button onClick={handleCreateRule} className="px-4 py-2 bg-brand-500 text-white rounded-lg text-sm">Create Rule</button>
+            <div className="bg-slate-900 border border-indigo-500/20 rounded-[48px] p-10 space-y-8 animate-in zoom-in-95 duration-500 relative overflow-hidden ring-1 ring-indigo-500/30">
+              <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600/10 blur-[100px]" />
+              
+              <div>
+                <h3 className="text-xl font-black text-white italic uppercase tracking-tight mb-6 flex items-center gap-3">
+                   <Code className="w-5 h-5 text-indigo-400" />
+                   New Logical Constraint
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                     <div>
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-2">Identified Handle</label>
+                       <input className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-colors" placeholder="e.g. HIGH_LATENCY_TRIGGER" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                     </div>
+                     <div>
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-2">Categorical Context</label>
+                       <select className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-sm outline-none focus:border-indigo-500 transition-colors cursor-pointer" value={form.alertType} onChange={(e) => setForm({ ...form, alertType: e.target.value })}>
+                         {['SLA_VIOLATION', 'KEYWORD', 'THRESHOLD', 'SCHEDULE', 'CUSTOM'].map(t => <option key={t} value={t}>{t}</option>)}
+                       </select>
+                     </div>
+                  </div>
+                  <div className="space-y-4">
+                     <div>
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2 px-2">Operational Logic (JSON Condition)</label>
+                       <textarea className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-xs outline-none focus:border-indigo-500 transition-colors font-mono" rows={5} placeholder='{ "latency": { ">": 1000 } }' value={form.conditions} onChange={(e) => setForm({ ...form, conditions: e.target.value })} />
+                     </div>
+                  </div>
+                </div>
+              </div>
+
+               <div className="flex justify-end pt-6 border-t border-slate-800/50">
+                  <button onClick={handleCreateRule} className="px-12 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all">
+                     Verify and Inject Rule
+                  </button>
+               </div>
             </div>
           )}
-          <div className="space-y-3">
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {rules.map((r) => (
-              <div key={r.id} className="bg-white rounded-xl border p-4 flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{r.name}</h3>
-                    <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-600">{r.alertType}</span>
-                    <span className={`w-2 h-2 rounded-full ${r.isActive ? 'bg-emerald-500' : 'bg-gray-300'}`} />
+              <div key={r.id} className="group relative bg-slate-950/40 border border-slate-800/80 p-8 rounded-[48px] hover:bg-slate-900 transition-all duration-700 backdrop-blur-3xl">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 bg-slate-900 rounded-[28px] border border-slate-800 group-hover:bg-slate-950 transition-all">
+                       <Settings className="w-6 h-6 text-slate-500 group-hover:text-indigo-400 group-hover:rotate-[360deg] transition-all duration-1000" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white italic group-hover:text-indigo-400 transition-colors uppercase tracking-tight leading-tight">{r.name}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                         <div className={`w-2 h-2 rounded-full ${r.isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-700'}`} />
+                         <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{r.isActive ? 'Operational' : 'Paused'}</span>
+                      </div>
+                    </div>
                   </div>
-                  {r.description && <p className="text-sm text-gray-500 mt-1">{r.description}</p>}
-                  <p className="text-xs text-gray-400 mt-1">Cooldown: {r.cooldownMin}min | Triggered: {r.triggerCount}x</p>
+                  <button onClick={() => handleDeleteRule(r.id)} className="p-4 bg-slate-950 text-slate-700 rounded-3xl hover:bg-rose-600 hover:text-white transition-all border border-slate-800 hover:border-rose-500 shadow-xl active:scale-90 opacity-20 group-hover:opacity-100">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
-                <button onClick={() => handleDeleteRule(r.id)} className="p-2 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-red-500" /></button>
+                
+                <div className="space-y-6">
+                   <div className="bg-slate-950/50 p-5 rounded-[28px] border border-slate-800/50 group-hover:border-slate-700 transition-colors">
+                      <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-1 italic">Rule Description</div>
+                      <p className="text-slate-400 text-sm font-medium italic group-hover:text-slate-300 transition-colors truncate">{r.description || 'Global behavioral monitoring rule'}</p>
+                   </div>
+
+                   <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { icon: <Zap className="w-3 h-3" />, label: 'Type', value: r.alertType },
+                        { icon: <Clock className="w-3 h-3" />, label: 'Cooldown', value: `${r.cooldownMin}m` },
+                        { icon: <Activity className="w-3 h-3" />, label: 'Hits', value: r.triggerCount }
+                      ].map((stat, i) => (
+                        <div key={i} className="bg-slate-950/20 p-4 rounded-[20px] border border-slate-800/30 flex flex-col items-center text-center">
+                           <div className="text-slate-600 mb-2">{stat.icon}</div>
+                           <div className="text-[8px] font-black text-slate-600 uppercase tracking-widest mb-1">{stat.label}</div>
+                           <div className="text-white text-[10px] font-black uppercase italic tracking-tighter">{stat.value}</div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
               </div>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

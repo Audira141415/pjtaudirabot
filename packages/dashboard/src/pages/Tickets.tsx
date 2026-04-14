@@ -1,12 +1,60 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { api } from '../lib/api';
-import { StatusBadge, PriorityBadge, CategoryBadge } from '../lib/badge-colors';
-import { Ticket, Search, ChevronLeft, ChevronRight, Eye, X } from 'lucide-react';
+import { 
+  Ticket, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  Eye, 
+  X, 
+  Filter, 
+  Zap, 
+  Clock, 
+  ShieldAlert, 
+  AlertCircle, 
+  CheckCircle2, 
+  User, 
+  MapPin, 
+  Activity,
+  ArrowRight,
+  MoreHorizontal
+} from 'lucide-react';
+
+// Premium Badge Components
+const PremiumStatusBadge = ({ status }: { status: string }) => {
+  const styles: Record<string, string> = {
+    OPEN: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.1)]',
+    IN_PROGRESS: 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.1)]',
+    WAITING: 'bg-sky-500/10 text-sky-400 border-sky-500/20 shadow-[0_0_15px_rgba(14,165,233,0.1)]',
+    ESCALATED: 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.1)]',
+    RESOLVED: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+    CLOSED: 'bg-slate-700/20 text-slate-400 border-slate-700/30 font-medium',
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${styles[status] || styles.CLOSED}`}>
+      {status.replace('_', ' ')}
+    </span>
+  );
+};
+
+const PremiumPriorityBadge = ({ priority }: { priority: string }) => {
+  const styles: Record<string, string> = {
+    CRITICAL: 'bg-rose-600 text-white border-rose-500 shadow-[0_0_20px_rgba(225,29,72,0.3)] animate-pulse',
+    HIGH: 'bg-orange-500/20 text-orange-500 border-orange-500/30',
+    MEDIUM: 'bg-amber-500/20 text-amber-500 border-amber-500/30',
+    LOW: 'bg-slate-800 text-slate-400 border-slate-700',
+  };
+
+  return (
+    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border ${styles[priority] || styles.LOW}`}>
+      {priority}
+    </span>
+  );
+};
 
 export default function TicketsPage() {
-  type BulkResolveFilter = { status?: string; priority?: string; search?: string };
-
-  const [tickets, setTickets] = useState<Array<Record<string, any>>>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -14,37 +62,46 @@ export default function TicketsPage() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
-  const [selected, setSelected] = useState<Record<string, any> | null>(null);
+  const [selected, setSelected] = useState<any | null>(null);
   const [bulkResolving, setBulkResolving] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkModalStep, setBulkModalStep] = useState<1 | 2>(1);
   const [bulkCandidateCount, setBulkCandidateCount] = useState(0);
   const [bulkConfirmText, setBulkConfirmText] = useState('');
-  const [bulkFilterSnapshot, setBulkFilterSnapshot] = useState<BulkResolveFilter>({});
-  const limit = 20;
+  const [bulkFilterSnapshot, setBulkFilterSnapshot] = useState<any>({});
+  
+  const limit = 15;
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      const filters: Record<string, string> = {};
+      const filters: any = {};
       if (appliedSearch) filters.search = appliedSearch;
       if (statusFilter) filters.status = statusFilter;
       if (priorityFilter) filters.priority = priorityFilter;
       const res = await api.getTickets(page, limit, filters);
-      setTickets(res.data as any);
+      setTickets(res.data);
       setTotal(res.pagination.total);
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) {
+      console.error('Failed to load tickets:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, appliedSearch, statusFilter, priorityFilter]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const handleSearch = (e: React.FormEvent) => { 
+    e.preventDefault();
+    setAppliedSearch(search.trim()); 
+    setPage(1); 
   };
-
-  useEffect(() => { setLoading(true); loadData(); }, [page, statusFilter, priorityFilter, appliedSearch]);
-
-  const handleSearch = () => { setAppliedSearch(search.trim()); setPage(1); };
 
   const openDetail = async (id: string) => {
     try {
       const res = await api.getTicket(id);
-      setSelected(res.data as any);
+      setSelected(res.data);
     } catch (err) { console.error(err); }
   };
 
@@ -54,363 +111,357 @@ export default function TicketsPage() {
     loadData();
   };
 
-  const closeBulkModal = (force = false) => {
-    if (bulkResolving && !force) return;
-    setBulkModalOpen(false);
-    setBulkModalStep(1);
-    setBulkCandidateCount(0);
-    setBulkConfirmText('');
-    setBulkFilterSnapshot({});
-  };
-
   const handleBulkResolveFiltered = async () => {
     if (bulkResolving) return;
-
-    if (['RESOLVED', 'CLOSED', 'CANCELLED'].includes(statusFilter)) {
-      setBulkMessage({ type: 'error', text: 'Status filter terminal tidak bisa di-resolve massal.' });
-      return;
-    }
-
-    const filter: BulkResolveFilter = {};
-    if (statusFilter) filter.status = statusFilter;
-    if (priorityFilter) filter.priority = priorityFilter;
-    if (appliedSearch) filter.search = appliedSearch;
-
-    if (!filter.status && !filter.priority && !filter.search) {
-      setBulkMessage({ type: 'error', text: 'Aktifkan minimal satu filter sebelum bulk resolve.' });
-      return;
-    }
-
+    const filter = { status: statusFilter, priority: priorityFilter, search: appliedSearch };
+    
     setBulkResolving(true);
-    setBulkMessage(null);
     try {
       const preview = await api.bulkResolveTickets({ filter, dryRun: true });
-      const candidateCount = preview.data.candidateCount ?? 0;
-      if (candidateCount === 0) {
-        setBulkMessage({ type: 'error', text: 'Tidak ada tiket kandidat untuk di-resolve dengan filter saat ini.' });
-        return;
-      }
-
+      setBulkCandidateCount(preview.data.candidateCount || 0);
       setBulkFilterSnapshot(filter);
-      setBulkCandidateCount(candidateCount);
-      setBulkConfirmText('');
       setBulkModalStep(1);
       setBulkModalOpen(true);
     } catch (err) {
-      setBulkMessage({ type: 'error', text: err instanceof Error ? err.message : 'Bulk resolve gagal.' });
+      setBulkMessage({ type: 'error', text: 'Gagal melakukan preview bulk resolve.' });
     } finally {
       setBulkResolving(false);
     }
   };
 
   const executeBulkResolve = async () => {
-    if (bulkResolving) return;
-
-    if (bulkConfirmText !== 'RESOLVE') {
-      setBulkMessage({ type: 'error', text: 'Konfirmasi gagal. Ketik RESOLVE persis untuk mengeksekusi.' });
-      return;
-    }
-
+    if (bulkConfirmText !== 'RESOLVE') return;
     setBulkResolving(true);
-    setBulkMessage(null);
     try {
-      const res = await api.bulkResolveTickets({ filter: bulkFilterSnapshot });
-      const resolvedCount = res.data.resolvedCount ?? 0;
-      const jobId = res.data.jobId;
-      setBulkMessage({
-        type: 'success',
-        text: jobId
-          ? `Bulk resolve berhasil: ${resolvedCount} tiket di-resolve. Job ID: ${jobId.slice(0, 8)}...`
-          : `Bulk resolve berhasil: ${resolvedCount} tiket di-resolve.`,
-      });
-      closeBulkModal(true);
-      setSelected(null);
-      await loadData();
+      await api.bulkResolveTickets({ filter: bulkFilterSnapshot });
+      setBulkMessage({ type: 'success', text: 'Bulk resolve berhasil dieksekusi.' });
+      setBulkModalOpen(false);
+      loadData();
     } catch (err) {
-      setBulkMessage({ type: 'error', text: err instanceof Error ? err.message : 'Bulk resolve gagal.' });
+      setBulkMessage({ type: 'error', text: 'Eksekusi bulk resolve gagal.' });
     } finally {
       setBulkResolving(false);
     }
   };
 
   const totalPages = Math.ceil(total / limit);
-  const hasNarrowingFilter = Boolean(appliedSearch || statusFilter || priorityFilter);
-
-  if (loading && tickets.length === 0) {
-    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>;
-  }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Ticket className="w-6 h-6 text-brand-500" />
-          <h1 className="text-2xl font-bold">Tickets</h1>
-          <span className="text-sm text-gray-500">({total})</span>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header Intelligence */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
+              <Ticket className="w-5 h-5" />
+            </div>
+            <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]">Service Desk</span>
+          </div>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1">Ticket Repository</h1>
+          <p className="text-slate-500 font-medium text-sm">Unified management for customer inquiries, technical faults, and service requests.</p>
+        </div>
+
+        <div className="flex gap-4">
+          <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-indigo-500/30 transition-all">
+             <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-indigo-400 transition-colors">Open Tickets</div>
+             <div className="text-3xl font-black text-white">{tickets.filter(t => t.status === 'OPEN').length}</div>
+          </div>
+          <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-rose-500/30 transition-all">
+             <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-rose-500 transition-colors">Critical</div>
+             <div className="text-3xl font-black text-white">{tickets.filter(t => t.priority === 'CRITICAL').length}</div>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm"
-            placeholder="Search tickets..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-        </div>
-        <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}>
-          <option value="">All Status</option>
-          {['OPEN', 'IN_PROGRESS', 'WAITING', 'ESCALATED', 'RESOLVED', 'CLOSED'].map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="border border-gray-300 rounded-lg px-3 py-2 text-sm" value={priorityFilter} onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}>
-          <option value="">All Priority</option>
-          {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <button
-          onClick={handleBulkResolveFiltered}
-          disabled={bulkResolving || tickets.length === 0 || !hasNarrowingFilter}
-          className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
-          title={!hasNarrowingFilter ? 'Aktifkan minimal satu filter (search/status/priority)' : undefined}
-        >
-          {bulkResolving ? 'Resolving...' : 'Resolve All Filtered Tickets'}
-        </button>
+      {/* Advanced Filter Bar */}
+      <div className="bg-slate-900/50 p-4 rounded-[32px] border border-slate-800/50 backdrop-blur-lg">
+        <form onSubmit={handleSearch} className="flex flex-col xl:flex-row gap-4">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+            <input
+              type="text"
+              placeholder="Filter by Ticket Number, Customer, or Keywords..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-slate-950/50 border border-slate-800 text-white pl-12 pr-6 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-700 font-bold text-xs tracking-tight"
+            />
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <select 
+              value={statusFilter} 
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="bg-slate-950/50 border border-slate-800 text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
+            >
+              <option value="">All Status</option>
+              {['OPEN', 'IN_PROGRESS', 'WAITING', 'ESCALATED', 'RESOLVED', 'CLOSED'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select 
+              value={priorityFilter} 
+              onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
+              className="bg-slate-950/50 border border-slate-800 text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
+            >
+              <option value="">All Priority</option>
+              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button 
+              type="button"
+              onClick={handleBulkResolveFiltered}
+              disabled={!statusFilter && !priorityFilter && !appliedSearch}
+              className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-20 active:scale-95 shadow-lg shadow-emerald-500/5"
+            >
+              Bulk Resolve
+            </button>
+          </div>
+        </form>
       </div>
 
       {bulkMessage && (
-        <div className={`mb-4 rounded-lg px-4 py-2 text-sm ${bulkMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-          {bulkMessage.text}
+        <div className={`p-4 rounded-2xl border flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
+          bulkMessage.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+        }`}>
+          {bulkMessage.type === 'success' ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
+          <span className="text-sm font-bold uppercase tracking-tight">{bulkMessage.text}</span>
+          <button onClick={() => setBulkMessage(null)} className="ml-auto p-1 hover:bg-white/10 rounded-lg"><X className="w-4 h-4" /></button>
         </div>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Ticket #</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Customer</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Priority</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Category</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">SLA</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500">Created</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-500"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {tickets.map((t) => {
-              const sla = t.slaTracking;
-              const breached = sla?.responseBreached || sla?.resolutionBreached;
-              return (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono text-xs">{t.ticketNumber}</td>
-                  <td className="px-4 py-3">{t.customer || '-'}</td>
-                  <td className="px-4 py-3"><StatusBadge status={t.status} /></td>
-                  <td className="px-4 py-3"><PriorityBadge priority={t.priority} /></td>
-                  <td className="px-4 py-3"><CategoryBadge category={t.category} /></td>
-                  <td className="px-4 py-3">
-                    {sla ? (
-                      <span className={`text-xs font-medium ${breached ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {breached ? 'BREACHED' : 'OK'}
-                      </span>
-                    ) : <span className="text-xs text-gray-400">N/A</span>}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{new Date(t.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => openDetail(t.id)} className="p-1 hover:bg-gray-100 rounded"><Eye className="w-4 h-4 text-gray-500" /></button>
-                  </td>
-                </tr>
-              );
-            })}
-            {tickets.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No tickets found</td></tr>}
-          </tbody>
-        </table>
+      {/* Modern Ticket List */}
+      <div className="space-y-4">
+        {loading ? (
+          Array(5).fill(0).map((_, i) => <div key={i} className="h-24 bg-slate-900/30 border border-slate-800 rounded-[28px] animate-pulse" />)
+        ) : tickets.length === 0 ? (
+          <div className="py-24 text-center bg-slate-900/20 rounded-[40px] border border-dashed border-slate-800">
+             <Ticket className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+             <h3 className="text-xl font-black text-slate-500 uppercase tracking-widest italic">Signal Lost — No Tickets Found</h3>
+          </div>
+        ) : (
+          tickets.map((ticket) => (
+            <div 
+              key={ticket.id}
+              onClick={() => openDetail(ticket.id)}
+              className={`group relative bg-slate-950/40 border border-slate-800/80 p-6 rounded-[32px] hover:bg-slate-900 hover:border-indigo-500/40 transition-all duration-500 cursor-pointer backdrop-blur-xl flex flex-col md:flex-row md:items-center gap-6 overflow-hidden ${
+                ticket.priority === 'CRITICAL' ? 'shadow-[L-0_0_20px_rgba(244,63,94,0.05)]' : ''
+              }`}
+            >
+              {/* Vertical Accent */}
+              <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                ticket.priority === 'CRITICAL' ? 'bg-rose-600' : 
+                ticket.priority === 'HIGH' ? 'bg-orange-500' : 
+                'bg-slate-800'
+              }`} />
+
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <span className="font-mono text-[10px] text-slate-600 font-bold group-hover:text-indigo-400 transition-colors uppercase tracking-widest whitespace-nowrap">
+                    #{ticket.ticketNumber}
+                  </span>
+                  <PremiumPriorityBadge priority={ticket.priority} />
+                  <PremiumStatusBadge status={ticket.status} />
+                  {ticket.slaTracking?.resolutionBreached && (
+                    <span className="bg-rose-600/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                      <Zap className="w-2.5 h-2.5" /> SLA Breach
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-white font-black text-lg group-hover:translate-x-1 transition-all duration-500 truncate">{ticket.customer || 'Unknown Subscriber'}</h3>
+                <div className="flex items-center gap-4 mt-2 text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                  <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-slate-600" /> {ticket.location || 'N/A'}</div>
+                  <div className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-slate-600" /> {new Date(ticket.createdAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-4 md:pt-0 border-slate-800/50">
+                <div className="text-right flex flex-col items-end">
+                   <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Operator</div>
+                   <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                         <User className="w-3 h-3 text-slate-400" />
+                      </div>
+                      <span className="text-white text-xs font-bold">{ticket.assignedTo?.displayName || 'Unassigned'}</span>
+                   </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className={`p-4 rounded-2xl bg-slate-950/50 border border-slate-800 group-hover:bg-indigo-600 group-hover:border-indigo-400 transition-all duration-500 group-hover:rotate-[360deg]`}>
+                    <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between mt-4 text-sm text-gray-600">
-        <span>Page {page} of {totalPages || 1} ({total} total)</span>
-        <div className="flex gap-2">
-          <button onClick={() => setPage(page - 1)} disabled={page <= 1} className="p-2 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4" /></button>
-          <button onClick={() => setPage(page + 1)} disabled={page >= totalPages} className="p-2 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronRight className="w-4 h-4" /></button>
+      {/* Pagination Intelligence */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between bg-slate-900/30 border border-slate-800/50 p-6 rounded-[32px] backdrop-blur-2xl">
+           <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+             Batch <span className="text-white">{page}</span> of <span className="text-white">{totalPages}</span> — <span className="text-white">{total}</span> Active Threads
+           </div>
+           
+           <div className="flex items-center gap-3">
+              <button 
+                 onClick={() => setPage(p => Math.max(1, p - 1))}
+                 disabled={page <= 1}
+                 className="p-4 bg-slate-800 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white disabled:opacity-20 transition-all border border-slate-700 active:scale-95"
+              >
+                 <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <button 
+                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                 disabled={page >= totalPages}
+                 className="p-4 bg-slate-800 text-slate-400 rounded-2xl hover:bg-slate-700 hover:text-white disabled:opacity-20 transition-all border border-slate-700 active:scale-95"
+              >
+                 <ChevronRight className="w-5 h-5" />
+              </button>
+           </div>
         </div>
-      </div>
+      )}
+
+      {/* Detail Intelligence Modal */}
+      {selected && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-[48px] p-8 md:p-12 max-w-4xl w-full shadow-2xl relative overflow-hidden my-auto ring-1 ring-white/5">
+            <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-600/10 blur-[120px]" />
+            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-rose-600/5 blur-[100px]" />
+
+            <div className="relative z-10">
+              <div className="flex justify-between items-start mb-10">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-xs font-black text-indigo-400 tracking-tighter uppercase underline decoration-indigo-500/30 underline-offset-4 decoration-2">Thread Registry: {selected.ticketNumber}</span>
+                    <PremiumPriorityBadge priority={selected.priority} />
+                  </div>
+                  <h2 className="text-3xl font-black text-white italic uppercase tracking-tight leading-tight">{selected.customer || 'Unknown Subscriber'}</h2>
+                </div>
+                <button 
+                  onClick={() => setSelected(null)}
+                  className="p-4 bg-slate-800 text-slate-400 rounded-3xl hover:bg-rose-600 hover:text-white transition-all border border-slate-700 hover:border-rose-500 shadow-xl"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10 text-center">
+                 {[
+                   { label: 'Current Status', value: <PremiumStatusBadge status={selected.status} /> },
+                   { label: 'Incident Origin', value: selected.platform || 'N/A' },
+                   { label: 'Asset Location', value: selected.location || 'Global' },
+                   { label: 'SLA Status', value: selected.slaTracking?.resolutionBreached ? <span className="text-rose-500 font-black">BREACHED</span> : <span className="text-emerald-500 font-black">STABLE</span> }
+                 ].map((item, i) => (
+                   <div key={i} className="bg-slate-950/50 p-4 rounded-[24px] border border-slate-800/50">
+                      <div className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">{item.label}</div>
+                      <div className="text-white text-xs font-bold">{item.value}</div>
+                   </div>
+                 ))}
+              </div>
+
+              <div className="space-y-6 mb-10">
+                <div className="group bg-slate-950/80 p-6 rounded-[32px] border border-slate-800 transition-all hover:border-slate-600">
+                   <div className="flex items-center gap-2 mb-4">
+                      <ShieldAlert className="w-4 h-4 text-amber-500" />
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Problem Description</span>
+                   </div>
+                   <p className="text-slate-300 text-sm leading-relaxed font-bold italic tracking-tight underline decoration-slate-800 underline-offset-8">"{selected.problem}"</p>
+                </div>
+
+                {selected.rootCause && (
+                  <div className="bg-rose-600/5 p-6 rounded-[32px] border border-rose-500/20">
+                     <div className="flex items-center gap-2 mb-2">
+                        <Activity className="w-4 h-4 text-rose-500" />
+                        <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Root Cause Diagnostics</span>
+                     </div>
+                     <p className="text-rose-200/80 text-sm font-medium">{selected.rootCause}</p>
+                  </div>
+                )}
+
+                {selected.solution && (
+                  <div className="bg-emerald-600/5 p-6 rounded-[32px] border border-emerald-500/20">
+                     <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Resolution Package</span>
+                     </div>
+                     <p className="text-emerald-200/80 text-sm font-medium">{selected.solution}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Terminal */}
+              {!['RESOLVED', 'CLOSED'].includes(selected.status) && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border-t border-slate-800/80 pt-10">
+                   {selected.status === 'OPEN' && (
+                     <button 
+                       onClick={() => updateStatus(selected.id, 'IN_PROGRESS')}
+                       className="bg-amber-600/10 border border-amber-500/20 text-amber-500 py-5 rounded-[24px] font-black uppercase text-xs tracking-widest hover:bg-amber-600 hover:text-white transition-all shadow-xl shadow-amber-500/5"
+                     >
+                       Begin Handling
+                     </button>
+                   )}
+                   <button 
+                     onClick={() => updateStatus(selected.id, 'RESOLVED')}
+                     className="bg-emerald-600/10 border border-emerald-500/20 text-emerald-500 py-5 rounded-[24px] font-black uppercase text-xs tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-xl shadow-emerald-500/5 flex items-center justify-center gap-2"
+                   >
+                     <CheckCircle2 className="w-4 h-4" />
+                     Commit Resolve
+                   </button>
+                   <button 
+                     onClick={() => updateStatus(selected.id, 'WAITING')}
+                     className="bg-sky-600/10 border border-sky-500/20 text-sky-400 py-5 rounded-[24px] font-black uppercase text-xs tracking-widest hover:bg-sky-600 hover:text-white transition-all shadow-xl shadow-sky-500/5"
+                   >
+                     Hold Ticket
+                   </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bulk Resolve Modal */}
       {bulkModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => closeBulkModal()}>
-          <div className="bg-white rounded-xl w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-gray-900">Resolve All Filtered Tickets</h2>
-                <p className="text-sm text-gray-500">
-                  Step {bulkModalStep} of 2
-                </p>
-              </div>
-              <button onClick={() => closeBulkModal()} disabled={bulkResolving} className="text-gray-400 hover:text-gray-600 disabled:opacity-50">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/95 backdrop-blur-3xl animate-in fade-in duration-300">
+           <div className="bg-slate-900 border border-slate-800 rounded-[48px] p-12 max-w-md w-full shadow-2xl relative overflow-hidden">
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-rose-600/20 blur-[100px]" />
+              
+              <div className="relative z-10 flex flex-col items-center text-center">
+                 <div className="w-20 h-20 rounded-[28px] bg-rose-600 flex items-center justify-center text-white mb-8 border border-white/5 animate-pulse">
+                    <AlertCircle className="w-10 h-10" />
+                 </div>
+                 <h2 className="text-2xl font-black text-white italic uppercase tracking-tight mb-2 underline decoration-rose-500 decoration-4 underline-offset-8">Critical override</h2>
+                 <p className="text-slate-500 text-sm font-medium mb-10 leading-relaxed">
+                   You are about to resolve <span className="text-white font-black">{bulkCandidateCount}</span> tickets simultaneously. This action will trigger global notifications and audit logs.
+                 </p>
 
-            {bulkModalStep === 1 && (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-                  <p className="text-sm text-emerald-700">Candidate tickets to resolve</p>
-                  <p className="text-2xl font-bold text-emerald-800">{bulkCandidateCount}</p>
-                </div>
-
-                <div className="rounded-lg border border-gray-200 p-4">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Applied filters</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between gap-3">
-                      <span className="text-gray-500">Status</span>
-                      <span className="font-medium text-gray-800">{bulkFilterSnapshot.status || 'Any'}</span>
+                 <div className="w-full space-y-4 mb-10">
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest px-2">
+                       <span>Verification string</span>
+                       <span className="text-rose-500">REQUIRED</span>
                     </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-gray-500">Priority</span>
-                      <span className="font-medium text-gray-800">{bulkFilterSnapshot.priority || 'Any'}</span>
-                    </div>
-                    <div className="flex justify-between gap-3">
-                      <span className="text-gray-500">Search</span>
-                      <span className="font-medium text-gray-800 text-right break-all">{bulkFilterSnapshot.search || 'None'}</span>
-                    </div>
-                  </div>
-                </div>
+                    <input 
+                       value={bulkConfirmText}
+                       onChange={(e) => setBulkConfirmText(e.target.value)}
+                       placeholder="Type RESOLVE to confirm"
+                       className="w-full bg-slate-950 border border-slate-800 text-white p-5 rounded-2xl outline-none focus:border-rose-500 placeholder:text-slate-800 text-center font-black tracking-widest text-xs"
+                    />
+                 </div>
 
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => closeBulkModal()}
-                    disabled={bulkResolving}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => setBulkModalStep(2)}
-                    disabled={bulkResolving}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    Continue
-                  </button>
-                </div>
+                 <div className="flex flex-col w-full gap-3">
+                    <button 
+                       disabled={bulkConfirmText !== 'RESOLVE' || bulkResolving}
+                       onClick={executeBulkResolve}
+                       className="w-full py-5 bg-rose-600 text-white rounded-[24px] font-black uppercase text-xs tracking-[0.2em] disabled:opacity-30 disabled:grayscale transition-all shadow-xl shadow-rose-600/20"
+                    >
+                       {bulkResolving ? 'Executing...' : 'Force Sync Resolve'}
+                    </button>
+                    <button 
+                       onClick={() => setBulkModalOpen(false)}
+                       className="w-full py-4 text-slate-500 font-bold hover:text-white transition-colors uppercase text-[10px] tracking-widest"
+                    >
+                       Abort Operation
+                    </button>
+                 </div>
               </div>
-            )}
-
-            {bulkModalStep === 2 && (
-              <div className="space-y-4">
-                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  Aksi ini akan mengubah {bulkCandidateCount} tiket menjadi RESOLVED. Ketik RESOLVE untuk konfirmasi.
-                </div>
-                <p className="text-xs text-gray-500">
-                  Candidate count adalah hasil preview dan bisa berubah bila data tiket berubah sebelum eksekusi.
-                </p>
-
-                <div>
-                  <label htmlFor="bulk-resolve-guard" className="block text-sm font-medium text-gray-700 mb-2">
-                    Confirmation text
-                  </label>
-                  <input
-                    id="bulk-resolve-guard"
-                    value={bulkConfirmText}
-                    onChange={(e) => setBulkConfirmText(e.target.value)}
-                    placeholder="Type RESOLVE"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                    disabled={bulkResolving}
-                  />
-                </div>
-
-                <div className="flex justify-between gap-2">
-                  <button
-                    onClick={() => setBulkModalStep(1)}
-                    disabled={bulkResolving}
-                    className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={executeBulkResolve}
-                    disabled={bulkResolving || bulkConfirmText !== 'RESOLVE'}
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {bulkResolving ? 'Resolving...' : 'Execute Bulk Resolve'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {selected && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelected(null)}>
-          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h2 className="text-lg font-bold">{selected.ticketNumber}</h2>
-                <p className="text-sm text-gray-500">{selected.title}</p>
-              </div>
-              <button onClick={() => setSelected(null)}><X className="w-5 h-5" /></button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-              <div><span className="text-xs text-gray-500">Status</span><div><StatusBadge status={selected.status} /></div></div>
-              <div><span className="text-xs text-gray-500">Priority</span><div><PriorityBadge priority={selected.priority} /></div></div>
-              <div><span className="text-xs text-gray-500">Category</span><div><CategoryBadge category={selected.category} /></div></div>
-              <div><span className="text-xs text-gray-500">Customer</span><p className="font-medium text-sm">{selected.customer || '-'}</p></div>
-              <div><span className="text-xs text-gray-500">Location</span><p className="font-medium text-sm">{selected.location || '-'}</p></div>
-              <div><span className="text-xs text-gray-500">SID</span><p className="font-mono text-xs">{selected.sid || '-'}</p></div>
-              <div><span className="text-xs text-gray-500">Service</span><p className="font-medium text-sm">{selected.service || '-'}</p></div>
-              <div><span className="text-xs text-gray-500">IP</span><p className="font-mono text-xs">{selected.ipAddress || '-'}</p></div>
-              <div><span className="text-xs text-gray-500">Assigned To</span><p className="font-medium text-sm">{selected.assignedTo?.displayName || 'Unassigned'}</p></div>
-            </div>
-            <div className="mb-4"><span className="text-xs text-gray-500">Problem</span><p className="text-sm bg-gray-50 p-3 rounded mt-1">{selected.problem}</p></div>
-            {selected.rootCause && <div className="mb-4"><span className="text-xs text-gray-500">Root Cause</span><p className="text-sm bg-amber-50 p-3 rounded mt-1">{selected.rootCause}</p></div>}
-            {selected.solution && <div className="mb-4"><span className="text-xs text-gray-500">Solution</span><p className="text-sm bg-emerald-50 p-3 rounded mt-1">{selected.solution}</p></div>}
-
-            {/* SLA Info */}
-            {selected.slaTracking && (
-              <div className="mb-4 p-3 bg-sky-50 rounded">
-                <p className="text-xs font-medium text-sky-700 mb-2">SLA Tracking</p>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>Response Deadline: <span className="font-mono">{new Date(selected.slaTracking.responseDeadline).toLocaleString()}</span></div>
-                  <div>Resolution Deadline: <span className="font-mono">{new Date(selected.slaTracking.resolutionDeadline).toLocaleString()}</span></div>
-                  <div>Response Breached: <span className={selected.slaTracking.responseBreached ? 'text-red-600 font-bold' : 'text-emerald-600'}>
-                    {selected.slaTracking.responseBreached ? 'YES' : 'NO'}</span></div>
-                  <div>Resolution Breached: <span className={selected.slaTracking.resolutionBreached ? 'text-red-600 font-bold' : 'text-emerald-600'}>
-                    {selected.slaTracking.resolutionBreached ? 'YES' : 'NO'}</span></div>
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            {!['RESOLVED', 'CLOSED'].includes(selected.status) && (
-              <div className="flex gap-2 mt-4 border-t pt-4">
-                {selected.status === 'OPEN' && <button onClick={() => updateStatus(selected.id, 'IN_PROGRESS')} className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm">Start Working</button>}
-                <button onClick={() => updateStatus(selected.id, 'RESOLVED')} className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm">Resolve</button>
-                <button onClick={() => updateStatus(selected.id, 'CLOSED')} className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm">Close</button>
-              </div>
-            )}
-
-            {/* History */}
-            {selected.ticketHistory?.length > 0 && (
-              <div className="mt-4 border-t pt-4">
-                <p className="text-xs font-medium text-gray-500 mb-2">History</p>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {selected.ticketHistory.map((h: any) => (
-                    <div key={h.id} className="text-xs flex gap-2">
-                      <span className="text-gray-400">{new Date(h.createdAt).toLocaleString()}</span>
-                      <span className="font-medium">{h.action}</span>
-                      {h.field && <span className="text-gray-500">{h.field}: {h.oldValue} → {h.newValue}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+           </div>
         </div>
       )}
     </div>
