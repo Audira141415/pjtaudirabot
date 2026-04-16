@@ -50,7 +50,6 @@ export class TelegramMessageHandler {
   }
 
   private async emitReply(ctx: Context, text: string, options?: any): Promise<void> {
-    const platformUserId = String(ctx.from?.id);
     const chatId = String(ctx.chat?.id);
     
     await ctx.reply(text, options);
