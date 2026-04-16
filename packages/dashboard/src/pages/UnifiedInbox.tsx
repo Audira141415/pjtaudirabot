@@ -5,7 +5,8 @@ import {
   ChevronDown, MessageSquare, Send, CheckCircle2, 
   Clock, Hash, BadgeCheck, Zap, Paperclip, MoreVertical,
   Orbit, Layers, Cpu, Fingerprint, Activity, Info,
-  Power, Target, RefreshCw, Smartphone
+  Power, Target, RefreshCw, Smartphone,
+  MoreHorizontal, ShieldCheck, UserCircle
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 

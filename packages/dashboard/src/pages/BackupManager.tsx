@@ -17,7 +17,7 @@ import {
   FolderSync, 
   FileArchive, 
   Activity, 
-  CloudDownload, 
+  Download, 
   LayoutGrid, 
   MoreHorizontal,
   Search,

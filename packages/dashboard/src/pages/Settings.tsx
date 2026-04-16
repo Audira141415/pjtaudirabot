@@ -24,6 +24,8 @@ import {
   Layers,
   ChevronRight,
   Fingerprint,
+  UserCircle,
+  Monitor,
   Activity,
   ShieldAlert,
   HardDrive,

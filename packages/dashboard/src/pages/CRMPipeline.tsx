@@ -17,7 +17,8 @@ import {
   Info, 
   ChevronRight,
   Loader2,
-  DollarSign
+  DollarSign,
+  Zap
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 

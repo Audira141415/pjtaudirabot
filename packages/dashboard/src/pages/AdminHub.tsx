@@ -5,7 +5,8 @@ import {
   Activity, Settings, QrCode, BrainCircuit, AlertTriangle,
   Terminal, TrendingUp, TrendingDown, Info, HardDrive, ShieldAlert,
   CheckCircle2, Orbit, Layers, Fingerprint, Radio, Target, Smartphone,
-  Command, PlusCircle, Unplug, ShieldX, XCircle, Search
+  Command, PlusCircle, Unplug, ShieldX, XCircle, Search,
+  Clock, Users
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from '../components/Toast';
@@ -101,7 +102,7 @@ const AdminHub = () => {
     if (!confirm('CAUTION: This will wipe PM Sheets & resync current schedule metadata. Proceed with purge?')) return;
     setPurging(true);
     try {
-      await api.purgeAndResyncPM();
+      await api.syncMaintenanceToSheets();
       toast({ type: 'success', title: 'PM_RESET_EXECUTED', message: 'Maintenance sheets have been reset and resynced with core metadata.' });
       fetchHealth();
     } catch (err) {
@@ -119,7 +120,7 @@ const AdminHub = () => {
     if (!confirm(`CRITICAL: You are about to purge ${selectedModules.length} selected components. This action is immutable. Proceed?`)) return;
     setPurging(true);
     try {
-      await api.executePurge({ modules: selectedModules });
+      await api.purgeModularData(selectedModules);
       toast({ type: 'success', title: 'PURGE_PROTOCOL_COMPLETE', message: `${selectedModules.length} functional data streams have been terminated.` });
       setSelectedModules([]);
       setShowPurgeModal(false);

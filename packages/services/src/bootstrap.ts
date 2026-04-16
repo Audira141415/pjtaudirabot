@@ -110,6 +110,7 @@ export interface BotInfrastructure {
   redisConfig: ReturnType<typeof getRedisConfig>;
   portConfig: ReturnType<typeof getPortConfig>;
   ports: ReturnType<typeof getPortRegistry>;
+  botName: string;
 }
 
 export interface BotServices {
@@ -176,7 +177,7 @@ export async function initInfrastructure(botName: string): Promise<BotInfrastruc
   await redis.connect();
   logger.info('Redis connected');
 
-  return { db, redis, logger, config, botsConfig, redisConfig, portConfig, ports };
+  return { db, redis, logger, config, botsConfig, redisConfig, portConfig, ports, botName };
 }
 
 // ─── Services ─────────────────────────────────────────────────
@@ -333,7 +334,14 @@ export async function createBotServices(
   const scheduler = new Scheduler(db, redis, logger);
 
   // Live Chat WebSocket Bridge (Phase 2)
-  const liveChatService = new LiveChatService(eventBus, logger, infra.ports.getPort('terminal') ?? 4005);
+  // Resolve bot-specific port (e.g., TERMINAL_PORT_TELEGRAM) or fall back to default
+  const botType = infra.botName.split('-')[0].toUpperCase(); // 'TELEGRAM' or 'WHATSAPP'
+  const envPortKey = `TERMINAL_PORT_${botType}`;
+  const terminalPort = infra.ports.getPort('terminal') ?? 
+                       parseInt(process.env[envPortKey] ?? process.env.TERMINAL_PORT ?? '4005', 10);
+                       
+  logger.info(`LiveChat Configuration: Using port ${terminalPort} (resolved from ${envPortKey})`);
+  const liveChatService = new LiveChatService(eventBus, logger, terminalPort);
 
   // ── Register common commands ───────────────────────────────
 

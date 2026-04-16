@@ -25,7 +25,8 @@ import {
   Target,
   Search,
   RefreshCw,
-  MoreHorizontal
+  MoreHorizontal,
+  Monitor
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 

@@ -19,7 +19,8 @@ import {
   CheckCircle2,
   Mail,
   Send,
-  AppWindow
+  AppWindow,
+  Clock
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 

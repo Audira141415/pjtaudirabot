@@ -47,7 +47,8 @@ import {
   HardDrive,
   CpuIcon,
   Inbox,
-  Workflow
+  Workflow,
+  Info
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 
@@ -858,7 +859,7 @@ export default function MaintenancePage() {
                  <div className="relative z-10">
                    <div className="flex items-center gap-5 mb-3">
                       <div className="p-3 bg-indigo-600 text-white rounded-xl shadow-xl shadow-indigo-600/20">
-                         <workflow className="w-8 h-8" />
+                         <Workflow className="w-8 h-8" />
                       </div>
                       <h2 className="text-5xl font-black text-slate-950 dark:text-white italic uppercase tracking-tighter leading-none">Sequence Initialization</h2>
                    </div>

@@ -705,4 +705,8 @@ export const api = {
     request<{ data: any[] }>('/predictive', undefined, '/api/insights'),
   getSLAWeightedReport: () =>
     request<{ data: { totalScore: number; breakdown: any[]; period: string } }>('/sla/weighted', undefined, '/api/insights'),
+  
+  // ─── Manual Control Hub ──────────────────────────────────
+  manualSync: () => request<{ success: boolean; message: string }>('/sync/all', { method: 'POST' }),
+  cleanupInvalidSchedules: () => request<{ success: boolean; message: string }>('/maintenance/cleanup', { method: 'POST' }),
 };

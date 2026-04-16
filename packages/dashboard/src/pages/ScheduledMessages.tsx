@@ -16,7 +16,8 @@ import {
   ShieldCheck,
   X,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  CheckCircle2
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -238,7 +239,7 @@ export default function ScheduledMessages() {
                           </div>
                        )}
                        <div className="flex items-center gap-2 text-[9px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">
-                          <ShieldCheck className="w-3.5 h-3.5" /> Protocol: {msg.platform || 'COMMUNAL'}
+                          <ShieldCheck className="w-3.5 h-3.5" /> <span>Protocol: {(msg.platform as string) || 'COMMUNAL'}</span>
                        </div>
                     </div>
                   </div>

@@ -141,7 +141,8 @@ export default function Layout() {
     navigate('/login');
   };
 
-  return (    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-indigo-500/30 font-mono`}>
+  return (
+    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-indigo-500/30 font-mono`}>
       {/* Ultimate Scanline Overlay (Global) */}
       <div className="scanline-overlay" />
 
@@ -184,8 +185,12 @@ export default function Layout() {
                          }`
                        }
                      >
-                       <item.icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'rotate-12 scale-110' : 'group-hover:rotate-6'}`} />
-                       <span className="italic">{item.label}</span>
+                       {({ isActive }) => (
+                         <>
+                           <item.icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'rotate-12 scale-110' : 'group-hover:rotate-6'}`} />
+                           <span className="italic">{item.label}</span>
+                         </>
+                       )}
                      </NavLink>
                    ))}
                 </div>
@@ -337,6 +342,5 @@ export default function Layout() {
         </main>
       </div>
     </div>
-
   );
 }

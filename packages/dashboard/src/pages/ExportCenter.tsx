@@ -19,7 +19,6 @@ import {
   History, 
   Share2, 
   Orbit, 
-  CloudDownload, 
   Layers, 
   Fingerprint, 
   LayoutGrid, 
@@ -156,7 +155,7 @@ export default function ExportCenter() {
                   onClick={create} 
                   className="w-full py-5 bg-emerald-600 text-white rounded-[28px] text-[10px] font-black tracking-widest uppercase flex items-center justify-center gap-3 transition-all hover:bg-emerald-500 hover:scale-[1.02] active:scale-95 shadow-2xl shadow-emerald-500/20 border-2 border-emerald-400/20"
                >
-                  <CloudDownload className="w-5 h-5" /> Execute Egress Protocol
+                  <Download className="w-5 h-5" /> Execute Egress Protocol
                </button>
             </div>
           </div>
