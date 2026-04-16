@@ -405,7 +405,7 @@ export function buildDashboardSheetData(): DashboardRangeData[] {
   ];
 }
 
-export class GoogleSheetsService {
+export class SheetsService {
   private sheets: sheets_v4.Sheets | null = null;
   private spreadsheetId: string | null;
   private logger: ILogger;
@@ -1396,3 +1396,5 @@ export class GoogleSheetsService {
     return sheet?.properties?.sheetId ?? null;
   }
 }
+
+export { SheetsService as GoogleSheetsService };

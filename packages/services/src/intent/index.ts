@@ -38,7 +38,7 @@ export class IntentDetector {
     private dataExtraction: DataExtractionService,
     private ticketService: TicketService,
     private slaService: SLAService,
-    private sheetsService: SheetsService,
+    private sheetsService: SheetsService | null,
     logger: ILogger
   ) {
     this.logger = logger.child({ service: 'intent-detector' });

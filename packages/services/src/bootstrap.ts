@@ -79,7 +79,7 @@ import { FlowEngine } from './flow';
 import { EventBus } from './events';
 import { I18n } from './i18n';
 import { Scheduler, createMaintenanceTasks } from './scheduler';
-import { GoogleSheetsService } from './sheets';
+import { SheetsService } from './sheets';
 import { TaskManagerService } from './task-manager';
 import { ChecklistService } from './checklist';
 import { DocumentationService } from './documentation';
@@ -124,7 +124,7 @@ export interface BotServices {
   flowEngine: FlowEngine;
   eventBus: EventBus;
   i18n: I18n;
-  sheetsService: GoogleSheetsService | null;
+  sheetsService: SheetsService | null;
   taskManager: TaskManagerService;
   checklistService: ChecklistService;
   documentationService: DocumentationService;
@@ -263,7 +263,7 @@ export async function createBotServices(
   const i18n = new I18n();
 
   // Google Sheets
-  let sheetsService: GoogleSheetsService | null = null;
+  let sheetsService: SheetsService | null = null;
   if (config.GOOGLE_SHEETS_ENABLED === 'true' && config.GOOGLE_SHEETS_CREDENTIALS) {
     if (!config.GOOGLE_SHEETS_SPREADSHEET_ID) {
       logger.warn('Google Sheets is enabled but GOOGLE_SHEETS_SPREADSHEET_ID is missing; sheet sync will be disabled');
@@ -277,7 +277,7 @@ export async function createBotServices(
     if (options.sheetsTicketsOnly) {
       sheetsOpts.ticketsOnly = true;
     }
-    sheetsService = new GoogleSheetsService(sheetsOpts as any, logger);
+    sheetsService = new SheetsService(sheetsOpts as any, logger);
     if (sheetsService.isAvailable()) {
       sheetsService.initializeSheets().catch((err) => logger.error('Sheets init failed', err));
       logger.info('Google Sheets integration enabled');
