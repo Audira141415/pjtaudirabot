@@ -113,8 +113,8 @@ export default function FlowsPage() {
             <GitBranch className="w-8 h-8 text-brand-400" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Logic Architect</h1>
-            <p className="text-slate-400 text-sm">Design and deploy autonomous conversation workflows</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Logic Architect</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Design and deploy autonomous conversation workflows</p>
           </div>
         </div>
         <button
@@ -126,10 +126,10 @@ export default function FlowsPage() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="glass-dark p-8 rounded-3xl mb-8 border-indigo-500/30 animate-slide-in">
+        <form onSubmit={handleCreate} className="glass-dark p-8 rounded-3xl mb-8 border border-indigo-500/30 animate-slide-in">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-white uppercase tracking-tight">Workflow Configuration</h2>
-            <button type="button" onClick={() => setShowForm(false)} className="text-slate-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tight">Workflow Configuration</h2>
+            <button type="button" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"><X className="w-6 h-6" /></button>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -139,7 +139,7 @@ export default function FlowsPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="e.g. NOC Incident Triage"
-                className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-white transition-all"
+                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-slate-900 dark:text-white transition-all placeholder:text-slate-400"
                 required
               />
             </div>
@@ -149,7 +149,7 @@ export default function FlowsPage() {
                 value={form.trigger}
                 onChange={(e) => setForm({ ...form, trigger: e.target.value })}
                 placeholder="e.g. !triage"
-                className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-white font-mono transition-all"
+                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-slate-900 dark:text-white font-mono transition-all placeholder:text-slate-400"
                 required
               />
             </div>
@@ -160,29 +160,29 @@ export default function FlowsPage() {
             <input
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-white transition-all"
+              className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl px-4 py-3 focus:border-brand-500 outline-none text-slate-900 dark:text-white transition-all placeholder:text-slate-400"
             />
           </div>
 
-          <div className="mb-8 p-6 bg-slate-900/60 rounded-3xl border border-slate-800/50">
-            <label className="text-xs font-bold text-slate-400 uppercase mb-4 block">Sequence Definition</label>
+          <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900/60 rounded-3xl border border-slate-200 dark:border-slate-800/50">
+            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-4 block">Sequence Definition</label>
             <div className="space-y-4">
               {form.steps.map((step, idx) => (
-                <div key={idx} className="flex items-start gap-4 p-4 bg-slate-800/40 rounded-2xl border border-slate-700/30 group">
-                  <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-900 border border-slate-700 text-brand-400 font-mono text-xs">{idx + 1}</span>
+                <div key={idx} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/30 group">
+                  <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-brand-600 dark:text-brand-400 font-mono text-xs">{idx + 1}</span>
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-3">
                       <input
                         value={step.prompt}
                         onChange={(e) => updateStep(idx, 'prompt', e.target.value)}
                         placeholder="Interrogation prompt..."
-                        className="w-full bg-transparent border-b border-slate-700 focus:border-brand-500 py-1 text-sm outline-none text-slate-200 transition-colors"
+                        className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 focus:border-brand-500 py-1 text-sm outline-none text-slate-900 dark:text-slate-200 transition-colors"
                       />
                     </div>
                     <select
                       value={step.expectedType}
                       onChange={(e) => updateStep(idx, 'expectedType', e.target.value)}
-                      className="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-300 outline-none"
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-600 dark:text-slate-300 outline-none"
                     >
                       <option value="text">Textual</option>
                       <option value="number">Numeric</option>
@@ -198,7 +198,7 @@ export default function FlowsPage() {
                 </div>
               ))}
             </div>
-            <button type="button" onClick={addStep} className="mt-4 text-xs font-bold text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 uppercase tracking-tighter ml-12">
+            <button type="button" onClick={addStep} className="mt-4 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 transition-colors flex items-center gap-1 uppercase tracking-tighter ml-12">
               <Plus className="w-3 h-3" /> Append Protocol Step
             </button>
           </div>
@@ -227,7 +227,7 @@ export default function FlowsPage() {
         ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             {flows.map((flow) => (
-              <div key={flow.id} className="glass-dark rounded-3xl border-slate-800 overflow-hidden group hover:border-brand-500/30 transition-all flex flex-col">
+              <div key={flow.id} className="glass-dark rounded-3xl border-slate-200 dark:border-slate-800 overflow-hidden group hover:border-brand-500/30 transition-all flex flex-col">
                 <div className="p-8 pb-4">
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div 
@@ -235,8 +235,8 @@ export default function FlowsPage() {
                       onClick={() => setExpanded(expanded === flow.id ? null : flow.id)}
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="text-xl font-bold text-white group-hover/title:text-brand-400 transition-colors uppercase tracking-tight">{flow.name}</h3>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20 font-mono">{flow.trigger}</span>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white group-hover/title:text-brand-600 dark:group-hover/title:text-brand-400 transition-colors uppercase tracking-tight">{flow.name}</h3>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 font-mono">{flow.trigger}</span>
                       </div>
                       {flow.description && <p className="text-sm text-slate-500 leading-relaxed">{flow.description}</p>}
                     </div>
@@ -249,20 +249,20 @@ export default function FlowsPage() {
                         }`}
                         title={flow.isActive ? 'Suspend Cluster' : 'Activate Cluster'}
                       >
-                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow trasform transition-all duration-300 ${flow.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transform transition-all duration-300 ${flow.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                       <button
                         onClick={() => handleDelete(flow)}
-                        className="p-2 text-slate-600 hover:text-rose-500 transition-colors"
+                        className="p-2 text-slate-400 hover:text-rose-500 transition-colors"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 text-xs font-bold text-slate-500 uppercase tracking-widest mt-6">
-                    <span className="flex items-center gap-1"><Circle className="w-2 h-2 fill-brand-500 text-brand-500" /> {flow.steps?.length ?? 0} Nodes</span>
-                    <span className="flex items-center gap-1"><Circle className="w-2 h-2 fill-slate-700 text-slate-702" /> Deployment: Active</span>
+                  <div className="flex items-center gap-4 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-6">
+                    <span className="flex items-center gap-1"><Circle className="w-2 h-2 fill-brand-600 dark:fill-brand-500 text-brand-600 dark:text-brand-500" /> {flow.steps?.length ?? 0} Nodes</span>
+                    <span className="flex items-center gap-1"><Circle className="w-2 h-2 fill-slate-300 dark:fill-slate-700 text-slate-400 dark:text-slate-702" /> Deployment: Active</span>
                   </div>
                 </div>
 
@@ -272,12 +272,12 @@ export default function FlowsPage() {
                       {flow.steps && flow.steps.map((step, idx) => (
                         <div key={step.id} className="flex items-center shrink-0">
                           <div className="relative group/node text-center w-28">
-                             <div className="w-10 h-10 mx-auto rounded-xl bg-slate-800 border-2 border-slate-700 group-hover/node:border-brand-500 flex items-center justify-center text-xs font-bold text-slate-400 group-hover/node:text-brand-400 transition-all shadow-lg glow-brand/0 group-hover/node:glow-brand/30">
+                             <div className="w-10 h-10 mx-auto rounded-xl bg-slate-50 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 group-hover/node:border-brand-500 flex items-center justify-center text-xs font-bold text-slate-500 dark:text-slate-400 group-hover/node:text-brand-600 dark:group-hover/node:text-brand-400 transition-all shadow-lg glow-brand/0 group-hover/node:glow-brand/30">
                                 {idx + 1}
                              </div>
                              <div className="mt-3">
-                               <p className="text-[10px] text-white font-bold opacity-0 group-hover/node:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis px-2 uppercase tracking-tighter">Step Output</p>
-                               <p className="text-[9px] text-slate-500 uppercase font-black tracking-widest">{step.expectedType}</p>
+                               <p className="text-[10px] text-slate-900 dark:text-white font-bold opacity-0 group-hover/node:opacity-100 transition-opacity whitespace-nowrap overflow-hidden text-ellipsis px-2 uppercase tracking-tighter">Step Output</p>
+                               <p className="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-black tracking-widest">{step.expectedType}</p>
                              </div>
                           </div>
                           {idx < flow.steps.length - 1 && (

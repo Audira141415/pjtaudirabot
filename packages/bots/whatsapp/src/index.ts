@@ -179,10 +179,15 @@ async function main(): Promise<void> {
   const sendToAdminUsers = async (message: string): Promise<number> => {
     const admins = await db.user.findMany({
       where: { role: 'ADMIN', platform: 'WHATSAPP' },
-      select: { id: true, platformUserId: true },
+      select: { id: true, platformUserId: true, settings: true },
     });
     let sent = 0;
     for (const admin of admins) {
+      const settings = (admin.settings as any) || {};
+      if (settings.notifications === false) {
+        logger.info(`Skipping admin DM to ${admin.id} (notifications disabled in settings)`);
+        continue;
+      }
       try {
         await connection.sendMessage(admin.platformUserId, message);
         sent += 1;
@@ -239,9 +244,13 @@ async function main(): Promise<void> {
 
   // ── Scheduled Reports & Maintenance ──
   setupMaintenanceScheduler(services, infra, async (msgs) => {
-    // 1. WhatsApp admins
+    // 1. WhatsApp Notification (Prefer group broadcast)
     for (const msg of msgs) {
-      await sendToAdminUsers(msg);
+      if (notifier.isConfigured()) {
+        await notifier.broadcast(msg);
+      } else {
+        await sendToAdminUsers(msg);
+      }
     }
     // 2. Telegram NOC (cross-platform forwarding fallback)
     if (telegramNotifier.isConfigured()) {
@@ -512,7 +521,11 @@ async function main(): Promise<void> {
           '• !logs <service>',
         ].join('\n');
 
-        await sendToAdminUsers(message);
+        if (notifier.isConfigured()) {
+          await notifier.broadcast(message);
+        } else {
+          await sendToAdminUsers(message);
+        }
         // 6 hour dedup — don't repeat the same fingerprint for a long time
         await redis.set(dedupeKey, fingerprint, { EX: 6 * 3600 });
       },

@@ -105,9 +105,9 @@ function severityClass(severity?: string): string {
 
 function Metric({ label, value, tone }: { label: string; value: string | number; tone: string }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${tone} dark:bg-slate-950/50 dark:border-white/5`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{value}</p>
+    <div className={`rounded-2xl border p-4 shadow-sm ${tone} dark:bg-slate-900/40 dark:border-white/5`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -193,9 +193,9 @@ export default function OperationalOverview({
               </h4>
               <div className="space-y-2">
                 {topPriorities.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
-                    <span className="text-sm font-medium text-slate-600">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -206,9 +206,9 @@ export default function OperationalOverview({
               </h4>
               <div className="space-y-2">
                 {topCategories.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 border border-slate-100 transition-colors hover:bg-slate-100">
-                    <span className="text-sm font-medium text-slate-600 truncate">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">{item.name}</span>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -231,19 +231,19 @@ export default function OperationalOverview({
             {slaItemsExpanded && (
               <div className="grid grid-cols-1 gap-3">
                 {urgentSla.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md hover:border-slate-200">
+                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-900/40 shadow-sm transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-white/10">
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col">
-                        <span className="font-mono text-[11px] font-bold text-indigo-600 underline decoration-indigo-200">{item.ticket?.ticketNumber ?? '-'}</span>
-                        <span className="text-sm font-bold text-slate-800 mt-0.5">{item.ticket?.customer ?? 'N/A'}</span>
+                        <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400 underline decoration-indigo-200 dark:decoration-indigo-900">{item.ticket?.ticketNumber ?? '-'}</span>
+                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">{item.ticket?.customer ?? 'N/A'}</span>
                       </div>
                       <PriorityBadge priority={item.ticket?.priority ?? 'MEDIUM'} />
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-bold ${item.responseBreached || item.resolutionBreached ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      <p className={`text-sm font-bold ${item.responseBreached || item.resolutionBreached ? 'text-rose-600 dark:text-rose-500' : 'text-emerald-600 dark:text-emerald-500'}`}>
                         {formatHoursLeft(item.resolutionDeadline)}
                       </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{formatDate(item.resolutionDeadline)}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{formatDate(item.resolutionDeadline)}</p>
                     </div>
                   </div>
                 ))}
@@ -254,54 +254,54 @@ export default function OperationalOverview({
 
         {/* Right Column: Alerts & Response (Incidents/Escalations) */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          <article className="flex flex-col rounded-[32px] border border-slate-200 dark:border-white/10 bg-slate-900 dark:bg-slate-950 p-7 text-white shadow-xl shadow-slate-200/50 dark:shadow-none">
+          <article className="flex flex-col rounded-[32px] border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 p-7 text-slate-900 dark:text-white shadow-sm dark:shadow-none">
              <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30">
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 ring-1 ring-rose-100 dark:ring-rose-500/30 shadow-sm dark:shadow-none">
                   <Bell className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Signal Response</h3>
-                  <p className="text-sm text-slate-400">{activeAlerts.length} Attention Required</p>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Signal Response</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{activeAlerts.length} Attention Required</p>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 grid grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
+              <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-4 transition-colors hover:bg-slate-100 dark:hover:bg-white/10">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Incidents</p>
-                <p className="mt-2 text-3xl font-bold">{openIncidents.length}</p>
+                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{openIncidents.length}</p>
               </div>
-              <div className="rounded-2xl bg-white/5 border border-white/10 p-4 transition-colors hover:bg-white/10">
+              <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-4 transition-colors hover:bg-slate-100 dark:hover:bg-white/10">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Escalations</p>
-                <p className="mt-2 text-3xl font-bold text-rose-500">{openEscalations.length}</p>
+                <p className="mt-2 text-3xl font-bold text-rose-600 dark:text-rose-500">{openEscalations.length}</p>
               </div>
             </div>
 
             {/* Signal Feed (Incidents & Alerts Combined) */}
             <div className="mt-6 space-y-3">
                {openIncidents.slice(0, 1).map((incident) => (
-                  <div key={incident.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden group transition-all hover:bg-white/10">
+                  <div key={incident.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 relative overflow-hidden group transition-all hover:bg-slate-100 dark:hover:bg-white/10">
                     <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
                     <div className="flex items-center justify-between mb-2">
                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${severityClass(incident.severity)}`}>
                          INCIDENT: {incident.severity}
                        </span>
                     </div>
-                    <p className="text-sm font-bold text-slate-100">{incident.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{incident.description ?? 'Active incident tracking'}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{incident.title}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{incident.description ?? 'Active incident tracking'}</p>
                   </div>
                ))}
                {activeAlerts.slice(0, 1).map((alert) => (
-                  <div key={alert.id} className="p-4 rounded-2xl bg-white/5 border border-white/10 relative overflow-hidden transition-all hover:bg-white/10">
+                  <div key={alert.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 relative overflow-hidden transition-all hover:bg-slate-100 dark:hover:bg-white/10">
                     <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
                     <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-400`}>
+                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400`}>
                          ALERT: {alert.severity}
                        </span>
                     </div>
-                    <p className="text-sm font-bold text-slate-100">{alert.title}</p>
-                    <p className="mt-1 text-xs text-slate-400 line-clamp-1">{alert.message ?? alert.rule?.name}</p>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{alert.title}</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{alert.message ?? alert.rule?.name}</p>
                   </div>
                ))}
             </div>

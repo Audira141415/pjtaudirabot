@@ -11,44 +11,75 @@ body {
     radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.03) 0px, transparent 50%),
     radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.03) 0px, transparent 50%);
   background-attachment: fixed;
+  overflow-x: hidden;
 }
 
-/* Scrollbar defaults (Light) */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+/* --- ULTIMATE UI 2.0 CORE ANIMATIONS --- */
 
-/* Toast animation fallback */
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
-}
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(100%) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(100%) rotate(-360deg); }
 }
 
-/* Design System Utilities */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.3)); }
+  50% { filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.6)); }
+}
+
+/* --- ULTIMATE DESIGN SYSTEM --- */
+
 @layer components {
   .glass {
     @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)];
   }
-  .glass-dark {
-    @apply bg-slate-900/40 backdrop-blur-xl border border-white/5 shadow-2xl;
+  
+  .glass-ultimate {
+    @apply bg-white/40 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/20 dark:border-white/5 
+           shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.4)]
+           ring-1 ring-white/20 dark:ring-white/5;
   }
-  .glow-brand {
-    box-shadow: 0 0 20px -5px theme('colors.brand.500');
+
+  .scanline-overlay {
+    @apply pointer-events-none fixed inset-0 z-[9999] opacity-[0.02] dark:opacity-[0.03];
+    background: linear-gradient(to bottom, transparent 50%, #000 50%);
+    background-size: 100% 4px;
+    animation: scanline 20s linear infinite;
   }
-  .glow-brand-strong {
-    box-shadow: 0 0 40px -10px theme('colors.brand.400');
+
+  /* Border Beam Effect */
+  .border-beam {
+    @apply absolute inset-[-2px] rounded-inherit pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-700;
   }
-  .card-premium {
-    @apply transition-all duration-300 hover:scale-[1.01] hover:shadow-xl hover:border-indigo-500/20 active:scale-[0.99];
+  
+  .border-beam::after {
+    content: '';
+    @apply absolute w-[150%] h-[150%] left-[-25%] top-[-25%];
+    background: conic-gradient(from 0deg, transparent 20%, theme('colors.indigo.500') 50%, transparent 80%);
+    animation: orbit 4s linear infinite;
   }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-emerald-500;
+
+  .text-ultimate-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-950 via-indigo-600 to-slate-950 dark:from-white dark:via-indigo-400 dark:to-white;
   }
 }
+
+/* Selection aesthetics */
+::selection {
+  @apply bg-indigo-500/30 text-indigo-900 dark:text-white;
+}
+
+/* Scrollbar Refinement (Ultimate) */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { @apply bg-transparent; }
+::-webkit-scrollbar-thumb { 
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-2 border-transparent bg-clip-content; 
+}
+::-webkit-scrollbar-thumb:hover { @apply bg-indigo-500/50; }
 
 /* Dark mode overrides */
 @layer base {
@@ -58,6 +89,4 @@ body {
       radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
       radial-gradient(at 100% 100%, rgba(2, 132, 199, 0.05) 0px, transparent 50%);
   }
-  .dark ::-webkit-scrollbar-thumb { background: #1e293b; }
-  .dark ::-webkit-scrollbar-thumb:hover { background: #334155; }
 }

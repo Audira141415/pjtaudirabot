@@ -1,182 +1,130 @@
-import { useEffect, useState, useCallback } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { useEffect, useState } from 'react';
+import { api, SystemHealthData } from '../lib/api';
 import { 
-  ShieldCheck, 
-  Cpu, 
-  Database, 
-  RefreshCw, 
-  Clock, 
-  Settings, 
-  QrCode, 
-  Zap,
-  HardDrive,
-  Activity,
-  Terminal,
-  ShieldAlert,
-  BrainCircuit,
-  TrendingDown,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  Trash2,
+  ShieldCheck, RefreshCw, Trash2, Database, Zap, Cpu, 
+  Activity, Settings, QrCode, BrainCircuit, AlertTriangle,
+  Terminal, TrendingUp, TrendingDown, Info, HardDrive, ShieldAlert,
+  CheckCircle2, Orbit, Layers, Fingerprint, Radio, Target, Smartphone,
+  Command, PlusCircle, Unplug, ShieldX, XCircle, Search
 } from 'lucide-react';
-import { api } from '../lib/api';
+import { QRCodeSVG } from 'qrcode.react';
+import { toast } from '../components/Toast';
 
-interface SystemComponent {
-  name: string;
-  status: 'online' | 'offline' | 'degraded' | 'error';
-  latency?: number;
-  details?: string;
-  lastCheck: string;
-  meta?: {
-    platform?: string;
-    connectionStatus?: string;
-    lastConnectedAt?: string | null;
-    ready?: boolean;
-    qr?: string;
-  };
-}
+const PURGE_OPTIONS = [
+  { id: 'tickets', label: 'WIPE_TICKET_LEDGER', icon: <Trash2 className="w-5 h-5" />, desc: 'Permanently purge all support tickets and resolution logs.', danger: true },
+  { id: 'users', label: 'RESET_USER_POOL', icon: <Fingerprint className="w-5 h-5" />, desc: 'Terminate all user identity records and interaction history.', danger: true },
+  { id: 'agents', label: 'FLUSH_AI_CONTEXT', icon: <Cpu className="w-5 h-5" />, desc: 'Reset AI agent configurations and short-term context memory.', danger: false },
+  { id: 'logs', label: 'CLEAR_SYSTEM_LOGS', icon: <Activity className="w-5 h-5" />, desc: 'Purge historical performance telemetry and error archives.', danger: false },
+];
 
-interface SystemMetrics {
-  memoryUsedPct: number;
-  memoryUsedGB: number;
-  memoryTotalGB: number;
-  cpuCores: number;
-  loadAvg1m: number;
-  uptime: number;
-  activeSessions: number;
-  recentErrors: number;
-  openAlerts: number;
+interface Prediction {
+  id: string;
+  type: string;
+  location: string;
+  probability: number;
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  reason: string;
+  recommendation: string;
 }
 
 const AdminHub = () => {
-  const [health, setHealth] = useState<{ components: SystemComponent[], metrics: SystemMetrics, overallStatus: string } | null>(null);
+  const [health, setHealth] = useState<SystemHealthData | null>(null);
+  const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [showQr, setShowQr] = useState(false);
-  const [qrToken, setQrToken] = useState<string | null>(null);
   const [purging, setPurging] = useState(false);
+  const [qrToken, setQrToken] = useState<string | null>(null);
+  const [showQr, setShowQr] = useState(false);
   const [showPurgeModal, setShowPurgeModal] = useState(false);
   const [selectedModules, setSelectedModules] = useState<string[]>([]);
-  const [predictions, setPredictions] = useState<any[]>([]);
 
-  const PURGE_OPTIONS = [
-    { id: 'tickets', label: 'Tickets & SLA', desc: 'Semua tiket, history, dan data SLA tracking.', icon: <Terminal className="w-4 h-4" /> },
-    { id: 'maintenance', label: 'PM Schedules', desc: 'Jadwal Preventive Maintenance & Evidence.', icon: <Activity className="w-4 h-4" /> },
-    { id: 'tasks', label: 'Tasks', desc: 'Semua daftar tugas user.', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { id: 'incidents', label: 'Incidents', desc: 'Data kejadian/insiden jaringan.', icon: <AlertTriangle className="w-4 h-4" /> },
-    { id: 'broadcasts', label: 'Broadcasts', desc: 'Daftar pesan siaran dan tanda terima.', icon: <Zap className="w-4 h-4" /> },
-    { id: 'logs', label: 'Audit Logs', desc: 'Catatan aktivitas sistem dan user.', icon: <Settings className="w-4 h-4" /> },
-    { id: 'reminders', label: 'Reminders', desc: 'Semua pengingat jadwal bot.', icon: <Clock className="w-4 h-4" /> },
-    { id: 'notes', label: 'Notes', desc: 'Catatan/memo user.', icon: <Info className="w-4 h-4" /> },
-  ];
+  const fetchHealth = async () => {
+    try {
+      const res = await api.getSystemHealth();
+      setHealth(res.data);
+      if (res.data.components.find(c => c.name === 'WhatsApp Bot' && c.status === 'offline')) {
+        const qrRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/whatsapp/qr`);
+        const qrData = await qrRes.json();
+        setQrToken(qrData.token);
+      }
+    } catch (err) {
+       toast({ type: 'warning', title: 'TELEMETRY_SYNC_WARNING', message: 'Unable to synchronize real-time system health.' });
+    }
+  };
 
-  const handleModularPurge = async () => {
-    if (selectedModules.length === 0) return;
-    if (!confirm(`Hapus permanen data: ${selectedModules.length} kategori terpilih? Aksi ini tidak dapat dibatalkan.`)) return;
-    
+  const fetchInsights = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/insights/predictive`);
+      const result = await res.json();
+      setPredictions(result.data || []);
+    } catch (err) {
+      console.error('Failed to fetch AI insights');
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await Promise.all([fetchHealth(), fetchInsights()]);
+      setLoading(false);
+    };
+    init();
+    const interval = setInterval(fetchHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleManualSync = async () => {
+    setSyncing(true);
+    toast({ type: 'info', title: 'MANUAL_SYNC_INITIALIZED', message: 'Triggering global data synchronization protocol...' });
+    try {
+      await api.manualSync();
+      await fetchHealth();
+      toast({ type: 'success', title: 'SYNC_PROTOCOL_SUCCESS', message: 'All core services and ledgers have been synchronized.' });
+    } catch (err) {
+      toast({ type: 'error', title: 'SYNC_FAILURE', message: 'Remote procedure call was rejected by the master node.' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCleanupSchedules = async () => {
+     if (!confirm('Cleanup invalid PM schedules? This will recover database buffer space.')) return;
+     try {
+        await api.cleanupInvalidSchedules();
+        toast({ type: 'success', title: 'LOGIC_BUFFER_REPAIRED', message: 'Invalid scheduling fragments have been purged.' });
+     } catch (err) {
+        toast({ type: 'error', title: 'CLEANUP_FAILURE', message: 'Could not communicate with the scheduling engine.' });
+     }
+  };
+
+  const handlePurgeResync = async () => {
+    if (!confirm('CAUTION: This will wipe PM Sheets & resync current schedule metadata. Proceed with purge?')) return;
     setPurging(true);
     try {
-      const res = await api.purgeModularData(selectedModules);
-      alert(res.message);
-      setShowPurgeModal(false);
-      setSelectedModules([]);
+      await api.purgeAndResyncPM();
+      toast({ type: 'success', title: 'PM_RESET_EXECUTED', message: 'Maintenance sheets have been reset and resynced with core metadata.' });
       fetchHealth();
     } catch (err) {
-      alert('Gagal membersihkan data modular.');
+      toast({ type: 'error', title: 'PURGE_FAILURE', message: 'An anomaly occurred during the PM resync protocol.' });
     } finally {
       setPurging(false);
     }
   };
 
   const toggleModule = (id: string) => {
-    setSelectedModules(prev => 
-      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
-    );
+    setSelectedModules(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
   };
 
-  const fetchHealth = useCallback(async () => {
-    try {
-      const res = await api.getSystemHealth();
-      setHealth(res.data);
-      
-      // Extract QR from WhatsApp component if available
-      const waBot = res.data.components.find((c: any) => c.name.includes('WhatsApp'));
-      const meta = waBot?.meta as any;
-      if (meta?.qr) {
-        setQrToken(meta.qr);
-      } else {
-        setQrToken(null);
-      }
-    } catch (err) {
-      console.error('Failed to fetch system health:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchInsights = useCallback(async () => {
-    try {
-      const res = await api.getPredictiveInsights();
-      setPredictions(res.data);
-    } catch (err) {
-      console.error('Failed to fetch insights:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchHealth();
-    fetchInsights();
-    // Faster poll when QR is shown to catch the sequence
-    const intervalTime = showQr ? 5000 : 30000;
-    const interval = setInterval(() => {
-      fetchHealth();
-      fetchInsights();
-    }, intervalTime);
-    return () => clearInterval(interval);
-  }, [fetchHealth, fetchInsights, showQr]);
-
-  const handleManualSync = async () => {
-    setSyncing(true);
-    try {
-      const res = await api.syncMaintenanceToSheets();
-      alert(res.message || 'Synchronization started successfully!');
-    } catch (err) {
-      console.error('Sync failed:', err);
-      alert('Failed to start sync');
-    } finally {
-      setSyncing(false);
-      fetchHealth();
-    }
-  };
-
-  const handlePurgeResync = async () => {
-    if (!confirm('This will DELETE all current rows in the GSheet tab and reload them from the DB. Continue?')) return;
+  const handleModularPurge = async () => {
+    if (!confirm(`CRITICAL: You are about to purge ${selectedModules.length} selected components. This action is immutable. Proceed?`)) return;
     setPurging(true);
     try {
-      const res = await api.clearAndResyncSheets();
-      alert(res.message || 'Sheet purged and resynced successfully!');
+      await api.executePurge({ modules: selectedModules });
+      toast({ type: 'success', title: 'PURGE_PROTOCOL_COMPLETE', message: `${selectedModules.length} functional data streams have been terminated.` });
+      setSelectedModules([]);
+      setShowPurgeModal(false);
     } catch (err) {
-      console.error('Purge failed:', err);
-      alert('Failed to purge and resync');
-    } finally {
-      setPurging(false);
-      fetchHealth();
-    }
-  };
-
-
-
-  const handleCleanupSchedules = async () => {
-    if (!confirm('Hapus semua jadwal PM yang tidak memiliki lokasi? Ini biasanya data sampah hasil testing.')) return;
-    setPurging(true);
-    try {
-      const res = await api.bulkDeleteMaintenanceSchedules({ filter: 'no-location' });
-      alert(res.message || 'Cleanup completed!');
-    } catch (err) {
-      console.error('Cleanup failed:', err);
-      alert('Failed to cleanup schedules');
+      toast({ type: 'error', title: 'TERMINATION_FAILURE', message: 'Purge operation failed to reach technical completion.' });
     } finally {
       setPurging(false);
       fetchHealth();
@@ -184,67 +132,75 @@ const AdminHub = () => {
   };
 
   if (loading) return (
-    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-      <div className="animate-spin p-2 bg-indigo-500/10 rounded-full border-t-2 border-indigo-500 w-12 h-12" />
-      <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">Synchronizing Core Services...</p>
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
+      <div className="w-14 h-14 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" />
+      <span className="text-[10px] font-black text-slate-400 dark:text-indigo-400 uppercase tracking-[0.5em] animate-pulse italic font-mono">Synchronizing Master Core Services...</span>
     </div>
   );
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-12 pb-16 animate-in fade-in slide-in-from-bottom-12 duration-1000">
       {/* Selective Purge Modal */}
       {showPurgeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-950/90 backdrop-blur-xl animate-in fade-in duration-500">
+          <div className="bg-white dark:bg-slate-900 rounded-[56px] w-full max-w-3xl overflow-hidden shadow-2xl border-2 border-rose-500/20 relative group/modal">
+             <div className="absolute -top-32 -right-32 w-80 h-80 bg-rose-600/5 blur-[120px] pointer-events-none" />
+             
+            <div className="p-12 border-b-2 border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/50 relative z-10">
               <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selective Purge Center</h2>
-                <p className="text-slate-500 text-sm font-medium">Pilih kategori data yang ingin dihapus permanen dari Database & GSheets.</p>
+                <div className="flex items-center gap-3 mb-2">
+                   <ShieldX className="w-6 h-6 text-rose-600" />
+                   <h2 className="text-4xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic">Selective Purge Center</h2>
+                </div>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-black uppercase tracking-widest font-mono italic">Pilih kategori data untuk terminasi permanen dari Database & GSheets.</p>
               </div>
-              <button onClick={() => setShowPurgeModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <Settings className="w-6 h-6 text-slate-400 rotate-45" />
+              <button 
+                 onClick={() => setShowPurgeModal(false)} 
+                 className="w-14 h-14 bg-white dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all active:scale-90"
+              >
+                <XCircle className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto">
+            <div className="p-12 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[50vh] overflow-y-auto bg-white dark:bg-slate-900 custom-scrollbar relative z-10">
               {PURGE_OPTIONS.map((opt) => (
                 <div 
                   key={opt.id}
                   onClick={() => toggleModule(opt.id)}
-                  className={`p-5 rounded-[24px] border-2 cursor-pointer transition-all ${
+                  className={`p-8 rounded-[40px] border-2 cursor-pointer transition-all ${
                     selectedModules.includes(opt.id) 
-                      ? 'border-rose-500 bg-rose-50' 
-                      : 'border-slate-100 hover:border-slate-200 bg-white'
+                      ? 'border-rose-600 bg-rose-50/50 dark:bg-rose-600/10 shadow-[inner_0_0_20px_rgba(225,29,72,0.1)] scale-[0.98]' 
+                      : 'border-slate-100 dark:border-slate-800/80 hover:border-indigo-500/30 bg-white dark:bg-slate-950/40 hover:bg-slate-50 dark:hover:bg-slate-900 shadow-sm'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 rounded-xl ${selectedModules.includes(opt.id) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${selectedModules.includes(opt.id) ? 'bg-rose-600 text-white shadow-xl shadow-rose-600/30 rotate-6' : 'bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-600 border border-slate-100 dark:border-slate-800'}`}>
                       {opt.icon}
                     </div>
-                    <span className={`font-bold ${selectedModules.includes(opt.id) ? 'text-rose-700' : 'text-slate-700'}`}>{opt.label}</span>
+                    <span className={`text-sm font-black uppercase tracking-widest italic font-mono ${selectedModules.includes(opt.id) ? 'text-rose-600' : 'text-slate-900 dark:text-white'}`}>{opt.label}</span>
                   </div>
-                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{opt.desc}</p>
+                  <p className={`text-[11px] font-black uppercase tracking-tighter leading-relaxed italic ${selectedModules.includes(opt.id) ? 'text-rose-900/60 dark:text-rose-400/60' : 'text-slate-400 dark:text-slate-600'}`}>{opt.desc}</p>
                 </div>
               ))}
             </div>
 
-            <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-400 dark:text-slate-500">
-                {selectedModules.length} CATEGORIES SELECTED
+            <div className="p-12 bg-slate-50 dark:bg-slate-950/80 border-t-2 border-slate-100 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+              <div className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.4em] italic font-mono flex items-center gap-3">
+                <Target className="w-5 h-5 text-rose-600" /> {selectedModules.length} CATEGORIES_QUEUED_FOR_TERMINATION
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-4 w-full md:w-auto">
                 <button 
                   onClick={() => setShowPurgeModal(false)}
-                  className="px-6 py-3 text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white transition-colors"
+                  className="flex-1 md:flex-none px-10 py-5 text-[11px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-widest hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
-                  Batal
+                  ABORT_ACTION
                 </button>
                 <button 
                   onClick={handleModularPurge}
                   disabled={selectedModules.length === 0 || purging}
-                  className="px-8 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-300 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95"
+                  className="flex-1 md:flex-none px-12 py-5 bg-rose-600 hover:bg-rose-700 disabled:opacity-30 text-white rounded-[24px] font-black uppercase text-[11px] tracking-[0.3em] transition-all shadow-2xl shadow-rose-600/40 active:scale-95 border-2 border-rose-400/20"
                 >
-                  {purging ? 'Purging...' : 'Execute Purge'}
+                  {purging ? 'PROTO_EXECUTING...' : 'EXECUTE_PURGE_SEQUENCE'}
                 </button>
               </div>
             </div>
@@ -252,103 +208,102 @@ const AdminHub = () => {
         </div>
       )}
 
-      {/* Header Panel */}
-      <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl relative overflow-hidden transition-all">
-        <div className="absolute top-0 right-0 p-12 opacity-5 dark:opacity-10 pointer-events-none">
-          <ShieldCheck className="w-64 h-64 text-indigo-400" />
+      {/* Primary Control Hub Panel */}
+      <div className="bg-white dark:bg-slate-950/40 rounded-[64px] p-12 border-2 border-slate-100 dark:border-slate-800/80 shadow-sm dark:shadow-none relative overflow-hidden transition-all hover:border-indigo-500/20 backdrop-blur-3xl group/hub">
+        <div className="absolute top-0 right-0 p-16 opacity-[0.03] group-hover/hub:opacity-10 pointer-events-none transition-opacity">
+          <ShieldCheck className="w-[400px] h-[400px] text-indigo-500" />
         </div>
         
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 font-primary">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-10">
           <div>
-             <div className="flex items-center gap-3 mb-2">
-                <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${health?.overallStatus === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                <h1 className="text-3xl font-black text-slate-950 dark:text-white tracking-tight italic">Super Admin Hub</h1>
+             <div className="flex items-center gap-4 mb-4">
+                <div className={`w-4 h-4 rounded-full animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.8)] ${health?.overallStatus === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500 shadow-rose-500/50'}`} />
+                <h1 className="text-5xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic leading-none underline decoration-indigo-600/30 underline-offset-[16px] decoration-8">Super Admin Hub</h1>
              </div>
-             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md font-medium">AudiraBot Central Nervous System. Monitor core services and manage bot connectivity from here.</p>
+             <p className="text-slate-500 dark:text-slate-400 text-base max-w-xl font-medium leading-relaxed mt-4 drop-shadow-sm">AudiraBot Central Nervous System. Monitor global core services health and manage bot connectivity protocols from this master terminal.</p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-4">
              <button 
                 onClick={handleManualSync}
                 disabled={syncing || purging}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-white hover:text-indigo-600 border-2 border-transparent hover:border-indigo-600 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95 text-sm"
+                className="flex items-center gap-4 px-10 py-5 bg-indigo-600 hover:scale-[1.05] disabled:opacity-50 text-white rounded-[28px] font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-2xl shadow-indigo-600/40 active:scale-95 border-2 border-indigo-400/20"
              >
-                <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Syncing...' : 'Sync All Data'}
-             </button>
-             <button 
-                onClick={handlePurgeResync}
-                disabled={syncing || purging}
-                title="Reset Maintenance Sheets"
-                className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-bold transition-all border border-slate-200 dark:border-rose-500/30 hover:border-rose-500 active:scale-95 text-sm"
-             >
-                <RefreshCw className={`w-4 h-4 ${purging ? 'animate-spin' : ''}`} />
-                {purging ? 'Purging...' : 'Reset PM Sheets'}
+                <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'SYNC_ACTIVE...' : 'SYNC_ALL_DATA_STREAMS'}
              </button>
              <button 
                 onClick={() => setShowPurgeModal(true)}
                 disabled={syncing || purging}
-                className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95 text-sm"
+                className="flex items-center gap-4 px-10 py-5 bg-rose-600 hover:scale-[1.05] disabled:opacity-50 text-white rounded-[28px] font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-2xl shadow-rose-600/40 active:scale-95 border-2 border-rose-400/20"
              >
-                <Trash2 className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
-                Purge Center
+                <Trash2 className={`w-5 h-5 ${purging ? 'animate-bounce' : ''}`} />
+                PURGE_TERMINAL
              </button>
-             <button 
-                onClick={handleCleanupSchedules}
-                disabled={syncing || purging}
-                title="Cleanup Invalid PM Schedules"
-                className="p-3 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-300 rounded-2xl hover:bg-rose-600 hover:text-white transition-all border border-slate-200 dark:border-slate-700"
-             >
-                <Trash2 className="w-5 h-5" />
-             </button>
-             <button className="p-3 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-300 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600 transition-all border border-slate-200 dark:border-slate-700">
-                <Settings className="w-5 h-5" />
-             </button>
+             <div className="flex gap-2">
+                <button 
+                   onClick={handleCleanupSchedules}
+                   disabled={syncing || purging}
+                   title="Cleanup Invalid PM Schedules"
+                   className="p-5 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-700 rounded-2xl hover:text-rose-600 hover:border-rose-500/30 transition-all border border-slate-100 dark:border-slate-800 shadow-sm"
+                >
+                   <Trash2 className="w-6 h-6" />
+                </button>
+                <button className="p-5 bg-white dark:bg-slate-900 text-slate-400 dark:text-slate-700 rounded-2xl hover:text-indigo-600 hover:border-indigo-500/30 transition-all border border-slate-100 dark:border-slate-800 shadow-sm">
+                   <Settings className="w-6 h-6" />
+                </button>
+             </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: System Status */}
-        <div className="lg:col-span-2 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Left Tactic Panel: System Health & AI Insights */}
+        <div className="lg:col-span-2 space-y-12">
            <section>
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                 <Activity className="w-4 h-4" /> Core Services Status
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between mb-8 px-4">
+                 <h2 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 font-mono italic">
+                    <Orbit className="w-5 h-5 text-indigo-500" /> Core_Service_Availability_Matrix
+                 </h2>
+                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono italic">SLA_TARGET: 99.99%</div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  {health?.components.map((c) => (
-                    <div key={c.name} className="bg-white dark:bg-slate-950/40 rounded-3xl p-6 border border-slate-100 dark:border-white/5 shadow-sm hover:border-indigo-100 dark:hover:border-indigo-500/20 transition-all group">
-                       <div className="flex items-center justify-between mb-4">
-                          <div className={`p-3 rounded-2xl ${
-                             c.status === 'online' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                          }`}>
-                             {c.name.includes('DB') ? <Database className="w-5 h-5" /> : 
-                              c.name.includes('Bot') ? <Zap className="w-5 h-5" /> : 
-                              <Cpu className="w-5 h-5" />}
-                          </div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                             c.status === 'online' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                          }`}>{c.status}</span>
+                    <div key={c.name} className="bg-white dark:bg-slate-950/40 rounded-[40px] p-8 border-2 border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-500 group relative overflow-hidden hover:border-indigo-500/30 hover:scale-[1.02] backdrop-blur-3xl">
+                       <div className="absolute right-[-10px] top-[-10px] opacity-[0.03] group-hover:opacity-10 transition-opacity">
+                          {c.name.includes('DB') ? <Database className="w-20 h-20" /> : <Zap className="w-20 h-20" />}
                        </div>
-                       <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{c.name}</h3>
-                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mb-4">{c.details || 'Operational and responding normally.'}</p>
-                       
-                       {c.latency && (
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 grayscale group-hover:grayscale-0 transition-all">
-                             <Clock className="w-3 h-3 text-indigo-500" />
-                             <span>LATENCY:</span>
-                             <span className="text-indigo-600 font-black">{c.latency}ms</span>
+                       <div className="flex items-center justify-between mb-8 relative z-10">
+                          <div className={`p-4 rounded-[20px] transition-all group-hover:rotate-12 border-2 ${
+                             c.status === 'online' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-500/20' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-500/20 shadow-[0_0_20px_rgba(225,29,72,0.2)] animate-pulse'
+                          }`}>
+                             {c.name.includes('DB') ? <Database className="w-6 h-6" /> : 
+                              c.name.includes('Bot') ? <Smartphone className="w-6 h-6" /> : 
+                              <Cpu className="w-6 h-6" />}
                           </div>
-                       )}
-
-                       {c.name.includes('WhatsApp') && c.status === 'offline' && (
-                          <button 
-                             onClick={() => setShowQr(true)}
-                             className="mt-4 w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 hover:bg-indigo-600 transition-colors"
-                          >
-                             <QrCode className="w-3 h-3" /> Get QR Code
-                          </button>
-                       )}
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-5 py-2 rounded-full border-2 shadow-inner ${
+                             c.status === 'online' ? 'bg-emerald-100/50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-400 border-emerald-200/50 dark:border-emerald-500/20' : 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-400 border-rose-200 dark:border-rose-500/20'
+                          }`}>{c.status.toUpperCase()}</span>
+                       </div>
+                       <h3 className="text-lg font-black text-slate-950 dark:text-white mb-2 uppercase italic tracking-tighter relative z-10">{c.name}</h3>
+                       <p className="text-[11px] text-slate-500 dark:text-slate-500 font-black uppercase tracking-widest leading-relaxed mb-8 italic relative z-10">{c.details || 'Operational and responding to master requests normally.'}</p>
+                       
+                       <div className="flex items-center justify-between relative z-10 pt-6 border-t border-slate-100 dark:border-white/5">
+                          {c.latency ? (
+                             <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 dark:text-slate-700 font-mono tracking-[0.2em] uppercase italic">
+                                <Clock className="w-4 h-4 text-indigo-500" /> LATENCY: <span className="text-indigo-600 dark:text-indigo-500">{c.latency}MS</span>
+                             </div>
+                          ) : <div className="text-[10px] font-black text-slate-300 dark:text-slate-800 uppercase tracking-widest italic font-mono">LATENCY_STABLE</div>}
+                          
+                          {c.name.includes('WhatsApp') && c.status === 'offline' && (
+                             <button 
+                                onClick={() => setShowQr(true)}
+                                className="px-6 py-2.5 bg-slate-950 dark:bg-white text-white dark:text-slate-950 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-all active:scale-95 shadow-xl shadow-black/20"
+                             >
+                                <QrCode className="w-4 h-4" /> RE_BIND_QR
+                             </button>
+                          )}
+                       </div>
                     </div>
                  ))}
               </div>
@@ -356,250 +311,230 @@ const AdminHub = () => {
 
            {predictions.length > 0 && (
              <section>
-                <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                   <BrainCircuit className="w-4 h-4 text-indigo-500" /> Infrastructure Risk Forecast
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between mb-8 px-4">
+                  <h2 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 font-mono italic">
+                      <BrainCircuit className="w-5 h-5 text-indigo-500" /> Infrastructure_Risk_Forecast
+                  </h2>
+                  <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono italic">ENGINE: NEURAL_CORE_X1</div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                    {predictions.map((pred) => (
-                      <div key={pred.id} className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-xl overflow-hidden relative">
-                         <div className="absolute top-0 right-0 w-32 h-32 opacity-[0.03] pointer-events-none -mr-8 -mt-8">
-                            {pred.severity === 'critical' || pred.severity === 'high' ? <TrendingUp className="w-full h-full" /> : <TrendingDown className="w-full h-full" />}
+                      <div key={pred.id} className="bg-white dark:bg-slate-950/40 rounded-[48px] p-10 border-2 border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-500 hover:scale-[1.03] group relative overflow-hidden backdrop-blur-3xl">
+                         <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:opacity-10 transition-opacity pointer-events-none">
+                            {pred.severity === 'critical' || pred.severity === 'high' ? <TrendingUp className="w-32 h-32 text-rose-500" /> : <TrendingDown className="w-32 h-32 text-emerald-500" />}
                          </div>
 
-                         <div className="flex items-center justify-between mb-4">
-                            <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                               pred.severity === 'critical' ? 'bg-rose-500/10 text-rose-500' :
-                               pred.severity === 'high' ? 'bg-orange-500/10 text-orange-500' :
-                               pred.severity === 'medium' ? 'bg-amber-500/10 text-amber-500' :
-                               'bg-emerald-500/10 text-emerald-500'
+                         <div className="flex items-center justify-between mb-8 relative z-10">
+                            <div className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.3em] font-mono border-2 shadow-inner ${
+                                pred.severity === 'critical' ? 'bg-rose-600 text-white border-rose-400 animate-pulse' :
+                                pred.severity === 'high' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                                pred.severity === 'medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
+                                'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                             }`}>
-                               {pred.severity} risk
-                               {pred.severity === 'critical' && <AlertTriangle className="inline-block w-3 h-3 ml-1" />}
-                               {pred.severity === 'low' && <CheckCircle2 className="inline-block w-3 h-3 ml-1" />}
+                               {pred.severity.toUpperCase()}_RISK
+                               {pred.severity === 'critical' && <AlertTriangle className="inline-block w-3.5 h-3.5 ml-2" />}
                             </div>
-                            <div className="flex items-center gap-1.5">
-                               <span className="text-[10px] font-black text-slate-500">PROBABILITY</span>
-                               <span className="text-sm font-black text-white">{pred.probability}%</span>
+                            <div className="flex flex-col items-end">
+                               <span className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-1 italic">PROBABILITY_SCALAR</span>
+                               <span className="text-2xl font-black text-slate-950 dark:text-white italic tracking-tighter leading-none">{pred.probability}%</span>
                             </div>
                          </div>
 
-                         <h3 className="text-lg font-black text-white mb-1">{pred.type}</h3>
-                         <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                            <Activity className="w-3 h-3" /> {pred.location}
-                         </p>
+                         <h3 className="text-2xl font-black text-slate-950 dark:text-white mb-2 uppercase italic tracking-tighter relative z-10">{pred.type}</h3>
+                         <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest font-mono italic mb-8 relative z-10">
+                            <Activity className="w-4 h-4" /> {pred.location.toUpperCase()}
+                         </div>
                          
-                         <div className="bg-slate-800/40 rounded-2xl p-4 mb-4 border border-slate-800/50">
-                            <p className="text-xs text-slate-300 leading-relaxed italic">"{pred.reason}"</p>
+                         <div className="bg-slate-900 dark:bg-slate-900 rounded-[32px] p-8 mb-8 border border-white/5 shadow-inner group-hover:bg-slate-800/80 transition-all">
+                            <p className="text-xs text-slate-400 dark:text-slate-400 leading-relaxed italic font-medium">"{pred.reason}"</p>
                          </div>
 
-                         <div className="flex items-start gap-3 p-3 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
-                            <Info className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                            <p className="text-[11px] text-indigo-200 font-medium leading-normal">{pred.recommendation}</p>
+                         <div className="flex items-start gap-5 p-6 bg-indigo-600 text-white rounded-[32px] shadow-2xl shadow-indigo-600/30 border-2 border-indigo-400 relative z-10 group-hover:scale-[1.05] transition-transform">
+                            <Info className="w-6 h-6 text-indigo-100 shrink-0" />
+                            <p className="text-[12px] text-white font-black uppercase tracking-tight italic leading-relaxed">{pred.recommendation}</p>
                          </div>
                       </div>
                    ))}
                 </div>
              </section>
-           )}
+            )}
 
-           <section>
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] mb-4 flex items-center gap-2">
-                 <Terminal className="w-4 h-4" /> Logic Control Center
-              </h2>
-              <div className="bg-slate-900 rounded-[32px] p-1 border border-slate-800">
-                 <div className="flex bg-slate-800/50 rounded-[30px] p-2">
-                    <div className="flex-1 p-8 text-center border-r border-slate-700/50">
-                       <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Active Sessions</p>
-                       <p className="text-4xl font-black text-white">{health?.metrics.activeSessions}</p>
-                    </div>
-                    <div className="flex-1 p-8 text-center border-r border-slate-700/50">
-                       <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Recent Errors</p>
-                       <p className={`text-4xl font-black ${health?.metrics.recentErrors! > 0 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                          {health?.metrics.recentErrors}
-                       </p>
-                    </div>
-                    <div className="flex-1 p-8 text-center">
-                       <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">System Uptime</p>
-                       <p className="text-2xl font-black text-white py-1.5">{Math.floor(health?.metrics.uptime! / 3600)}h {Math.floor((health?.metrics.uptime! % 3600) / 60)}m</p>
-                    </div>
-                 </div>
+            <section>
+              <div className="flex items-center justify-between mb-8 px-4">
+                 <h2 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 font-mono italic">
+                    <Terminal className="w-5 h-5 text-indigo-500" /> Logic_Payload_Control
+                 </h2>
+                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono italic">REFRESH_RATE: 15S</div>
               </div>
-           </section>
+              <div className="bg-white dark:bg-slate-950/40 rounded-[56px] p-2 border-2 border-slate-100 dark:border-slate-800 shadow-sm backdrop-blur-3xl overflow-hidden transition-all hover:border-indigo-500/20">
+                  <div className="flex bg-slate-50/50 dark:bg-slate-900/40 rounded-[52px] p-4 gap-4">
+                     {[
+                       { label: 'ACTIVE_SESSIONS', value: health?.metrics.activeSessions, icon: Users, color: 'text-indigo-500' },
+                       { label: 'RECENT_ERRORS', value: health?.metrics.recentErrors, icon: AlertTriangle, color: health?.metrics.recentErrors! > 0 ? 'text-rose-500' : 'text-emerald-500' },
+                       { label: 'SYSTEM_UPTIME', value: `${Math.floor(health?.metrics.uptime! / 3600)}h ${Math.floor((health?.metrics.uptime! % 3600) / 60)}m`, icon: Clock, color: 'text-sky-500' }
+                     ].map((m, i) => (
+                       <div key={i} className={`flex-1 p-10 text-center rounded-[40px] transition-all hover:bg-white dark:hover:bg-slate-950 hover:shadow-2xl group/m ${i !== 2 ? 'border-r-2 border-slate-100/50 dark:border-white/5' : ''}`}>
+                          <div className={`p-4 rounded-2xl bg-slate-100 dark:bg-slate-900 mx-auto w-fit mb-6 transition-all group-hover/m:rotate-12 border border-slate-200 dark:border-slate-800 ${m.color}`}>
+                             <m.icon className="w-6 h-6" />
+                          </div>
+                          <p className="text-[11px] text-slate-400 dark:text-slate-600 font-black uppercase tracking-[0.3em] mb-3 font-mono italic">{m.label}</p>
+                          <p className={`text-5xl font-black italic tracking-tighter drop-shadow-sm ${m.color === 'text-indigo-500' ? 'text-slate-900 dark:text-white' : m.color}`}>
+                             {m.value}
+                          </p>
+                       </div>
+                     ))}
+                  </div>
+              </div>
+            </section>
         </div>
 
-        {/* Right Column: Resource Usage */}
-        <div className="space-y-8">
-           <section className="bg-white dark:bg-slate-950/40 rounded-[32px] p-8 border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-xl">
-              <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                 <HardDrive className="w-4 h-4" /> Resource Utilization
+        {/* Right Resource Panel: HW Monitoring & Emergency Control */}
+        <div className="space-y-12">
+           <section className="bg-white dark:bg-slate-950/40 rounded-[56px] p-10 border-2 border-slate-100 dark:border-slate-800/80 shadow-sm dark:shadow-2xl backdrop-blur-3xl transition-all hover:border-indigo-500/20 group/res">
+              <div className="absolute top-0 right-0 p-16 opacity-[0.03] group-hover/res:opacity-10 pointer-events-none transition-opacity">
+                 <Cpu className="w-64 h-64 text-indigo-500" />
+              </div>
+              <h2 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.4em] mb-10 flex items-center gap-4 font-mono italic relative z-10">
+                 <HardDrive className="w-6 h-6 text-indigo-500" /> Nodal_Resource_Utilization
               </h2>
               
-              <div className="space-y-6">
-                 <div>
-                    <div className="flex justify-between items-end mb-2">
-                       <span className="text-sm font-bold text-slate-700">Memory (RAM)</span>
-                       <span className="text-[10px] font-black text-slate-400">{health?.metrics.memoryUsedGB} / {health?.metrics.memoryTotalGB} GB</span>
+              <div className="space-y-10 relative z-10">
+                 <div className="group/metric">
+                    <div className="flex justify-between items-end mb-4 px-2">
+                       <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest italic flex items-center gap-3">
+                          <MemoryStick className="w-4 h-4 text-indigo-500" /> SYSTEM_MEMORY
+                       </span>
+                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-700 font-mono italic">{health?.metrics.memoryUsedGB} / {health?.metrics.memoryTotalGB} GB</span>
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-4 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner group-hover/metric:h-6 transition-all">
                        <div 
-                          className={`h-full transition-all duration-1000 ${health?.metrics.memoryUsedPct! > 80 ? 'bg-rose-500' : 'bg-indigo-500'}`} 
+                          className={`h-full transition-all duration-1000 shadow-[0_0_20px_rgba(0,0,0,0.5)] ${health?.metrics.memoryUsedPct! > 80 ? 'bg-rose-600' : 'bg-indigo-600'}`} 
                           style={{ width: `${health?.metrics.memoryUsedPct}%` }} 
                        />
                     </div>
+                    <div className="mt-3 text-right">
+                       <span className={`text-[10px] font-black uppercase tracking-widest font-mono italic ${health?.metrics.memoryUsedPct! > 80 ? 'text-rose-500 animate-pulse' : 'text-slate-400'}`}>USAGE: {health?.metrics.memoryUsedPct}%</span>
+                    </div>
                  </div>
 
-                 <div>
-                    <div className="flex justify-between items-end mb-2">
-                       <span className="text-sm font-bold text-slate-700">CPU Load (1m)</span>
-                       <span className="text-[10px] font-black text-slate-400">{health?.metrics.loadAvg1m} Avg</span>
+                 <div className="group/metric">
+                    <div className="flex justify-between items-end mb-4 px-2">
+                       <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest italic flex items-center gap-3">
+                          <Activity className="w-4 h-4 text-emerald-500" /> COMPUTE_ENGINE_LOAD
+                       </span>
+                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-700 font-mono italic">{health?.metrics.loadAvg1m} AVG_1M</span>
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-4 w-full bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner group-hover/metric:h-6 transition-all">
                        <div 
-                          className="h-full bg-emerald-500 transition-all duration-1000" 
+                          className="h-full bg-emerald-600 transition-all duration-1000 shadow-[0_0_20px_rgba(16,185,129,0.5)]" 
                           style={{ width: `${Math.min(100, health?.metrics.loadAvg1m! * 10)}%` }} 
                        />
+                    </div>
+                    <div className="mt-3 text-right">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono italic">SCALAR: {Math.min(100, health?.metrics.loadAvg1m! * 10).toFixed(1)}%</span>
                     </div>
                  </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
-                 <div className="text-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">CPU Cores</p>
-                    <p className="font-black text-slate-800 text-lg">{health?.metrics.cpuCores}</p>
+              <div className="mt-12 pt-10 border-t-2 border-slate-100 dark:border-white/5 grid grid-cols-2 gap-8 relative z-10">
+                 <div className="text-center group/sub">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase mb-3 font-mono italic">CPU_CORES</p>
+                    <p className="font-black text-slate-900 dark:text-white text-3xl italic tracking-tighter group-hover/sub:scale-125 transition-transform">{health?.metrics.cpuCores}</p>
                  </div>
-                 <div className="text-center">
-                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Open Alerts</p>
-                    <p className="font-black text-amber-600 text-lg">{health?.metrics.openAlerts}</p>
+                 <div className="text-center group/sub">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase mb-3 font-mono italic">OPEN_ALERTS</p>
+                    <p className={`font-black text-3xl italic tracking-tighter group-hover/sub:scale-125 transition-transform ${health?.metrics.openAlerts! > 0 ? 'text-amber-500' : 'text-slate-900 dark:text-white'}`}>{health?.metrics.openAlerts}</p>
                  </div>
               </div>
            </section>
 
-           <section className="bg-slate-900 rounded-[32px] p-8 border border-slate-800 shadow-xl">
-              <div className="flex items-center gap-3 mb-6">
-                 <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400">
-                    <ShieldAlert className="w-5 h-5" />
-                 </div>
-                 <h2 className="text-sm font-bold text-white">Emergency Control</h2>
+           <section className="bg-slate-900 dark:bg-slate-950 rounded-[56px] p-10 border-4 border-rose-600 overflow-hidden relative group/emergency shadow-2xl shadow-rose-900/40">
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-900/20 to-transparent pointer-events-none" />
+              <div className="absolute right-[-40px] top-[-40px] opacity-10 group-hover/emergency:opacity-30 transition-opacity">
+                 <ShieldX className="w-48 h-48 text-rose-500" />
               </div>
-              <p className="text-xs text-slate-500 font-medium mb-6 leading-relaxed">Kill switch for external bots. Recommended only during critical failures.</p>
-              <div className="space-y-3">
-                 <button className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95">
-                    Hard Reset All Bots
+              
+              <div className="flex items-center gap-5 mb-8 relative z-10">
+                 <div className="p-4 rounded-[24px] bg-rose-600 text-white shadow-xl shadow-rose-600/40 group-hover/emergency:rotate-12 transition-all">
+                    <ShieldAlert className="w-8 h-8" />
+                 </div>
+                 <div className="flex flex-col">
+                    <h2 className="text-lg font-black text-white uppercase italic tracking-tighter leading-none mb-1">Emergency Protocol</h2>
+                    <span className="text-[9px] font-black text-rose-500 uppercase tracking-[0.3em] font-mono italic">AUTHORIZATION_REQUIRED</span>
+                 </div>
+              </div>
+              <p className="text-sm text-slate-400 dark:text-slate-500 font-black uppercase italic tracking-tight mb-10 leading-relaxed relative z-10 underline decoration-rose-500/20 underline-offset-8">Kill switch for external bots and nodal segments. Recommended only during terminal failures.</p>
+              <div className="space-y-4 relative z-10">
+                 <button className="w-full py-6 bg-rose-600 hover:bg-rose-700 text-white rounded-[24px] text-[11px] font-black uppercase tracking-[0.3em] transition-all active:scale-95 shadow-2xl border-2 border-rose-400 shadow-rose-600/30">
+                    HARD_RESET_ALL_NODES
                  </button>
-                 <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest transition-all">
-                    Wipe Temp Sessions
+                 <button className="w-full py-5 bg-slate-800 hover:bg-slate-700 text-slate-500 dark:text-slate-600 rounded-[24px] text-[10px] font-black uppercase tracking-[0.3em] transition-all border border-white/5 active:scale-95">
+                    FLUSH_REDUNDANT_SESSIONS
                  </button>
               </div>
            </section>
         </div>
       </div>
 
-      {/* QR Code Modal (Placeholder) */}
+      {/* Connectivity Handshake Modal */}
       {showQr && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/80">
-           <div className="bg-white dark:bg-slate-900 rounded-[40px] p-12 max-w-sm w-full text-center shadow-2xl relative border border-slate-200 dark:border-white/5">
-              <button onClick={() => setShowQr(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white">
-                 <XCircleIcon className="w-6 h-6" />
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-8 backdrop-blur-3xl bg-slate-950/90 animate-in fade-in duration-500">
+           <div className="bg-white dark:bg-slate-900 rounded-[64px] p-16 max-w-lg w-full text-center shadow-[0_0_100px_rgba(79,70,229,0.2)] relative border-4 border-indigo-500/20 group/qr-modal">
+              <div className="absolute -top-32 -left-32 w-80 h-80 bg-indigo-600/5 blur-[120px] pointer-events-none" />
+              <button 
+                 onClick={() => setShowQr(false)} 
+                 className="absolute top-10 right-10 w-14 h-14 bg-slate-50 dark:bg-slate-950 rounded-2xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-all active:scale-90 border border-slate-100 dark:border-white/5"
+              >
+                 <XCircle className="w-8 h-8" />
               </button>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Snap to Connect</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8">Scan this QR code with your WhatsApp to link AudiraBot.</p>
               
-              <div className="aspect-square bg-slate-50 dark:bg-slate-950 flex items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 mb-8 p-8">
+              <div className="mb-10">
+                 <div className="flex items-center justify-center gap-4 mb-3">
+                    <QrCode className="w-10 h-10 text-indigo-500 group-hover/qr-modal:rotate-12 transition-all" />
+                    <h3 className="text-4xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic">Snap_Link</h3>
+                 </div>
+                 <p className="text-[11px] text-slate-500 dark:text-slate-500 font-black uppercase tracking-widest font-mono italic leading-relaxed">Scan this ephemeral token with your mobile node to synchronize the WhatsApp Command Layer.</p>
+              </div>
+              
+              <div className="aspect-square bg-white dark:bg-slate-950 flex items-center justify-center rounded-[48px] border-4 border-dashed border-slate-100 dark:border-indigo-500/20 mb-12 p-12 shadow-inner group-hover/qr-modal:border-indigo-600 transition-colors">
                  {qrToken ? (
-                    <QRCodeSVG 
-                      value={qrToken} 
-                      size={256} 
-                      level="H"
-                      includeMargin={true}
-                      className="w-full h-full"
-                    />
+                    <div className="p-4 bg-white rounded-3xl shadow-2xl">
+                       <QRCodeSVG 
+                         value={qrToken} 
+                         size={320} 
+                         level="H"
+                         includeMargin={false}
+                         className="w-full h-full"
+                       />
+                    </div>
                  ) : (
-                    <div className="text-center space-y-4">
-                       <QrCode className="w-16 h-16 text-slate-300 mx-auto animate-pulse" />
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Generating Token...</p>
+                    <div className="flex flex-col items-center gap-6 opacity-20 grayscale animate-pulse">
+                       <QrCode className="w-32 h-32 text-indigo-500" />
+                       <span className="text-[12px] font-black text-indigo-600 uppercase tracking-[0.5em] font-mono italic">GENERATING_ENCRYPTED_TOKEN...</span>
                     </div>
                  )}
               </div>
               
               <button 
                 onClick={() => fetchHealth()}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-colors"
+                className="w-full py-6 bg-indigo-600 hover:scale-[1.05] text-white rounded-[28px] font-black uppercase tracking-[0.3em] text-[11px] transition-all shadow-2xl shadow-indigo-600/40 active:scale-95 border-2 border-indigo-400 pb-6"
               >
-                 Refresh QR Status
+                 POLL_HANDSHAKE_STATUS
               </button>
+              <div className="mt-8 flex items-center justify-center gap-3 text-[9px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-[0.1em] italic">
+                 <ShieldCheck className="w-4 h-4" /> End-to-end encrypted protocol initialization active.
+              </div>
            </div>
-        </div>
-      )}
-      {/* Selective Purge Modal */}
-      {showPurgeModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[40px] w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-200">
-            <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Selective Purge Center</h2>
-                <p className="text-slate-500 text-sm font-medium">Pilih kategori data yang ingin dihapus permanen dari Database & GSheets.</p>
-              </div>
-              <button onClick={() => setShowPurgeModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-                <Settings className="w-6 h-6 text-slate-400 rotate-45" />
-              </button>
-            </div>
-
-            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[50vh] overflow-y-auto">
-              {PURGE_OPTIONS.map((opt) => (
-                <div 
-                  key={opt.id}
-                  onClick={() => toggleModule(opt.id)}
-                  className={`p-5 rounded-[24px] border-2 cursor-pointer transition-all ${
-                    selectedModules.includes(opt.id) 
-                      ? 'border-rose-500 bg-rose-50' 
-                      : 'border-slate-100 hover:border-slate-200 bg-white'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-2 rounded-xl ${selectedModules.includes(opt.id) ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                      {opt.icon}
-                    </div>
-                    <span className={`font-bold ${selectedModules.includes(opt.id) ? 'text-rose-700' : 'text-slate-700'}`}>{opt.label}</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">{opt.desc}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-400">
-                {selectedModules.length} CATEGORIES SELECTED
-              </div>
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setShowPurgeModal(false)}
-                  className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-colors"
-                >
-                  Batal
-                </button>
-                <button 
-                  onClick={handleModularPurge}
-                  disabled={selectedModules.length === 0 || purging}
-                  className="px-8 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-300 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95"
-                >
-                  {purging ? 'Purging...' : 'Execute Purge'}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>
   );
 };
 
-// Helper for X icon since I missed it in imports
-const XCircleIcon = ({ className }: { className?: string }) => (
+const MemoryStick = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10m4-10v10m4-10v10m4-10v10m4-10v10M3 7h18a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" />
   </svg>
 );
-
-
 
 export default AdminHub;
