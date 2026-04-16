@@ -85,7 +85,11 @@ export class TicketCreateCommand extends BaseCommandHandler {
         try {
           const contact = await this.crmService.findContactWithAssets(ticket.customer);
           if (contact && contact.assets.length > 0) {
-            customerServices = contact.assets.map(a => `${a.identifier} (${a.serviceType || 'Unknown'})`);
+            customerServices = contact.assets.map(a => {
+              const type = a.type || 'VLAN';
+              const name = a.serviceType ? ` — [${a.serviceType}]` : '';
+              return `${type} ${a.identifier}${name}`;
+            });
           }
         } catch (err) {
           this.logger.warn('Failed to fetch CRM assets for notification enrichment', err as Error);
