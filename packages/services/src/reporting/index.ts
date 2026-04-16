@@ -204,4 +204,30 @@ export class ReportingService {
 
     return parts.length > 0 ? parts.join('; ') + '.' : 'All clear for today.';
   }
+
+  /**
+   * Generates a monthly weighted SLA summary (Phase 5).
+   */
+  async generateWeightedSLASummary(slaService: any, month?: number, year?: number): Promise<string> {
+    const now = new Date();
+    const m = month ?? now.getMonth();
+    const y = year ?? now.getFullYear();
+
+    const report = await slaService.calculateWeightedMonthlyPerformance(m, y);
+    
+    const lines = [
+      `📈 *neuCentrIX Monthly SLA Report*`,
+      `Period: ${report.period}`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      ...report.breakdown.map((b: any) => 
+        `${b.compliance >= 100 ? '✅' : '⚠️'} *${b.category}*: ${b.compliance}% (Weight: ${b.weight}%) → *${b.weightedScore}%*`
+      ),
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `🏆 *TOTAL SCORE: ${report.totalScore}%*`,
+      '',
+      `Target: 100% | Status: ${report.totalScore >= 99 ? 'PERFECT' : report.totalScore >= 95 ? 'GOOD' : 'CRITICAL'}`,
+    ];
+
+    return lines.join('\n');
+  }
 }

@@ -1,6 +1,14 @@
+export interface AIMessagePart {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: {
+    url: string;
+  };
+}
+
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | AIMessagePart[];
 }
 
 export interface AIResponse {

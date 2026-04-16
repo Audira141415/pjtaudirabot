@@ -12,40 +12,44 @@ export interface NeucentrixLocation {
 
 export const NEUCENTRIX_LOCATIONS: NeucentrixLocation[] = [
   // Sumatera
-  { code: 'BTM', fullName: 'neuCentrIX Batam Center', region: 'Riau Islands' },
-  { code: 'PKU', fullName: 'neuCentrIX Pekanbaru', region: 'Riau' },
-  { code: 'TLK', fullName: 'neuCentrIX Talang Kelapa', region: 'South Sumatera' },
-  { code: 'TKL', fullName: 'neuCentrIX Tanjung Karang Lampung', region: 'Lampung' },
-  { code: 'ACH', fullName: 'neuCentrIX Aceh', region: 'Aceh' },
-  { code: 'PLM', fullName: 'neuCentrIX Palembang', region: 'South Sumatera' },
+  { code: 'ACH', fullName: 'neuCentrIX Aceh', region: 'Sumatera' },
+  { code: 'MDN', fullName: 'neuCentrIX Medan Centrum', region: 'Sumatera' },
+  { code: 'PKU', fullName: 'neuCentrIX Pekanbaru', region: 'Sumatera' },
+  { code: 'BTM', fullName: 'neuCentrIX Batam Center', region: 'Sumatera' },
+  { code: 'TLK', fullName: 'neuCentrIX Talang Kelapa', region: 'Sumatera' },
+  { code: 'TKL', fullName: 'neuCentrIX Tanjung Karang Lampung', region: 'Sumatera' },
 
-  // Java
+  // Jakarta
   { code: 'KTS', fullName: 'neuCentrIX Karet Tengsin', region: 'Jakarta' },
   { code: 'MRY', fullName: 'neuCentrIX Meruya', region: 'Jakarta' },
   { code: 'JTN', fullName: 'neuCentrIX Jatinegara', region: 'Jakarta' },
-  { code: 'LMB', fullName: 'neuCentrIX Lembong', region: 'Bandung' },
-  { code: 'KBL', fullName: 'neuCentrIX Kebalen', region: 'Semarang' },
-  { code: 'MLG', fullName: 'neuCentrIX Malang', region: 'East Java' },
-  { code: 'GBG', fullName: 'neuCentrIX Gubeng', region: 'Surabaya' },
-  { code: 'KLS', fullName: 'neuCentrIX Kaliasem', region: 'East Java' },
-  { code: 'CRB', fullName: 'neuCentrIX Cirebon', region: 'West Java' },
+
+  // Jawa Barat
+  { code: 'LMB', fullName: 'neuCentrIX Lembong', region: 'Jawa Barat' },
+  { code: 'CRB', fullName: 'neuCentrIX Cirebon', region: 'Jawa Barat' },
+
+  // Jawa Tengah
+  { code: 'PGR', fullName: 'neuCentrIX Pugeran', region: 'Jawa Tengah' }, // Yogyakarta
+  { code: 'CND', fullName: 'neuCentrIX Candi', region: 'Jawa Tengah' },
+
+  // Jawa Timur
+  { code: 'GBG', fullName: 'neuCentrIX Gubeng', region: 'Jawa Timur' },
+  { code: 'MLG', fullName: 'neuCentrIX Malang', region: 'Jawa Timur' },
+
+  // Bali
+  { code: 'KLS', fullName: 'neuCentrIX Kaliasem', region: 'Bali' },
+  { code: 'KBL', fullName: 'neuCentrIX Kebalen', region: 'Bali' },
 
   // Kalimantan
-  { code: 'BPN', fullName: 'neuCentrIX TTC Balikpapan', region: 'East Kalimantan' },
-  { code: 'PTK', fullName: 'neuCentrIX Pontianak', region: 'West Kalimantan' },
-  { code: 'BJM', fullName: 'neuCentrIX Ulin Banjarmasin', region: 'South Kalimantan' },
-  { code: 'KTB', fullName: 'neuCentrIX Kotabaru', region: 'South Kalimantan' },
-  { code: 'SPK', fullName: 'neuCentrIX Sepaku', region: 'East Kalimantan' },
-  { code: 'BTA', fullName: 'neuCentrIX Batuampar', region: 'West Kalimantan' },
-  { code: 'MKS', fullName: 'neuCentrIX Mattoangin', region: 'South Kalimantan' },
-  { code: 'PGR', fullName: 'neuCentrIX Pugeran', region: 'South Kalimantan' },
+  { code: 'BPN', fullName: 'neuCentrIX Balikpapan', region: 'Kalimantan' },
+  { code: 'SMR', fullName: 'neuCentrIX Samarinda', region: 'Kalimantan' },
+  { code: 'PTK', fullName: 'neuCentrIX Pontianak', region: 'Kalimantan' },
+  { code: 'BJM', fullName: 'neuCentrIX Banjarmasin', region: 'Kalimantan' },
 
-  // Sumatera Utara
-  { code: 'MDN', fullName: 'neuCentrIX Medan Centrum', region: 'North Sumatera' },
-
-  // Eastern Indonesia
-  { code: 'MND', fullName: 'neuCentrIX Paniki', region: 'North Sulawesi' },
-  { code: 'JPR', fullName: 'neuCentrIX Jayapura', region: 'Papua' },
+  // Sulawesi & Papua
+  { code: 'MKS', fullName: 'neuCentrIX Makassar', region: 'Sulawesi & Papua' },
+  { code: 'MND', fullName: 'neuCentrIX Manado', region: 'Sulawesi & Papua' },
+  { code: 'JPR', fullName: 'neuCentrIX Jayapura', region: 'Sulawesi & Papua' },
 ];
 
 const LOCATION_STOP_WORDS = new Set([

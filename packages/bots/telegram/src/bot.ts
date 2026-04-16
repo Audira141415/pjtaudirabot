@@ -1,5 +1,6 @@
 import { Telegraf, Context } from 'telegraf';
 import { ILogger } from '@pjtaudirabot/core';
+import { Agent } from 'node:https';
 
 export interface TelegramBotConfig {
   token: string;
@@ -14,7 +15,12 @@ export class TelegramConnection {
     private config: TelegramBotConfig,
     private logger: ILogger
   ) {
-    this.bot = new Telegraf(config.token);
+    // Force IPv4 for Telegram API requests to avoid issues with IPv6-enabled hosts
+    // that don't have a reliable IPv6 route to the internet.
+    const agent = new Agent({ family: 4, keepAlive: true });
+    this.bot = new Telegraf(config.token, {
+      telegram: { agent }
+    });
   }
 
   onMessage(callback: (ctx: Context) => Promise<void>): void {
@@ -60,8 +66,16 @@ export class TelegramConnection {
   }
 
   async stop(): Promise<void> {
-    this.bot.stop('SIGINT');
-    this.logger.info('Telegram bot stopped');
+    try {
+      this.bot.stop('SIGINT');
+      this.logger.info('Telegram bot stopped');
+    } catch (err) {
+      if ((err as Error).message.includes('Bot is not running')) {
+        this.logger.warn('Telegram bot was already stopped or not running');
+      } else {
+        throw err;
+      }
+    }
   }
 
   async sendMessage(chatId: string | number, text: string): Promise<void> {

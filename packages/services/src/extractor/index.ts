@@ -104,9 +104,10 @@ export class AIExtractor {
 
   /**
    * Convert a raw chat message into a structured extraction result.
+   * Supports optional imageUrl for vision-based extraction (OCR).
    * Falls back to rule-based extraction if the AI provider is unavailable.
    */
-  async extract(message: string): Promise<ExtractionOutput> {
+  async extract(message: string, imageUrl?: string): Promise<ExtractionOutput> {
     // Guard against excessively long messages — truncate to avoid expensive AI calls
     const MAX_MSG_LENGTH = 2000;
     const trimmed = message.length > MAX_MSG_LENGTH
@@ -120,27 +121,42 @@ export class AIExtractor {
     try {
       const available = await this.aiProvider.isAvailable();
       if (available) {
-        return await this.extractWithAI(trimmed, todayStr);
+        return await this.extractWithAI(trimmed, todayStr, imageUrl);
       }
     } catch (err) {
       this.logger.warn('AI extraction failed, falling back to rules', { error: (err as Error).message });
     }
 
-    // Fallback: rule-based
+    // Fallback: rule-based (Rules don't support imagery yet)
     return this.extractWithRules(trimmed, now);
   }
 
   // ── AI path ──
 
-  private async extractWithAI(message: string, today: string): Promise<ExtractionOutput> {
+  private async extractWithAI(message: string, today: string, imageUrl?: string): Promise<ExtractionOutput> {
+    const systemPrompt = buildSystemPrompt(today) + (imageUrl 
+      ? "\nNote: An image has been attached. Perform OCR and visual analysis to extract relevant technical details (IP addresses, specific error messages, etc) from the image alongside the text." 
+      : "");
+
     const messages: AIMessage[] = [
-      { role: 'system', content: buildSystemPrompt(today) },
-      { role: 'user', content: message },
+      { role: 'system', content: systemPrompt }
     ];
+
+    if (imageUrl) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: message || "Analyze this image for technical issues." },
+          { type: 'image_url', image_url: { url: imageUrl } }
+        ]
+      });
+    } else {
+      messages.push({ role: 'user', content: message });
+    }
 
     const response = await this.aiProvider.chat(messages, {
       temperature: 0.1,  // deterministic
-      maxTokens: 512,
+      maxTokens: imageUrl ? 1024 : 512, // Vision needs more tokens for detailed extraction
     });
 
     const raw = response.content.trim();

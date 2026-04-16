@@ -49,10 +49,24 @@ export class TelegramMessageHandler {
     this.chatPipeline = deps.chatPipeline;
   }
 
+  private async emitReply(ctx: Context, text: string, options?: any): Promise<void> {
+    const platformUserId = String(ctx.from?.id);
+    const chatId = String(ctx.chat?.id);
+    
+    await ctx.reply(text, options);
+    
+    this.eventBus?.emit('message.sent', {
+      platform: 'telegram',
+      userId: chatId,
+      text,
+      timestamp: Date.now(),
+    }).catch(() => {});
+  }
+
   async handle(ctx: Context): Promise<void> {
     const startTime = Date.now();
     const message = ctx.message;
-    if (!message || !('text' in message)) return;
+    if (!message) return;
 
     const from = message.from;
     if (!from) return;
@@ -60,17 +74,41 @@ export class TelegramMessageHandler {
     const platformUserId = String(from.id);
     const displayName = [from.first_name, from.last_name].filter(Boolean).join(' ') || 'Unknown';
 
+    // Extract text from regular message or photo caption
+    let text = ('text' in message) ? message.text : (('caption' in message) ? (message as any).caption : '');
+    
+    // Check for photo and get link for Vision analysis
+    let imageUrl: string | undefined;
+    if ('photo' in message) {
+      const photos = (message as any).photo;
+      if (photos && photos.length > 0) {
+        const largestPhoto = photos[photos.length - 1];
+        const link = await ctx.telegram.getFileLink(largestPhoto.file_id);
+        imageUrl = link.href;
+      }
+    }
+
+    if (!text && !imageUrl) return;
+    if (!text) text = ''; // Allow empty text if image is present
+
     // Normalize Telegram slash commands → ! prefix
-    // /take TKT-xxx  →  !take TKT-xxx
-    // /ticket_status@BotName TKT-xxx  →  !ticket-status TKT-xxx
-    let text = message.text;
     if (text.startsWith('/')) {
       const [cmdAndMention, ...rest] = text.slice(1).split(' ');
       const cmd = cmdAndMention.split('@')[0].replace(/_/g, '-');
       text = COMMAND_PREFIX + cmd + (rest.length ? ' ' + rest.join(' ') : '');
     }
 
-    this.logger.debug('Telegram message received', { platformUserId, text });
+    this.logger.debug('Telegram message received', { platformUserId, text, hasImage: !!imageUrl });
+
+    // Broadcast to Live Chat Bridge (Phase 2)
+    this.eventBus?.emit('message.received', {
+      platform: 'telegram',
+      userId: platformUserId,
+      userName: displayName,
+      text,
+      timestamp: Date.now(),
+      imageUrl: imageUrl
+    }).catch(() => {});
 
     // Track message analytics
     this.analytics?.track({ eventType: 'message_received', platform: 'telegram', userId: platformUserId }).catch(() => {});
@@ -88,7 +126,7 @@ export class TelegramMessageHandler {
         const modResult = await this.moderation.check(user.id, text, 'telegram');
         if (!modResult.allowed) {
           const msg = modResult.message ?? this.i18n?.t('mod_blocked') ?? '⚠️ Message blocked by moderation.';
-          await ctx.reply(msg);
+          await this.emitReply(ctx, msg);
           this.eventBus?.emit('moderation.action', {
             userId: user.id, platform: 'telegram', action: modResult.action, rule: modResult.ruleName,
           }).catch(() => {});
@@ -110,12 +148,12 @@ export class TelegramMessageHandler {
           return;
         }
         if (flowResult.completed) {
-          await ctx.reply(this.i18n?.t('flow_completed') ?? '✅ Flow completed!');
+          await this.emitReply(ctx, this.i18n?.t('flow_completed') ?? '✅ Flow completed!');
           this.eventBus?.emit('flow.completed', {
             userId: user.id, platform: 'telegram', data: flowResult.data,
           }).catch(() => {});
         } else if (flowResult.prompt) {
-          await ctx.reply(flowResult.prompt);
+          await this.emitReply(ctx, flowResult.prompt);
         }
         return;
       }
@@ -125,9 +163,9 @@ export class TelegramMessageHandler {
         if (this.chatPipeline) {
           try {
             const pipelineResult = await this.chatPipeline.process(
-              user.id, text, 'telegram', displayName
+              user.id, text, 'telegram', displayName, imageUrl
             );
-            await ctx.reply(pipelineResult.reply, { parse_mode: 'Markdown' });
+            await this.emitReply(ctx, pipelineResult.reply, { parse_mode: 'Markdown' });
             this.eventBus?.emit('pipeline.processed', {
               userId: user.id, platform: 'telegram',
               type: pipelineResult.extraction.result.type,
@@ -141,7 +179,7 @@ export class TelegramMessageHandler {
           // Legacy fallback
           const intentResponse = await this.intentDetector.process(user.id, text, 'telegram');
           if (intentResponse) {
-            await ctx.reply(intentResponse, { parse_mode: 'Markdown' });
+            await this.emitReply(ctx, intentResponse, { parse_mode: 'Markdown' });
             this.eventBus?.emit('intent.detected', {
               userId: user.id, platform: 'telegram', text,
             }).catch(() => {});
@@ -198,11 +236,11 @@ export class TelegramMessageHandler {
       this.analytics?.track({ eventType: 'response_sent', platform: 'telegram', userId: platformUserId, value: responseTime }).catch(() => {});
 
       try {
-        await ctx.reply(result.message, { parse_mode: 'Markdown' });
+        await this.emitReply(ctx, result.message, { parse_mode: 'Markdown' });
       } catch {
         // Markdown parse failed (e.g. special chars in ticket data) — retry as plain text
         const plain = result.message.replace(/[*_`]/g, '');
-        await ctx.reply(plain);
+        await this.emitReply(ctx, plain);
       }
 
       this.eventBus?.emit('command.executed', {

@@ -54,6 +54,8 @@ const NotificationRulesPage = lazy(() => import('./pages/NotificationRules'));
 const MultiLanguagePage = lazy(() => import('./pages/MultiLanguage'));
 const MaintenancePage = lazy(() => import('./pages/Maintenance'));
 const AdminHubPage = lazy(() => import('./pages/AdminHub'));
+const LiveTerminalPage = lazy(() => import('./pages/LiveTerminal'));
+const SLAWeightedCompliancePage = lazy(() => import('./pages/SLAWeightedCompliance'));
 
 function PageLoader() {
   return (
@@ -98,6 +100,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="admin" element={<AdminHubPage />} />
+        <Route path="terminal" element={<LiveTerminalPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="broadcast" element={<BroadcastPage />} />
         <Route path="moderation" element={<ModerationPage />} />
@@ -106,6 +109,7 @@ export default function App() {
         <Route path="flows" element={<FlowsPage />} />
         <Route path="tickets" element={<TicketsPage />} />
         <Route path="sla" element={<SLAMonitorPage />} />
+        <Route path="sla-matrix" element={<SLAWeightedCompliancePage />} />
         <Route path="alerts" element={<AlertsPage />} />
         <Route path="uptime" element={<UptimeMonitorPage />} />
         <Route path="network" element={<NetworkHealthPage />} />

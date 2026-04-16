@@ -3,10 +3,14 @@ import { TaskManagerService } from '../task-manager';
 import { DocumentationService } from '../documentation';
 import { ReminderService } from '../reminders';
 import { KnowledgeBaseService } from '../knowledge';
+import { DataExtractionService } from '../data-extraction';
+import { TicketService } from '../ticket';
+import { SLAService } from '../sla';
 
 export type IntentType =
   | 'task'
   | 'incident'
+  | 'report'             // New structured report intent
   | 'reminder'
   | 'knowledge_query'
   | 'greeting'
@@ -30,6 +34,9 @@ export class IntentDetector {
     private documentation: DocumentationService,
     private reminderService: ReminderService,
     private knowledgeBase: KnowledgeBaseService,
+    private dataExtraction: DataExtractionService,
+    private ticketService: TicketService,
+    private slaService: SLAService,
     logger: ILogger
   ) {
     this.logger = logger.child({ service: 'intent-detector' });
@@ -41,30 +48,36 @@ export class IntentDetector {
   detect(message: string): DetectedIntent {
     const lower = message.toLowerCase().trim();
 
-    // Greetings
+    // 1. Structured Report detection (Highest priority - Template-based)
+    const extraction = this.dataExtraction.extract(message);
+    if (extraction.isValid && extraction.fieldCount >= 3) {
+      return { type: 'report', confidence: 0.95, data: extraction };
+    }
+
+    // 2. Greetings
     if (this.isGreeting(lower)) {
       return { type: 'greeting', confidence: 0.9 };
     }
 
-    // Reminder detection (highest priority - user explicitly asking)
+    // 3. Reminder detection
     if (this.reminderService.detectReminder(message)) {
       return { type: 'reminder', confidence: 0.85 };
     }
 
-    // Incident detection
+    // 4. Incident detection (Generic chat)
     if (this.documentation.detectIncident(message)) {
       return { type: 'incident', confidence: 0.8 };
     }
 
-    // Knowledge query
+    // 5. Knowledge query
     if (this.knowledgeBase.detectQuery(message)) {
       return { type: 'knowledge_query', confidence: 0.75 };
     }
 
-    // Task detection
-    const extracted = this.taskManager.extractTask(message);
-    if (extracted) {
-      return { type: 'task', confidence: 0.7, data: extracted };
+    // 6. Task detection
+    const extractedTask = this.taskManager.extractTask(message);
+    if (extractedTask) {
+      return { type: 'task', confidence: 0.7, data: extractedTask };
     }
 
     return { type: 'unknown', confidence: 0 };
@@ -91,6 +104,9 @@ export class IntentDetector {
     if (intent.confidence < 0.6) return null;
 
     switch (intent.type) {
+      case 'report':
+        return this.handleStructuredReport(userId, message, platform, intent.data);
+
       case 'task':
         return this.handleTask(userId, message, platform, intent.data);
 
@@ -109,6 +125,54 @@ export class IntentDetector {
       default:
         return null;
     }
+  }
+
+  private async handleStructuredReport(
+    userId: string,
+    message: string,
+    platform: string,
+    extraction: any
+  ): Promise<string> {
+    const data = extraction.data;
+    
+    // Create high-fidelity ticket
+    const ticket = await this.ticketService.create({
+      createdById: userId,
+      title: `${data.customer ?? 'Client'} - ${data.problem ?? 'Support Request'}`,
+      description: message,
+      problem: data.problem ?? message,
+      customer: data.customer,
+      location: data.location,
+      ao: data.ao,
+      sid: data.sid,
+      service: data.service,
+      hostnameSwitch: data.hostnameSwitch,
+      port: data.port,
+      vlanId: data.vlanId,
+      ipAddress: data.ipAddress,
+      gateway: data.gateway,
+      subnet: data.subnet,
+      source: platform.toUpperCase() as any,
+      sourceMessage: message,
+    });
+
+    // Determine priority and start SLA
+    const priority = (message.toLowerCase().includes('critical') || extraction.priorityScore >= 8) 
+      ? 'CRITICAL' 
+      : 'MEDIUM';
+    
+    await this.slaService.startTracking(ticket.id, priority as any, ticket.category, ticket.problem);
+
+    let response = `✅ *Structured Ticket Created*\n\n`;
+    response += `🎫 *No:* ${ticket.ticketNumber}\n`;
+    response += `📌 *Title:* ${ticket.title}\n`;
+    response += `👤 *Customer:* ${data.customer ?? '-'}\n`;
+    response += `📍 *Location:* ${data.location ?? '-'}\n`;
+    response += `⚠️ *Priority:* ${priority}\n`;
+    response += `⏱️ *SLA:* ${priority === 'CRITICAL' ? '2 Hours' : '4 Hours'} (Resolution)\n\n`;
+    response += `_Data extracted automatically from template._`;
+    
+    return response;
   }
 
   private async handleTask(

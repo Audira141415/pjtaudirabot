@@ -5,147 +5,92 @@ import {
   LayoutDashboard,
   Users,
   Radio,
-  Shield,
   FileText,
   Webhook,
   GitBranch,
-  LogOut,
-  Bot,
   Ticket,
   Timer,
   Bell,
-  Wifi,
   Network,
   Server,
   ArrowRightLeft,
   ListTodo,
   FileBarChart,
-  BookOpen,
   BrainCircuit,
   Brain,
-  Database,
-  Layers,
-  ClipboardCheck,
-  MessageSquare,
   Settings,
   BellRing,
-  CheckCheck,
   Trash2,
   Wrench,
   XCircle,
   AlertTriangle,
   CheckCircle,
   Info,
-  Smile,
-  CalendarClock,
   Megaphone,
-  Contact,
-  CreditCard,
   Inbox,
   ShieldCheck,
-  ShieldAlert,
-  HelpCircle,
-  FileStack,
   BotMessageSquare,
-  Star,
-  UserCog,
-  Tag,
-  Kanban,
-  FolderOpen,
   Key,
-  Zap,
   BarChart3,
-  ScrollText,
-  Download,
-  Globe,
   Moon,
   Sun,
+  Activity,
+  User,
+  Power,
+  Terminal,
+  Scale
 } from 'lucide-react';
 import { useTheme } from '../lib/ThemeProvider';
 
 const sections = [
   {
-    title: 'Overview',
+    title: 'Core System',
     items: [
-      { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/users', icon: Users, label: 'Users' },
+      { to: '/', icon: LayoutDashboard, label: 'Control Deck' },
+      { to: '/terminal', icon: Terminal, label: 'Live Terminal' },
+      { to: '/users', icon: Users, label: 'Identity Pulse' },
+      { to: '/admin', icon: ShieldCheck, label: 'Admin Terminal' },
     ],
   },
   {
-    title: 'Operations',
+    title: 'Mission Operations',
     items: [
-      { to: '/tickets', icon: Ticket, label: 'Tickets' },
-      { to: '/sla', icon: Timer, label: 'SLA Monitor' },
-      { to: '/alerts', icon: Bell, label: 'Alerts' },
-      { to: '/tasks', icon: ListTodo, label: 'Tasks' },
-      { to: '/shift', icon: ArrowRightLeft, label: 'Shift Handover' },
-      { to: '/checklist', icon: ClipboardCheck, label: 'Checklists' },
-      { to: '/reminders', icon: Bell, label: 'Reminders' },
-      { to: '/maintenance', icon: Wrench, label: 'Maintenance' },
+      { to: '/tickets', icon: Ticket, label: 'Signal Overrides' },
+      { to: '/sla', icon: Timer, label: 'Compliance Grid' },
+      { to: '/sla-matrix', icon: Scale, label: 'SLA Performance Matrix' },
+      { to: '/alerts', icon: Bell, label: 'Active Signals' },
+      { to: '/maintenance', icon: Wrench, label: 'Temporal Cycles' },
+      { to: '/tasks', icon: ListTodo, label: 'Operation Logs' },
+      { to: '/shift', icon: ArrowRightLeft, label: 'Handover Matrix' },
     ],
   },
   {
-    title: 'Infrastructure',
+    title: 'Communication Hub',
     items: [
-      { to: '/uptime', icon: Wifi, label: 'Uptime Monitor' },
-      { to: '/network', icon: Network, label: 'Network Health' },
-      { to: '/server', icon: Server, label: 'Server Status' },
-      { to: '/backups', icon: Database, label: 'Backups' },
+      { to: '/broadcast', icon: Radio, label: 'Mass Communiqué' },
+      { to: '/chatbot', icon: BotMessageSquare, label: 'Neural Architect' },
+      { to: '/inbox', icon: Inbox, label: 'Unified Stream' },
+      { to: '/campaigns', icon: Megaphone, label: 'Strategic Ops' },
     ],
   },
   {
-    title: 'Intelligence',
+    title: 'Telemetry & Intel',
     items: [
-      { to: '/incidents', icon: BrainCircuit, label: 'AI Insights' },
-      { to: '/sentiment', icon: Smile, label: 'Sentiment Analysis' },
-      { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-      { to: '/csat', icon: Star, label: 'CSAT Survey' },
-      { to: '/knowledge', icon: BookOpen, label: 'Knowledge Base' },
-      { to: '/memory', icon: Brain, label: 'Memory Browser' },
-      { to: '/reports', icon: FileBarChart, label: 'Reports' },
+      { to: '/server', icon: Server, label: 'Compute Power' },
+      { to: '/network', icon: Network, label: 'Network Fabric' },
+      { to: '/incidents', icon: BrainCircuit, label: 'AI Predictor' },
+      { to: '/analytics', icon: BarChart3, label: 'Data Visualizer' },
+      { to: '/reports', icon: FileBarChart, label: 'Audit Genesis' },
     ],
   },
   {
-    title: 'Communication',
+    title: 'Advanced Control',
     items: [
-      { to: '/broadcast', icon: Radio, label: 'Broadcast' },
-      { to: '/campaigns', icon: Megaphone, label: 'Campaigns' },
-      { to: '/scheduled-messages', icon: CalendarClock, label: 'Scheduled Messages' },
-      { to: '/inbox', icon: Inbox, label: 'Unified Inbox' },
-      { to: '/templates', icon: FileStack, label: 'Templates' },
-      { to: '/canned-responses', icon: Zap, label: 'Canned Responses' },
-      { to: '/chatbot', icon: BotMessageSquare, label: 'Chatbot Builder' },
-      { to: '/moderation', icon: Shield, label: 'Moderation' },
-      { to: '/groups', icon: MessageSquare, label: 'Groups' },
-      { to: '/faq', icon: HelpCircle, label: 'FAQ Manager' },
-    ],
-  },
-  {
-    title: 'Business',
-    items: [
-      { to: '/crm', icon: Contact, label: 'CRM Contacts' },
-      { to: '/pipeline', icon: Kanban, label: 'CRM Pipeline' },
-      { to: '/payments', icon: CreditCard, label: 'Payments' },
-      { to: '/tags', icon: Tag, label: 'Tags & Labels' },
-      { to: '/agents', icon: UserCog, label: 'Agents' },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
-      { to: '/admin', icon: ShieldCheck, label: 'Admin Hub' },
-      { to: '/flows', icon: GitBranch, label: 'Flows' },
-      { to: '/webhooks', icon: Webhook, label: 'Webhooks' },
-      { to: '/webhook-logs', icon: ScrollText, label: 'Webhook Logs' },
-      { to: '/audit', icon: FileText, label: 'Audit Logs' },
-      { to: '/auto-moderation', icon: ShieldAlert, label: 'Auto-Moderation' },
-      { to: '/notification-rules', icon: BellRing, label: 'Notification Rules' },
-      { to: '/api-keys', icon: Key, label: 'API Keys' },
-      { to: '/files', icon: FolderOpen, label: 'File Manager' },
-      { to: '/exports', icon: Download, label: 'Export Center' },
-      { to: '/bulk', icon: Layers, label: 'Bulk Operations' },
-      { to: '/language', icon: Globe, label: 'Language' },
-      { to: '/settings', icon: Settings, label: 'Settings' },
+      { to: '/flows', icon: GitBranch, label: 'Logic Streams' },
+      { to: '/webhooks', icon: Webhook, label: 'Link Protocols' },
+      { to: '/audit', icon: FileText, label: 'System Ledger' },
+      { to: '/api-keys', icon: Key, label: 'Encryption Keys' },
+      { to: '/settings', icon: Settings, label: 'Core Config' },
     ],
   },
 ];
@@ -158,10 +103,10 @@ const NOTIF_ICON: Record<string, React.ElementType> = {
 };
 
 const NOTIF_COLOR: Record<string, string> = {
-  error: 'text-red-500',
+  error: 'text-rose-500',
   warning: 'text-amber-500',
   success: 'text-emerald-500',
-  info: 'text-blue-500',
+  info: 'text-indigo-500',
 };
 
 export default function Layout() {
@@ -181,7 +126,6 @@ export default function Layout() {
     return notificationStore.subscribe(sync);
   }, []);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
@@ -198,167 +142,187 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col shrink-0">
-        {/* Logo */}
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-800">
-          <Bot className="w-8 h-8 text-brand-400" />
-          <div>
-            <h1 className="text-lg font-bold leading-tight">AudiraBot</h1>
-            <p className="text-xs text-gray-400">Admin Dashboard</p>
-          </div>
+    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100 selection:bg-indigo-500/30">
+      {/* Sidebar - Ultimate Aesthetic */}
+      <aside className="w-80 bg-slate-950 border-r border-white/5 flex flex-col shrink-0 relative z-50 overflow-hidden">
+        {/* Decorative Glow */}
+        <div className="absolute -left-20 -top-20 w-64 h-64 bg-indigo-600/10 blur-[100px] pointer-events-none" />
+        
+        {/* Logo Section */}
+        <div className="relative px-8 py-10 flex items-center gap-4 border-b border-white/5">
+           <div className="p-3 bg-indigo-600 rounded-[20px] shadow-2xl shadow-indigo-600/30 group cursor-pointer hover:scale-110 transition-transform">
+              <Brain className="w-6 h-6 text-white group-hover:animate-pulse" />
+           </div>
+           <div>
+              <h1 className="text-xl font-black italic tracking-tighter uppercase text-white leading-none">Audira<span className="text-indigo-500 underline decoration-2 underline-offset-4 decoration-indigo-400">OS</span></h1>
+              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mt-2">Core Neural Link</p>
+           </div>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
-          {sections.map((section) => (
-            <div key={section.title}>
-              <p className="px-3 mb-1 text-xs font-semibold uppercase tracking-wider text-gray-500">{section.title}</p>
-              <div className="space-y-0.5">
-                {section.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-brand-600 text-white'
-                          : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                      }`
-                    }
-                  >
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            </div>
-          ))}
+        {/* Navigation Content */}
+        <nav className="flex-1 px-4 py-8 space-y-10 overflow-y-auto scrollbar-hide">
+           {sections.map((section) => (
+             <div key={section.title} className="space-y-3">
+                <div className="flex items-center gap-3 px-4 mb-2">
+                   <span className="text-[10px] font-black uppercase text-indigo-500/60 tracking-[0.3em] whitespace-nowrap">{section.title}</span>
+                   <div className="h-px w-full bg-gradient-to-r from-indigo-500/20 to-transparent" />
+                </div>
+                <div className="space-y-1">
+                   {section.items.map((item) => (
+                     <NavLink
+                       key={item.to}
+                       to={item.to}
+                       end={item.to === '/'}
+                       className={({ isActive }) =>
+                         `group flex items-center gap-4 px-6 py-4 rounded-[18px] text-[11px] font-black uppercase tracking-widest transition-all duration-300 border ${
+                           isActive
+                             ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20 active:scale-95'
+                             : 'text-slate-500 border-transparent hover:text-white hover:bg-white/5 hover:translate-x-1'
+                         }`
+                       }
+                     >
+                       <item.icon className={`w-4 h-4 shrink-0 transition-all ${theme === 'dark' ? 'group-hover:text-indigo-400' : ''}`} />
+                       <span className="italic">{item.label}</span>
+                     </NavLink>
+                   ))}
+                </div>
+             </div>
+           ))}
         </nav>
 
-        {/* Footer */}
-        <div className="px-3 py-4 border-t border-gray-800">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white w-full transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            Logout
-          </button>
+        {/* User Footer Context */}
+        <div className="px-6 py-8 border-t border-white/5 relative bg-slate-950/80 backdrop-blur-md">
+           <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-[24px] border border-white/5 group hover:border-indigo-500/30 transition-all">
+              <div className="flex items-center gap-3">
+                 <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400">
+                    <User className="w-5 h-5" />
+                 </div>
+                 <div>
+                    <p className="text-[10px] font-black text-white italic truncate w-24 uppercase">Admin Nucleus</p>
+                    <div className="flex items-center gap-1">
+                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                       <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Linked</span>
+                    </div>
+                 </div>
+              </div>
+              <button 
+                 onClick={handleLogout}
+                 className="p-3 bg-slate-950 text-slate-700 hover:text-rose-500 rounded-xl transition-all border border-slate-800 hover:border-rose-500/20 active:scale-90"
+              >
+                 <Power className="w-4 h-4" />
+              </button>
+           </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar with Bell */}
-        <header className="h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex items-center justify-end px-6 shrink-0">
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-2"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {theme === 'dark' ? (
-              <Sun className="w-5 h-5 text-amber-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
-          <div ref={bellRef} className="relative">
-            <button
-              onClick={() => setBellOpen((p) => !p)}
-              className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              {unreadCount > 0 ? (
-                <BellRing className="w-5 h-5 text-red-500 animate-bounce" />
-              ) : (
-                <Bell className="w-5 h-5 text-gray-500" />
-              )}
-              {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </button>
-
-            {/* Notification Dropdown */}
-            {bellOpen && (
-              <div className="absolute right-0 top-12 w-96 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-[28rem] flex flex-col">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <h3 className="font-semibold text-sm">Notifications</h3>
-                  <div className="flex gap-2">
-                    {unreadCount > 0 && (
-                      <button
-                        onClick={() => notificationStore.markAllRead()}
-                        className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
-                      >
-                        <CheckCheck className="w-3 h-3" /> Mark all read
-                      </button>
-                    )}
-                    {notifs.length > 0 && (
-                      <button
-                        onClick={() => notificationStore.clear()}
-                        className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1"
-                      >
-                        <Trash2 className="w-3 h-3" /> Clear
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  {notifs.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
-                      <Bell className="w-8 h-8 mb-2 opacity-40" />
-                      <p className="text-sm">Tidak ada notifikasi</p>
-                    </div>
-                  ) : (
-                    notifs.map((n) => {
-                      const NIcon = NOTIF_ICON[n.type] ?? Info;
-                      const color = NOTIF_COLOR[n.type] ?? 'text-gray-500';
-                      return (
-                        <div
-                          key={n.id}
-                          onClick={() => notificationStore.markRead(n.id)}
-                          className={`px-4 py-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors ${
-                            !n.read ? 'bg-blue-50/40' : ''
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            <NIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${color}`} />
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold text-gray-800">{n.title}</p>
-                                {!n.read && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0" />}
-                              </div>
-                              <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
-                              {n.solution && (
-                                <div className="mt-1.5 flex items-start gap-1.5 bg-amber-50 rounded px-2 py-1 border border-dashed border-amber-200">
-                                  <Wrench className="w-3 h-3 mt-0.5 text-amber-600 flex-shrink-0" />
-                                  <p className="text-[11px] text-amber-800 font-medium leading-relaxed">{n.solution}</p>
-                                </div>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-1">
-                                {new Date(n.timestamp).toLocaleString('id-ID')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
+      {/* Main Framework */}
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Background Decorative */}
+        <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-indigo-600/5 blur-[150px] pointer-events-none" />
+        
+        {/* Top Intelligence Bar */}
+        <header className="h-20 bg-slate-950/20 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 relative z-40">
+           <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-2xl border border-white/5">
+                 <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Grid Status: Synchronized</span>
               </div>
-            )}
-          </div>
+           </div>
+
+           <div className="flex items-center gap-4">
+              {/* Theme Toggle Premium */}
+              <button
+                onClick={toggleTheme}
+                className="p-3 rounded-2xl border border-white/5 bg-slate-900/40 hover:bg-slate-800 hover:border-white/10 transition-all active:scale-90"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-5 h-5 text-amber-400 transition-transform hover:rotate-90 duration-500" />
+                ) : (
+                  <Moon className="w-5 h-5 text-indigo-400" />
+                )}
+              </button>
+
+              <div ref={bellRef} className="relative">
+                <button
+                  onClick={() => setBellOpen((p) => !p)}
+                  className={`p-3 rounded-2xl border transition-all active:scale-90 ${unreadCount > 0 ? 'bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-600/20' : 'bg-slate-900/40 border-white/5 hover:bg-slate-800'}`}
+                >
+                  <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-white' : 'text-slate-500'}`} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-600 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-slate-950 animate-bounce">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Ultimate Notification Dropdown */}
+                {bellOpen && (
+                  <div className="absolute right-0 top-16 w-[420px] bg-slate-950 border border-white/10 rounded-[40px] shadow-[0_0_80px_rgba(0,0,0,0.8)] z-[60] overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+                    <div className="p-8 border-b border-white/5 flex items-center justify-between bg-white/[0.02] backdrop-blur-xl">
+                       <div className="flex items-center gap-3">
+                          <BellRing className="w-5 h-5 text-indigo-500" />
+                          <h3 className="text-sm font-black text-white italic uppercase tracking-widest">Signal Stream</h3>
+                       </div>
+                       <div className="flex gap-4">
+                          {unreadCount > 0 && (
+                            <button onClick={() => notificationStore.markAllRead()} className="text-[9px] font-black text-indigo-400 hover:text-white transition-colors uppercase tracking-widest underline decoration-indigo-400/50 underline-offset-4">Sync All</button>
+                          )}
+                          <button onClick={() => notificationStore.clear()} className="p-2 text-slate-700 hover:text-rose-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                       </div>
+                    </div>
+
+                    <div className="max-h-[32rem] overflow-y-auto scrollbar-hide">
+                      {notifs.length === 0 ? (
+                        <div className="py-24 text-center opacity-20 flex flex-col items-center">
+                           <Inbox className="w-12 h-12 mb-4" />
+                           <p className="text-[10px] font-black uppercase tracking-[0.3em]">No frequency anomalies</p>
+                        </div>
+                      ) : (
+                        notifs.map((n) => {
+                          const NIcon = NOTIF_ICON[n.type] ?? Info;
+                          const color = NOTIF_COLOR[n.type] ?? 'text-slate-500';
+                          return (
+                            <div
+                              key={n.id}
+                              onClick={() => notificationStore.markRead(n.id)}
+                              className={`p-8 border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition-all relative ${!n.read ? 'bg-indigo-600/5' : ''}`}
+                            >
+                              {!n.read && <div className="absolute left-0 top-8 bottom-8 w-1 bg-indigo-600 rounded-r-full" />}
+                              <div className="flex items-start gap-6">
+                                <div className={`p-4 rounded-2xl bg-slate-900 border border-white/5 ${color.replace('text-', 'text-opacity-20 ')}`}>
+                                   <NIcon className={`w-5 h-5 ${color}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-[11px] font-black text-white uppercase tracking-tight">{n.title}</h4>
+                                    <span className="text-[8px] font-black text-slate-700 uppercase">{new Date(n.timestamp).toLocaleTimeString()}</span>
+                                  </div>
+                                  <p className="text-xs text-slate-500 font-bold leading-relaxed mb-4 italic group-hover:text-slate-300 transition-colors">"{n.message}"</p>
+                                  
+                                  {n.solution && (
+                                    <div className="bg-amber-600/10 border border-amber-600/20 rounded-2xl p-4 flex items-start gap-3">
+                                       <Wrench className="w-3.5 h-3.5 mt-0.5 text-amber-500 shrink-0" />
+                                       <p className="text-[10px] text-amber-400 font-black uppercase tracking-tight leading-relaxed">{n.solution}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-950">
-          <div className="p-8">
-            <Outlet />
-          </div>
+        {/* Neural Outlet - Content Terminal */}
+        <main className="flex-1 overflow-y-auto bg-slate-950 relative scrollbar-thin scrollbar-thumb-indigo-600/20 scrollbar-track-transparent">
+           <div className="p-10 max-w-[1920px] mx-auto">
+              <Outlet />
+           </div>
         </main>
       </div>
     </div>

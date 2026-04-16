@@ -723,6 +723,9 @@ model Ticket {
   tags              Json             @default("[]")
   metadata          Json             @default("{}")
   sheetSynced       Boolean          @default(false)
+  telegramNotified  Boolean          @default(false)
+  lastSyncError     String?
+  syncAttemptCount  Int              @default(0)
 
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -776,12 +779,21 @@ enum TicketPriority {
   CRITICAL
 }
 
-enum TicketCategory {
+enum     TicketCategory {
   INCIDENT
   REQUEST
   MAINTENANCE
   CONFIGURATION
   MONITORING
+  // neuCentrIX SLA Categories
+  FULFILLMENT
+  VAM
+  HELPDESK
+  SMARTHAND
+  INVENTORY
+  REPORTING
+  ADDITIONAL_SERVICE
+  AVAILABILITY
 }
 
 // ── SLA Tracking ──

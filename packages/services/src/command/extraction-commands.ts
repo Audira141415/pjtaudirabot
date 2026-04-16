@@ -80,14 +80,22 @@ export class ExtractCommand extends BaseCommandHandler {
         .join('\n');
 
       return this.createResult(true, [
-        `✅ *Data Extracted & Ticket Created*`,
-        `📋 ${ticket.ticketNumber}`,
-        `🔴 Priority: ${priority} (score: ${result.priorityScore}/10)`,
-        `📂 Category: ${result.category}`,
-        `📊 Fields extracted: ${result.fieldCount}`,
+        `⚡ *AUDI NOC SYSTEMS — EXTRACTION COMPLETE*`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `🎫 *ID:* [${ticket.ticketNumber}]`,
+        `👤 *SENDER:* [${context.user.displayName ?? 'System'}]`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `📊 *VITAL STATS*`,
+        `• Priority: 🎯 ${priority} (score: ${result.priorityScore}/10)`,
+        `• Category: 📁 ${result.category}`,
+        `• Extracted: ${result.fieldCount} fields`,
+        `• Status: 🔋 ACTIVE TRACKING`,
         ``,
-        `📝 *Extracted Data:*`,
+        `📝 *RAW DATA SUMMARY*`,
         extracted,
+        ``,
+        `⏱️ *SLA MONITORING:* [STARTED]`,
+        `_Gunakan !ticket-status ${ticket.ticketNumber} untuk pembaruan real-time._`,
       ].join('\n'), { ticketNumber: ticket.ticketNumber, data: result.data });
     } catch (error) {
       this.logger.error('Extraction failed', error as Error);

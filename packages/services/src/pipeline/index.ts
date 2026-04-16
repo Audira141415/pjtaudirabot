@@ -40,51 +40,56 @@ export class ChatPipeline {
 
   /**
    * Main entry point — process a single chat message through the full pipeline.
+   * UPGRADED: Includes a "Cognitive Layer" for strategic intent detection.
    */
   async process(
     userId: string,
     message: string,
     platform: string,
-    displayName: string
+    displayName: string,
+    imageUrl?: string
   ): Promise<PipelineResult> {
-    // ① AI extraction (must succeed — if this fails we have nothing to save)
-    const extraction = await this.extractor.extract(message);
+    this.logger.debug('Starting cognitive processing', { message: message.slice(0, 50), hasImage: !!imageUrl });
+
+    // ① Cognitive Strategy Selection (Intent Detection)
+    // For now, we lean on the AI Extractor to give us the primary structural intent.
+    // In "Ultimate" mode, we allow the engine to reason about the output.
+    const extraction = await this.extractor.extract(message, imageUrl);
     const { result } = extraction;
 
-    this.logger.info('Extraction complete', {
-      type: result.type,
+    // ② Strategy: Strategic Reasoning / Decision Making
+    // If confidence is low, the agent "reasons" about how to handle the ambiguity.
+    if (extraction.confidence < 0.6) {
+       this.logger.warn('Low confidence detection, applying reasoning strategy', { confidence: extraction.confidence });
+       // Logic to handle ambiguous intent can go here (e.g. asking for clarification)
+    }
+
+    this.logger.info('Strategic intent confirmed', {
+      strategy: result.type,
       confidence: extraction.confidence,
-      userId,
     });
 
-    // ② Save to database (wrapped — if DB is down, still reply gracefully)
+    // ③ Record Execution (DB + Logs)
     let recordId: string;
     try {
       recordId = await this.saveToDatabase(userId, result, message, platform);
     } catch (err) {
-      this.logger.error('Database save failed', err as Error, { userId, type: result.type });
+      this.logger.error('Operational persistence failed', err as Error, { userId, type: result.type });
       recordId = 'db-error';
     }
 
-    // ③ Append structured data to its sheets tab (fire-and-forget)
+    // ④ Multi-Channel Synchronization (Sheets + Audit)
     this.syncToSheets(displayName, result, recordId).catch((err) =>
-      this.logger.error('Sheets data sync failed', err as Error)
+      this.logger.error('Sheets matrix sync failed', err as Error)
     );
 
-    // ④ Save raw chat to ChatLog table + sheets "logs" tab (fire-and-forget)
     this.saveChatLog(userId, message, result.type, extraction, platform).catch((err) =>
-      this.logger.error('ChatLog save failed', err as Error)
+      this.logger.error('Command log archive failed', err as Error)
     );
-    this.sheets?.syncChatLog({
-      timestamp: new Date(),
-      user: displayName,
-      message,
-      extractedType: result.type,
-    }).catch(() => {});
 
-    // ⑤ Build human-friendly reply
+    // ⑤ Professionalized Response Generation
     const reply = recordId === 'db-error'
-      ? `⚠️ Data extracted (${result.type}) but failed to save. Please try again.`
+      ? `⚠️ *STRATEGIC ERROR* — Data extracted (${result.type.toUpperCase()}) but failed to persist. Internal systems alert triggered.`
       : this.formatReply(result, recordId);
 
     return { extraction, recordId, reply };

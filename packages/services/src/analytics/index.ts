@@ -186,6 +186,49 @@ export class AnalyticsService {
     });
   }
 
+  /**
+   * Proactive Incident Forecasting (Phase 5)
+   * Analyzes multi-day patterns to predict high-intensity periods.
+   */
+  async getPredictiveForecasting(): Promise<{
+    riskProfile: number[];
+    peakHour: number;
+    recommendedAlertLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  }> {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    // Retrieve historical signal density
+    const logs = await this.db.chatLog.findMany({
+      where: { createdAt: { gte: weekAgo } },
+      select: { createdAt: true }
+    });
+
+    const hourlyBuckets = new Array(24).fill(0);
+    logs.forEach(log => {
+      const hour = new Date(log.createdAt).getHours();
+      hourlyBuckets[hour]++;
+    });
+
+    // Strategy: Normalize distribution into a 0-100 relative risk score
+    const maxDensity = Math.max(...hourlyBuckets, 1);
+    const riskProfile = hourlyBuckets.map(count => Math.round((count / maxDensity) * 100));
+
+    // Determine current strategic alert level
+    const currentHour = new Date().getHours();
+    const currentRisk = riskProfile[currentHour];
+    
+    let level: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    if (currentRisk > 70) level = 'HIGH';
+    else if (currentRisk > 30) level = 'MEDIUM';
+
+    return {
+      riskProfile,
+      peakHour: hourlyBuckets.indexOf(Math.max(...hourlyBuckets)),
+      recommendedAlertLevel: level
+    };
+  }
+
   private todayKey(): string {
     return new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   }

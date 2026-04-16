@@ -40,6 +40,7 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
     volumes:
       - /home/audira/pjtaudirabot/logs:/app/logs
@@ -57,6 +58,7 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
       GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
       GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}
@@ -77,6 +79,7 @@ services:
     environment:
       NODE_ENV: production
       LOG_LEVEL: info
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
       GOOGLE_SHEETS_ENABLED: ${GOOGLE_SHEETS_ENABLED:-false}
       GOOGLE_SHEETS_CREDENTIALS: /opt/google-credentials/google-credentials.json
       GOOGLE_SHEETS_SPREADSHEET_ID: ${GOOGLE_SHEETS_SPREADSHEET_ID}

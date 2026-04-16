@@ -167,18 +167,17 @@ export class DataExtractionService {
         /\b(metro[-\s]?e|iptransit|iptx|ip\s*transit|dedicated|cloud|colocation)\b/i,
       ]),
       vlanId: get([
-        /(?:vlan\s*(?:id)?)\s*[:\-=]\s*(\d{1,4})/i,
-        /vlan\s+(\d{1,4})/i,
+        /(?:vlan\s*(?:id|id\s*vlan)?)\s*[:\-=]\s*(\d{1,5})/i,
+        /vlan\s+(\d{1,5})/i,
       ]),
       hostnameSwitch,
       port: normalizedPort,
       alokasi: this.buildAlokasi(hostnameSwitch, normalizedPort),
       ipAddress: get([
-        /(?:ip\s*(?:address)?)\s*[:\-=]\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d{1,2})?)/i,
-        /(?:ip\s*p2p)\s*[:\-=]\s*(.+)/i,
+        /(?:ip\s*(?:address|customer|cust|p2p|point\s*to\s*point)?)\s*[:\-=]\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d{1,2})?)/i,
       ]),
       gateway: get([/(?:gateway|gw)\s*[:\-=]\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/i]),
-      subnet: get([/(?:subnet|mask)\s*[:\-=]\s*(.+)/i]),
+      subnet: get([/(?:subnet|mask|subnet\s*mask)\s*[:\-=]\s*(.+)/i]),
       mode: get([/(?:mode)\s*[:\-=]\s*(.+)/i]),
       problem: get([
         /(?:laporan\s*(?:gangguan\/request|gangguan|request)?|problem|masalah(?:\s+yang\s+terjadi)?|keluhan|issue|gangguan)\s*[:\-=]\s*(.+)/i,
@@ -209,6 +208,12 @@ export class DataExtractionService {
         bestCategory = this.mapCategory(cat);
       }
     }
+
+    // Force category from template if present
+    if (lower.includes('category: incident')) bestCategory = 'INCIDENT';
+    else if (lower.includes('category: fulfillment')) bestCategory = 'FULFILLMENT';
+    else if (lower.includes('category: request')) bestCategory = 'REQUEST';
+
     return bestCategory;
   }
 
@@ -231,6 +236,10 @@ export class DataExtractionService {
     if (CATEGORY_KEYWORDS.DOWN.some((kw) => text.includes(kw))) score += 3;
     // SLOW keywords → +1
     else if (CATEGORY_KEYWORDS.SLOW.some((kw) => text.includes(kw))) score += 1;
+
+    // Template-based CRITICAL priority → Force score 10
+    if (text.includes('priority: critical')) score = 10;
+    else if (text.includes('priority: high')) score += 3;
 
     // VIP customer → +2
     if (data.customer && VIP_KEYWORDS.some((kw) => data.customer!.toLowerCase().includes(kw))) score += 2;

@@ -119,8 +119,8 @@ export class CommandExecutor {
   }
 
   private hasPermission(context: CommandContext, handler: any): boolean {
-    const requiredRole = handler.getRequiredRole();
-    const userRole = context.user.role;
+    const requiredRole = handler.getRequiredRole()?.toLowerCase() || 'user';
+    const userRole = context.user.role?.toLowerCase() || 'user';
 
     const roleHierarchy: Record<string, number> = {
       user: 1,
@@ -128,6 +128,6 @@ export class CommandExecutor {
       admin: 3
     };
 
-    return (roleHierarchy[userRole] || 0) >= (roleHierarchy[requiredRole] || 1);
+    return (roleHierarchy[userRole] || 1) >= (roleHierarchy[requiredRole] || 1);
   }
 }

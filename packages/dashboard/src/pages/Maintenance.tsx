@@ -6,26 +6,33 @@ import {
   type MaintenanceScheduleItem,
 } from '../lib/api';
 import {
-  Wrench,
-  Search,
-  CalendarDays,
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  Edit3,
-  Upload,
-  X,
-  Loader2,
-  ExternalLink,
-  ShieldCheck,
-  PlusCircle,
-  Filter,
-  History,
-  FileImage,
-  FileText,
   ChevronDown,
   Trash2,
+  Calendar,
+  Zap,
+  Activity,
+  Target,
+  LayoutGrid,
+  Settings,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  Wrench,
+  Search,
+  Filter,
+  PlusCircle,
+  ShieldCheck,
+  FileImage,
+  Edit3,
+  X,
+  ExternalLink,
+  FileText,
+  History as HistoryIcon,
+  Upload,
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
+import { toast } from '../components/Toast';
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 const INTERVAL_OPTIONS = [1, 2, 3, 6, 12];
@@ -58,33 +65,34 @@ const EMPTY_CREATE_FORM = {
 function dueMonthsForYear(schedule: MaintenanceScheduleItem, year: number) {
   const months: number[] = [];
   let cursor = schedule.anchorMonth;
+  const startYear = new Date(schedule.createdAt).getFullYear();
   while (cursor <= 12) {
     months.push(cursor);
     cursor += schedule.intervalMonths;
   }
-  return months.filter((month) => month >= 1 && month <= 12 && year >= new Date(schedule.createdAt).getFullYear());
+  return months.filter((month) => month >= 1 && month <= 12 && year >= startYear);
 }
 
 function intervalLabel(intervalMonths: number) {
   const map: Record<number, string> = {
-    1: 'Bulanan',
-    2: '2 Bulanan',
-    3: 'Triwulan',
-    6: 'Semesteran',
-    12: 'Tahunan',
+    1: 'Monthly Signal',
+    2: 'Bi-Monthly',
+    3: 'Quarterly Cycle',
+    6: 'Semi-Annual',
+    12: 'Annual Pulse',
   };
-  return map[intervalMonths] ?? `${intervalMonths} Bulanan`;
+  return map[intervalMonths] ?? `${intervalMonths} Month Cycle`;
 }
 
 function scheduleStatus(schedule: MaintenanceScheduleItem) {
   const now = new Date();
   const dueDate = new Date(schedule.nextDueDate);
-  if (dueDate < now) return { label: 'Overdue', className: 'bg-red-100 text-red-700', icon: AlertTriangle };
+  if (dueDate < now) return { label: 'CRITICAL OVERDUE', className: 'bg-rose-500/10 text-rose-500 border-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.2)]', icon: AlertTriangle };
 
   const dueSoonBoundary = new Date(now.getTime() + schedule.notifyDaysBefore * 24 * 60 * 60 * 1000);
-  if (dueDate <= dueSoonBoundary) return { label: 'Due Soon', className: 'bg-amber-100 text-amber-700', icon: Clock3 };
+  if (dueDate <= dueSoonBoundary) return { label: 'IMMINENT CYCLE', className: 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.2)]', icon: Clock };
 
-  return { label: 'On Track', className: 'bg-emerald-100 text-emerald-700', icon: CheckCircle2 };
+  return { label: 'SYNCHRONIZED', className: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20', icon: CheckCircle };
 }
 
 function isCompletedThisYear(schedule: MaintenanceScheduleItem, year: number) {
@@ -96,24 +104,19 @@ export default function MaintenancePage() {
   const [items, setItems] = useState<MaintenanceScheduleItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [search, setSearch] = useState('');
-  const [showInactive, setShowInactive] = useState(false);
+  const [apiSearch] = useState('');
   const [selected, setSelected] = useState<MaintenanceScheduleItem | null>(null);
   const [yearView, setYearView] = useState(new Date().getFullYear());
-
-  // ── Create form ──
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
-
-  // ── Dropdown filters ──
+  const [search, setSearch] = useState('');
+  const [showInactive] = useState(false);
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterLocation, setFilterLocation] = useState('');
   const [filterSid, setFilterSid] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // ── Edit form ──
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
@@ -131,11 +134,8 @@ export default function MaintenancePage() {
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null);
   const [latestUploadedEvidence, setLatestUploadedEvidence] = useState<MaintenanceEvidenceFile | null>(null);
 
-  // ── History timeline ──
   const [history, setHistory] = useState<MaintenanceHistoryEvent[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // ── Evidence preview ──
   const [previewFile, setPreviewFile] = useState<MaintenanceEvidenceFile | null>(null);
 
   const load = async () => {
@@ -143,21 +143,18 @@ export default function MaintenancePage() {
     try {
       const res = await api.getMaintenanceSchedules({
         active: showInactive ? undefined : true,
-        search: search.trim() || undefined,
+        search: apiSearch.trim() || undefined,
       });
       setItems(res.data);
       if (selected) {
         const fresh = res.data.find((item) => item.id === selected.id) ?? null;
         setSelected(fresh);
       }
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    load();
-  }, [showInactive]);
+  useEffect(() => { load(); }, [showInactive, apiSearch]);
 
   const filterOptions = useMemo(() => ({
     customers: [...new Set(items.map((item) => item.customer).filter(Boolean) as string[])].sort(),
@@ -215,7 +212,6 @@ export default function MaintenancePage() {
       notifyDaysBefore: item.notifyDaysBefore,
       isActive: item.isActive,
     });
-    // load history async
     setLoadingHistory(true);
     api.getMaintenanceHistory(item.id)
       .then((res) => setHistory(res.data))
@@ -227,7 +223,6 @@ export default function MaintenancePage() {
     setSelected(null);
     setLatestUploadedEvidence(null);
     setEvidenceFile(null);
-    setCompletionNote('');
     setHistory([]);
     setPreviewFile(null);
   };
@@ -239,10 +234,10 @@ export default function MaintenancePage() {
       await api.createMaintenanceSchedule(createForm);
       setShowCreate(false);
       setCreateForm(EMPTY_CREATE_FORM);
+      toast({ type: 'success', title: 'MATRIX_INIT_SUCCESS', message: 'Maintenance sequence established.' });
       await load();
-    } finally {
-      setCreating(false);
-    }
+    } catch (err) { toast({ type: 'error', title: 'INIT_FAILURE', message: 'Failed to establish sequence.' }); }
+    finally { setCreating(false); }
   };
 
   const handleSave = async () => {
@@ -251,15 +246,14 @@ export default function MaintenancePage() {
     try {
       const res = await api.updateMaintenanceSchedule(selected.id, editForm);
       setSelected(res.data);
+      toast({ type: 'success', title: 'SYNCRONIZATION_SUCCESS', message: 'Schedule parameters updated in core.' });
       await load();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleUploadEvidence = async () => {
     if (!selected || !evidenceFile) return null;
-    setUploading(true);
+    setSaving(true);
     try {
       const formData = new FormData();
       formData.append('file', evidenceFile);
@@ -269,11 +263,10 @@ export default function MaintenancePage() {
       setLatestUploadedEvidence(res.data);
       const refreshed = await api.getMaintenanceSchedule(selected.id);
       setSelected(refreshed.data);
+      toast({ type: 'success', title: 'DATA_INGEST_SUCCESS', message: 'Evidence signal captured.' });
       await load();
       return res.data;
-    } finally {
-      setUploading(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleComplete = async () => {
@@ -285,205 +278,170 @@ export default function MaintenancePage() {
         const uploaded = await handleUploadEvidence();
         evidenceId = uploaded?.id;
       }
-
       const res = await api.completeMaintenanceSchedule(selected.id, {
         note: completionNote,
         evidenceFileId: evidenceId,
       });
       setSelected(res.data);
       setEvidenceFile(null);
+      toast({ type: 'success', title: 'TASK_RESOLUTION_ACK', message: 'Maintenance cycle confirmed and reset.' });
       await load();
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    if (!confirm(`Hapus jadwal "${selected.title}"? Aksi ini tidak dapat dibatalkan dan akan menghapus sinkronisasi di Google Sheets.`)) return;
+    if (!confirm(`Purge sequence "${selected.title}"? This will terminate GSheet sync and historical tracking for this ID.`)) return;
     setSaving(true);
     try {
       await api.deleteMaintenanceSchedule(selected.id);
       closeDetail();
+      toast({ type: 'info', title: 'PURGE_EXECUTED', message: 'Maintenance item removed from registry.' });
       await load();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Gagal menghapus jadwal.');
-    } finally {
-      setSaving(false);
-    }
+      toast({ type: 'error', title: 'PURGE_FAILURE', message: String(err) });
+    } finally { setSaving(false); }
   };
 
+  if (loading && items.length === 0) return (
+    <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+      <div className="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" />
+      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Scanning Temporal Grid...</span>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* Header Intelligence */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2">
-            <Wrench className="h-6 w-6 text-brand-500" />
-            <h1 className="text-2xl font-bold text-gray-900">Preventive Maintenance</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <Wrench className="w-5 h-5 text-indigo-400" />
+            <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em]">Temporal Logistics</span>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Kalender PM per item, edit cadence tanpa script, dan tutup maintenance dengan bukti langsung dari dashboard.
-          </p>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1 underline decoration-indigo-500/30 underline-offset-[12px] decoration-4">Preventive Maintenance</h1>
+          <p className="text-slate-500 font-medium text-sm mt-4">Autonomous cycle management, evidence tracking, and multi-tenant scheduling hub.</p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <div className="relative min-w-[240px]">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+        <div className="flex flex-wrap gap-4">
+          <div className="relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 transition-colors group-hover:text-indigo-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari item / customer / lokasi / SID"
-              className="w-full rounded-xl border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none"
+              placeholder="Query sequence or SID..."
+              className="bg-slate-950/50 border border-slate-800 rounded-[20px] pl-12 pr-6 py-4 text-sm text-white placeholder:text-slate-700 outline-none focus:border-indigo-500 group-hover:border-slate-700 transition-all w-64 lg:w-80"
             />
           </div>
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium ${
-              showFilters || filterCustomer || filterLocation || filterSid
-                ? 'border-brand-500 bg-brand-50 text-brand-700'
-                : 'border-gray-300 bg-white text-gray-700'
-            }`}
+          
+          <button 
+             onClick={() => setShowFilters(!showFilters)}
+             className={`p-4 rounded-[20px] transition-all flex items-center gap-2 border ${showFilters || filterCustomer || filterLocation || filterSid ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20' : 'bg-slate-900 border-slate-800 text-slate-600 hover:text-white'}`}
           >
-            <Filter className="h-4 w-4" />
-            Filter
-            {(filterCustomer || filterLocation || filterSid) && (
-              <span className="rounded-full bg-brand-500 px-1.5 py-0.5 text-xs font-semibold text-white">
-                {[filterCustomer, filterLocation, filterSid].filter(Boolean).length}
-              </span>
-            )}
-            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+             <Filter className="w-5 h-5" />
+             {(filterCustomer || filterLocation || filterSid) && <span className="text-[10px] font-black">X{ [filterCustomer, filterLocation, filterSid].filter(Boolean).length }</span>}
           </button>
-          <button
-            onClick={() => load()}
-            className="rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-          >
-            Refresh
-          </button>
-          <button
-            onClick={() => setShowInactive((value) => !value)}
-            className={`rounded-xl border px-4 py-2 text-sm font-medium ${showInactive ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-300 bg-white text-gray-700'}`}
-          >
-            {showInactive ? 'Hanya Aktif' : '+Nonaktif'}
-          </button>
-          <button
+
+          <button 
             onClick={() => setShowCreate(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+            className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-[20px] hover:scale-[1.05] active:scale-95 transition-all shadow-2xl shadow-indigo-600/30"
           >
-            <PlusCircle className="h-4 w-4" />
-            Tambah Jadwal
+            <PlusCircle className="w-4 h-4" /> Establish Matrix
           </button>
         </div>
       </div>
 
-      {/* ── Filter dropdowns ── */}
+      {/* Filter Dropdown */}
       {showFilters && (
-        <div className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
-          <div className="flex flex-wrap items-end gap-4">
-            <label className="space-y-1 text-sm">
-              <span className="text-gray-600 font-medium">Customer</span>
-              <select
-                value={filterCustomer}
-                onChange={(e) => setFilterCustomer(e.target.value)}
-                className="block rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              >
-                <option value="">Semua Customer</option>
-                {filterOptions.customers.map((c) => <option key={c} value={c}>{c}</option>)}
+        <div className="bg-slate-900 border border-indigo-500/20 rounded-[32px] p-8 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-4 duration-300">
+           <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest block ml-2">Customer Axis</label>
+              <select value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
+                <option value="">Full Customer Spectrum</option>
+                {filterOptions.customers.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-gray-600 font-medium">Lokasi</span>
-              <select
-                value={filterLocation}
-                onChange={(e) => setFilterLocation(e.target.value)}
-                className="block rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              >
-                <option value="">Semua Lokasi</option>
-                {filterOptions.locations.map((l) => <option key={l} value={l}>{l}</option>)}
+           </div>
+           <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest block ml-2">Location Node</label>
+              <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
+                <option value="">Full Geographic Grid</option>
+                {filterOptions.locations.map(l => <option key={l} value={l}>{l}</option>)}
               </select>
-            </label>
-            <label className="space-y-1 text-sm">
-              <span className="text-gray-600 font-medium">SID</span>
-              <select
-                value={filterSid}
-                onChange={(e) => setFilterSid(e.target.value)}
-                className="block rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
-              >
-                <option value="">Semua SID</option>
-                {filterOptions.sids.map((s) => <option key={s} value={s}>{s}</option>)}
+           </div>
+           <div className="space-y-2">
+              <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest block ml-2">Identity (SID)</label>
+              <select value={filterSid} onChange={e => setFilterSid(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-indigo-500">
+                <option value="">Full Identification Pool</option>
+                {filterOptions.sids.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
-            </label>
-            {(filterCustomer || filterLocation || filterSid) && (
-              <button
-                onClick={() => { setFilterCustomer(''); setFilterLocation(''); setFilterSid(''); }}
-                className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-              >
-                Reset Filter
-              </button>
-            )}
-          </div>
+           </div>
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-4">
+      {/* Stats Dash */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Total Item', value: stats.total, tone: 'text-gray-900', icon: CalendarDays },
-          { label: 'Overdue', value: stats.overdue, tone: 'text-red-600', icon: AlertTriangle },
-          { label: 'Due 14 Hari', value: stats.dueSoon, tone: 'text-amber-600', icon: Clock3 },
-          { label: `Completed ${yearView}`, value: stats.completedThisYear, tone: 'text-emerald-600', icon: ShieldCheck },
-        ].map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-500">{card.label}</p>
-                <Icon className="h-5 w-5 text-gray-400" />
-              </div>
-              <p className={`mt-3 text-3xl font-bold ${card.tone}`}>{card.value}</p>
-            </div>
-          );
-        })}
+          { label: 'ACTIVE SEQUENCES', value: stats.total, color: 'text-indigo-400', icon: Calendar },
+          { label: 'CRITICAL OVERDUE', value: stats.overdue, color: 'text-rose-500', icon: AlertTriangle, status: 'urgent' },
+          { label: 'IMMINENT (H-14)', value: stats.dueSoon, color: 'text-amber-500', icon: Clock },
+          { label: `SUCCESS CYCLES [${yearView}]`, value: stats.completedThisYear, color: 'text-emerald-500', icon: ShieldCheck },
+        ].map((card, i) => (
+          <div key={i} className="bg-slate-950/40 border border-slate-800/80 p-8 rounded-[40px] relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-500">
+             <div className={`absolute -right-8 -top-8 w-24 h-24 blur-[40px] opacity-10 ${card.color.replace('text-', 'bg-')}`} />
+             <div className="flex items-start justify-between relative z-10 mb-6">
+                <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 group-hover:rotate-12 transition-all ${card.status === 'urgent' && 'animate-pulse'}`}>
+                   <card.icon className={`w-6 h-6 ${card.color}`} />
+                </div>
+                <div className="text-right">
+                   <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{card.label}</p>
+                   <p className={`text-4xl font-black italic tracking-tighter ${card.color}`}>{card.value}</p>
+                </div>
+             </div>
+             <div className="text-[9px] font-black text-slate-700 uppercase tracking-widest flex items-center gap-1">
+                <Zap className="w-3 h-3 text-indigo-500" /> Real-time telemetry sync
+             </div>
+          </div>
+        ))}
       </div>
 
-      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-gray-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Kalender PM Tahunan</h2>
-            <p className="text-sm text-gray-500">Setiap baris menunjukkan bulan-bulan maintenance aktif untuk item tersebut.</p>
+      {/* Yearly Strategy Board */}
+      <section className="bg-slate-950/40 border border-slate-800/80 rounded-[48px] overflow-hidden backdrop-blur-3xl shadow-2xl relative">
+        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-indigo-600/5 to-transparent pointer-events-none" />
+        
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-800/50 p-10">
+          <div className="flex items-center gap-4">
+             <LayoutGrid className="w-6 h-6 text-indigo-500" />
+             <div>
+                <h2 className="text-2xl font-black text-white uppercase italic tracking-tight">Temporal Grid Map</h2>
+                <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-1">Global maintenance synchronization overview</p>
+             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setYearView((year) => year - 1)}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              {yearView - 1}
-            </button>
-            <div className="rounded-lg bg-gray-900 px-4 py-1.5 text-sm font-semibold text-white">{yearView}</div>
-            <button
-              onClick={() => setYearView((year) => year + 1)}
-              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              {yearView + 1}
-            </button>
+          
+          <div className="flex items-center gap-4 bg-slate-950/50 p-3 rounded-3xl border border-slate-800">
+            <button onClick={() => setYearView(y => y-1)} className="p-3 text-slate-600 hover:text-white transition-colors"><ChevronDown className="w-5 h-5 rotate-90" /></button>
+            <div className="px-8 py-3 bg-indigo-600 text-white font-black text-sm italic rounded-2xl shadow-xl shadow-indigo-600/30">{yearView}</div>
+            <button onClick={() => setYearView(y => y+1)} className="p-3 text-slate-600 hover:text-white transition-colors"><ChevronDown className="w-5 h-5 -rotate-90" /></button>
           </div>
         </div>
+
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
-                <th className="sticky left-0 z-10 bg-gray-50 px-4 py-3 text-left font-medium">Item</th>
-                <th className="px-4 py-3 text-left font-medium">Interval</th>
-                {MONTH_LABELS.map((month) => (
-                  <th key={month} className="px-3 py-3 text-center font-medium">{month}</th>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-900/30 border-b border-slate-800/50">
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] sticky left-0 bg-slate-950 z-20">Sequence Archetype</th>
+                <th className="px-6 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">Protocol</th>
+                {MONTH_LABELS.map(m => (
+                  <th key={m} className="px-4 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] text-center">{m}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
-              {loading ? (
+            <tbody className="divide-y divide-slate-800/30">
+              {filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-10 text-center text-gray-400">Loading maintenance calendar...</td>
-                </tr>
-              ) : filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={14} className="px-4 py-10 text-center text-gray-400">Belum ada item maintenance</td>
+                   <td colSpan={14} className="py-24 text-center grayscale opacity-20">
+                      <Calendar className="w-16 h-16 mx-auto mb-4" />
+                      <p className="text-[10px] font-black uppercase tracking-[0.4em]">Grid Empty — Establish Sequences Above</p>
+                   </td>
                 </tr>
               ) : (
                 filteredItems.map((item) => {
@@ -493,33 +451,29 @@ export default function MaintenancePage() {
                     : null;
                   const status = scheduleStatus(item);
                   return (
-                    <tr key={item.id} className="hover:bg-gray-50/70">
-                      <td className="sticky left-0 z-10 bg-white px-4 py-3">
-                        <button onClick={() => openDetail(item)} className="text-left">
-                          <div className="font-semibold text-gray-900">{item.title}</div>
-                          <div className="text-xs text-gray-500">{item.customer || item.location || 'General schedule'}</div>
+                    <tr key={item.id} className="group hover:bg-white/5 transition-colors">
+                      <td className="px-10 py-6 sticky left-0 bg-slate-950/90 backdrop-blur group-hover:bg-slate-900 transition-colors z-10 border-r border-slate-900/50">
+                        <button onClick={() => openDetail(item)} className="text-left group/btn">
+                           <h4 className="text-sm font-black text-white italic group-hover/btn:text-indigo-400 transition-colors truncate w-64">{item.title}</h4>
+                           <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mt-1 truncate w-64">{item.customer || item.location || 'GLOBAL CLUSTER'}</p>
                         </button>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${status.className}`}>
-                          <status.icon className="h-3.5 w-3.5" />
-                          {intervalLabel(item.intervalMonths)}
+                      <td className="px-6 py-6 text-center">
+                        <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 bg-white/5 ${status.className.includes('rose') ? 'text-rose-500' : 'text-slate-400'}`}>
+                           {intervalLabel(item.intervalMonths).split(' ')[0]}
                         </span>
                       </td>
-                      {MONTH_LABELS.map((month, index) => {
-                        const monthNumber = index + 1;
-                        const isDueMonth = dueMonths.has(monthNumber);
-                        const isNextDue = nextDueMonth === monthNumber;
+                      {MONTH_LABELS.map((_, idx) => {
+                        const m = idx + 1;
+                        const isDue = dueMonths.has(m);
+                        const isNext = nextDueMonth === m;
                         return (
-                          <td key={`${item.id}-${month}`} className="px-2 py-3 text-center">
-                            <div className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full text-xs font-semibold ${
-                              isNextDue
-                                ? 'bg-brand-500 text-white shadow'
-                                : isDueMonth
-                                  ? 'bg-sky-100 text-sky-700'
-                                  : 'bg-gray-100 text-gray-400'
+                          <td key={idx} className="px-2 py-6 text-center">
+                            <div className={`mx-auto w-10 h-10 rounded-2xl flex items-center justify-center text-[10px] font-black transition-all duration-500 ${
+                               isNext ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/40 ring-4 ring-indigo-600/10 scale-110' :
+                               isDue ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-900/50 text-slate-800'
                             }`}>
-                              {isDueMonth ? 'PM' : '-'}
+                               {isDue ? 'PM' : '•'}
                             </div>
                           </td>
                         );
@@ -533,438 +487,333 @@ export default function MaintenancePage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-5 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Daftar Operasional PM</h2>
-          <p className="text-sm text-gray-500">Pantau next due, ticket aktif, evidence terbaru, dan lakukan update manual saat teknisi selesai.</p>
+      {/* Operations Table */}
+      <section className="bg-slate-950/40 border border-slate-800/80 rounded-[48px] overflow-hidden shadow-2xl relative">
+        <div className="flex items-center gap-4 border-b border-slate-800/50 p-10">
+           <Activity className="w-6 h-6 text-emerald-500" />
+           <div>
+              <h2 className="text-2xl font-black text-white uppercase italic tracking-tight">Deployment & Evidence Nexus</h2>
+              <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mt-1">Operational lifecycle and historical telemetry</p>
+           </div>
         </div>
+        
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium">Item</th>
-                <th className="px-4 py-3 text-left font-medium">Next Due</th>
-                <th className="px-4 py-3 text-left font-medium">Last Maintained</th>
-                <th className="px-4 py-3 text-left font-medium">Reminder</th>
-                <th className="px-4 py-3 text-left font-medium">Ticket Aktif</th>
-                <th className="px-4 py-3 text-left font-medium">Evidence</th>
-                <th className="px-4 py-3 text-left font-medium"></th>
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-slate-900/40 border-b border-slate-800/50">
+                <th className="px-10 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Target Sequence</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Temporal Delta</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Last Ingest</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Active Link</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Object Link</th>
+                <th className="px-10 py-6 text-right text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Control</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-800/30">
               {filteredItems.map((item) => {
                 const status = scheduleStatus(item);
-                const StatusIcon = status.icon;
                 return (
-                  <tr key={item.id} className="hover:bg-gray-50/70">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-gray-900">{item.title}</div>
-                      <div className="text-xs text-gray-500">{item.customer || item.location || '-'}</div>
+                  <tr key={item.id} className="group hover:bg-slate-900/50 transition-colors">
+                    <td className="px-10 py-8">
+                       <h4 className="text-sm font-black text-white italic group-hover:text-indigo-400 transition-colors">{item.title}</h4>
+                       <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mt-1 font-mono">{item.sid || 'NO_SID'}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800">{new Date(item.nextDueDate).toLocaleDateString('id-ID')}</div>
-                      <span className={`mt-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${status.className}`}>
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        {status.label}
-                      </span>
+                    <td className="px-8 py-8">
+                       <div className="flex flex-col gap-2">
+                          <span className="text-[11px] font-bold text-white italic tracking-tighter">{new Date(item.nextDueDate).toLocaleDateString()}</span>
+                          <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border whitespace-nowrap inline-flex items-center gap-1.5 ${status.className}`}>
+                             <status.icon className="w-3 h-3" />
+                             {status.label}
+                          </span>
+                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{item.lastMaintainedAt ? new Date(item.lastMaintainedAt).toLocaleString('id-ID') : '-'}</td>
-                    <td className="px-4 py-3 text-gray-600">
-                      <div>{item.notifyDaysBefore} hari sebelum due</div>
-                      <div className="text-xs text-gray-400">Follow-up tiap {item.reminderEveryMonths} bulan</div>
+                    <td className="px-8 py-8">
+                       <span className="text-xs font-black text-slate-400 italic">{item.lastMaintainedAt ? new Date(item.lastMaintainedAt).toLocaleString() : 'VOID'}</span>
                     </td>
-                    <td className="px-4 py-3">
-                      {item.openTicket ? (
-                        <div>
-                          <div className="font-mono text-xs text-brand-700">{item.openTicket.ticketNumber}</div>
-                          <div className="text-xs text-gray-500">{item.openTicket.status}</div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400">Tidak ada</span>
-                      )}
+                    <td className="px-8 py-8">
+                       {item.openTicket ? (
+                         <div className="bg-slate-900 border border-slate-800 px-4 py-3 rounded-2xl group/ticket hover:border-indigo-500/50 transition-all cursor-crosshair">
+                            <div className="text-[10px] font-mono font-black text-indigo-400 italic mb-1">{item.openTicket.ticketNumber}</div>
+                            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{item.openTicket.status}</div>
+                         </div>
+                       ) : <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest font-mono">NO_ACTIVE_LINK</span>}
                     </td>
-                    <td className="px-4 py-3">
-                      {item.evidenceFiles[0] ? (
-                        <a
-                          href={item.evidenceFiles[0].url || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1 text-sm font-medium text-brand-600 hover:text-brand-700"
-                        >
-                          {item.evidenceFiles[0].originalName}
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      ) : (
-                        <span className="text-xs text-gray-400">Belum ada</span>
-                      )}
+                    <td className="px-8 py-8">
+                       {item.evidenceFiles[0] ? (
+                         <a href={item.evidenceFiles[0].url || '#'} target="_blank" rel="noreferrer" className="flex items-center gap-2 group/evidence">
+                            <div className="p-3 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400 group-hover/evidence:bg-indigo-600 group-hover/evidence:text-white transition-all">
+                               <FileImage className="w-4 h-4" />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-500 group-hover/evidence:text-white transition-colors underline decoration-slate-800 underline-offset-4">VIEW_OBJ_01</span>
+                         </a>
+                       ) : <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest font-mono">VOID_OBJ</span>}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openDetail(item)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                      >
-                        <Edit3 className="h-3.5 w-3.5" />
-                        Kelola
-                      </button>
+                    <td className="px-10 py-8 text-right">
+                       <button 
+                          onClick={() => openDetail(item)}
+                          className="px-6 py-3 bg-slate-900 border border-slate-800 text-slate-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-indigo-500/50 hover:text-indigo-400 transition-all flex items-center justify-center gap-2 ml-auto shadow-xl group-hover:scale-[1.05]"
+                       >
+                          <Edit3 className="w-3.5 h-3.5" /> INTERROGATE
+                       </button>
                     </td>
                   </tr>
                 );
               })}
-              {!loading && filteredItems.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400">Tidak ada item untuk filter saat ini</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
       </section>
 
+      {/* Detail Modal Ultimate */}
       {selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeDetail}>
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start justify-between border-b border-gray-100 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{selected.title}</h2>
-                <p className="mt-1 text-sm text-gray-500">Edit cadence, upload bukti maintenance, lalu mark completed untuk update jadwal berikutnya.</p>
-              </div>
-              <button onClick={closeDetail} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid gap-6 px-6 py-6 lg:grid-cols-[1.3fr_1fr]">
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-gray-200 p-5">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Edit3 className="h-5 w-5 text-brand-500" />
-                    <h3 className="font-semibold text-gray-900">Konfigurasi Jadwal</h3>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Nama Item</span>
-                      <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Customer</span>
-                      <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.customer} onChange={(e) => setEditForm((prev) => ({ ...prev, customer: e.target.value }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Lokasi</span>
-                      <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.location} onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">SID</span>
-                      <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.sid} onChange={(e) => setEditForm((prev) => ({ ...prev, sid: e.target.value }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Service</span>
-                      <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.service} onChange={(e) => setEditForm((prev) => ({ ...prev, service: e.target.value }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Interval</span>
-                      <select className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.intervalMonths} onChange={(e) => setEditForm((prev) => ({ ...prev, intervalMonths: Number(e.target.value) }))}>
-                        {INTERVAL_OPTIONS.map((option) => <option key={option} value={option}>{intervalLabel(option)}</option>)}
-                      </select>
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Anchor Day</span>
-                      <input type="number" min={1} max={31} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.anchorDay} onChange={(e) => setEditForm((prev) => ({ ...prev, anchorDay: Number(e.target.value) }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Reminder Cadence (bulan)</span>
-                      <input type="number" min={1} max={12} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.reminderEveryMonths} onChange={(e) => setEditForm((prev) => ({ ...prev, reminderEveryMonths: Number(e.target.value) }))} />
-                    </label>
-                    <label className="space-y-1 text-sm">
-                      <span className="text-gray-500">Notify H-</span>
-                      <input type="number" min={1} max={60} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.notifyDaysBefore} onChange={(e) => setEditForm((prev) => ({ ...prev, notifyDaysBefore: Number(e.target.value) }))} />
-                    </label>
-                    <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-700">
-                      <input type="checkbox" checked={editForm.isActive} onChange={(e) => setEditForm((prev) => ({ ...prev, isActive: e.target.checked }))} />
-                      Jadwal aktif
-                    </label>
-                  </div>
-                  <label className="mt-4 block space-y-1 text-sm">
-                    <span className="text-gray-500">Deskripsi</span>
-                    <textarea className="min-h-[100px] w-full rounded-xl border border-gray-300 px-3 py-2" value={editForm.description} onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))} />
-                  </label>
-                  <div className="mt-4 flex items-center justify-between">
-                    <button onClick={handleDelete} disabled={saving} className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50">
-                      <Trash2 className="h-4 w-4" />
-                      Hapus Jadwal
-                    </button>
-                    <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60">
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
-                      Simpan Perubahan
-                    </button>
-                  </div>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300" onClick={closeDetail}>
+          <div className="w-full max-w-6xl max-h-[90vh] bg-slate-950 border border-indigo-500/30 rounded-[64px] shadow-[0_0_100px_rgba(99,102,241,0.15)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
+             {/* Modal Header */}
+             <div className="relative p-10 border-b border-indigo-500/10 flex items-start justify-between">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 blur-[80px] pointer-events-none" />
+                <div className="relative z-10">
+                   <div className="flex items-center gap-4 mb-2">
+                      <Target className="w-6 h-6 text-indigo-500" />
+                      <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.5em]">Identity Profile</span>
+                   </div>
+                   <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">{selected.title}</h2>
+                   <p className="text-slate-500 font-bold text-sm mt-2 opacity-80">{selected.customer || 'Core'} // {selected.location || 'Distributed'}</p>
                 </div>
+                <button onClick={closeDetail} className="p-4 bg-slate-900 hover:bg-rose-950/20 text-slate-500 hover:text-rose-500 rounded-[28px] transition-all border border-slate-800 active:scale-90">
+                   <X className="w-8 h-8" />
+                </button>
+             </div>
 
-                <div className="rounded-2xl border border-gray-200 p-5">
-                  <div className="mb-4 flex items-center gap-2">
-                    <Upload className="h-5 w-5 text-brand-500" />
-                    <h3 className="font-semibold text-gray-900">Mark Completed & Bukti Maintenance</h3>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="space-y-1 text-sm md:col-span-2">
-                      <span className="text-gray-500">Catatan penyelesaian</span>
-                      <textarea className="min-h-[110px] w-full rounded-xl border border-gray-300 px-3 py-2" value={completionNote} onChange={(e) => setCompletionNote(e.target.value)} placeholder="Contoh: PM selesai, cleaning indoor/outdoor, cek tekanan freon, dokumentasi terlampir." />
-                    </label>
-                    <label className="space-y-1 text-sm md:col-span-2">
-                      <span className="text-gray-500">Upload bukti (foto/PDF/video kecil)</span>
-                      <input type="file" onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)} className="block w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm" />
-                    </label>
-                    {evidenceFile && (
-                      <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-700 md:col-span-2">
-                        File siap upload: <span className="font-semibold">{evidenceFile.name}</span> ({(evidenceFile.size / 1024 / 1024).toFixed(2)} MB)
+             <div className="flex-1 overflow-y-auto p-10">
+                <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-12">
+                   {/* Left Col: Config & Control */}
+                   <div className="space-y-12">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                         {[
+                           { label: 'Next Event', value: new Date(selected.nextDueDate).toLocaleDateString(), icon: Clock, sub: 'Temporal Lock' },
+                           { label: 'Sequence', value: intervalLabel(selected.intervalMonths), icon: Activity, sub: 'Cycle Purity' },
+                           { label: 'Notify H-', value: `${selected.notifyDaysBefore} Days`, icon: Zap, sub: 'Warning Delta' },
+                           { label: 'Ref ID', value: selected.sid || 'N/A', icon: Target, sub: 'Matrix UID' }
+                         ].map((tag, i) => (
+                           <div key={i} className="bg-slate-900/50 border border-slate-800/50 p-6 rounded-[32px] text-center hover:bg-slate-900 transition-colors">
+                              <tag.icon className="w-4 h-4 text-indigo-500 mx-auto mb-3" />
+                              <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{tag.label}</p>
+                              <p className="text-xs font-black text-white italic truncate">{tag.value}</p>
+                              <p className="text-[8px] font-bold text-slate-700 uppercase mt-1">{tag.sub}</p>
+                           </div>
+                         ))}
                       </div>
-                    )}
-                    {latestUploadedEvidence && (
-                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 md:col-span-2">
-                        Bukti terbaru tersimpan:{' '}
-                        <a className="font-semibold underline" href={latestUploadedEvidence.url || '#'} target="_blank" rel="noreferrer">
-                          {latestUploadedEvidence.originalName}
-                        </a>
+
+                      <div className="bg-slate-900/30 border border-slate-800 p-8 rounded-[48px] space-y-8">
+                         <div className="flex items-center gap-3">
+                            <Settings className="w-5 h-5 text-indigo-500" />
+                            <h3 className="text-lg font-black text-white uppercase italic tracking-widest underline decoration-indigo-500/30 decoration-2 underline-offset-8">Neural Parameters</h3>
+                         </div>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[
+                              { label: 'Identity Handle', value: editForm.title, field: 'title' },
+                              { label: 'Service Archetype', value: editForm.service, field: 'service' },
+                              { label: 'Customer Alias', value: editForm.customer, field: 'customer' },
+                              { label: 'Location Node', value: editForm.location, field: 'location' }
+                            ].map((input, i) => (
+                              <div key={i} className="space-y-2">
+                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">{input.label}</label>
+                                 <input 
+                                    value={input.value} 
+                                    onChange={e => setEditForm(prev => ({...prev, [input.field]: e.target.value}))}
+                                    className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-sm text-white focus:border-indigo-500 transition-all font-bold" 
+                                 />
+                              </div>
+                            ))}
+                         </div>
+                         <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                            <button onClick={handleDelete} disabled={saving} className="flex-1 px-8 py-5 bg-rose-600/10 border border-rose-500/20 text-rose-500 rounded-[28px] text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all flex items-center justify-center gap-3">
+                               <Trash2 className="w-4 h-4" /> Purge Sequence
+                            </button>
+                            <button onClick={handleSave} disabled={saving} className="flex-[1.5] px-12 py-5 bg-indigo-600 text-white rounded-[28px] text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3">
+                               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Commit Parameters
+                            </button>
+                         </div>
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-4 flex flex-wrap justify-end gap-2">
-                    <button
-                      onClick={handleUploadEvidence}
-                      disabled={!selected || !evidenceFile || uploading}
-                      className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                    >
-                      {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      Upload Bukti
-                    </button>
-                    <button
-                      onClick={handleComplete}
-                      disabled={saving}
-                      className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
-                    >
-                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                      Mark Completed
-                    </button>
-                  </div>
-                </div>
-              </div>
 
-              <div className="space-y-6">
-                <div className="rounded-2xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-gray-900">Ringkasan Saat Ini</h3>
-                  <dl className="mt-4 space-y-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-gray-500">Next Due</dt>
-                      <dd className="font-semibold text-gray-800">{new Date(selected.nextDueDate).toLocaleString('id-ID')}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-gray-500">Last Maintained</dt>
-                      <dd className="font-semibold text-gray-800">{selected.lastMaintainedAt ? new Date(selected.lastMaintainedAt).toLocaleString('id-ID') : '-'}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-gray-500">Open Ticket</dt>
-                      <dd className="font-semibold text-gray-800">{selected.openTicket?.ticketNumber || '-'}</dd>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <dt className="text-gray-500">Last Note</dt>
-                      <dd className="max-w-[220px] text-right text-gray-700">{selected.lastCompletionNote || '-'}</dd>
-                    </div>
-                  </dl>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 p-5">
-                  <h3 className="font-semibold text-gray-900">Evidence Terbaru</h3>
-                  <div className="mt-4 space-y-3">
-                    {selected.evidenceFiles.length === 0 ? (
-                      <p className="text-sm text-gray-400">Belum ada bukti maintenance.</p>
-                    ) : (
-                      selected.evidenceFiles.map((file) => {
-                        const isImage = file.mimeType?.startsWith('image/');
-                        const isPdf = file.mimeType === 'application/pdf';
-                        return (
-                          <div key={file.id} className="rounded-xl border border-gray-200 p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  {isImage ? (
-                                    <FileImage className="h-4 w-4 shrink-0 text-sky-500" />
-                                  ) : isPdf ? (
-                                    <FileText className="h-4 w-4 shrink-0 text-red-500" />
-                                  ) : (
-                                    <FileText className="h-4 w-4 shrink-0 text-gray-400" />
-                                  )}
-                                  <a href={file.url || '#'} target="_blank" rel="noreferrer" className="truncate font-medium text-brand-600 hover:text-brand-700">
-                                    {file.originalName}
-                                  </a>
-                                </div>
-                                <p className="mt-1 text-xs text-gray-500">{new Date(file.createdAt).toLocaleString('id-ID')} · {file.mimeType}</p>
-                                {file.metadata?.notes && <p className="mt-2 text-sm text-gray-700">{file.metadata.notes}</p>}
-                                {isImage && file.url && (
-                                  <button onClick={() => setPreviewFile(previewFile?.id === file.id ? null : file)} className="mt-2 text-xs font-medium text-brand-500 hover:text-brand-700 underline">
-                                    {previewFile?.id === file.id ? 'Sembunyikan Preview' : 'Preview Gambar'}
-                                  </button>
-                                )}
-                              </div>
-                              <a href={file.url || '#'} target="_blank" rel="noreferrer" className="rounded-lg border border-gray-200 p-2 text-gray-600 hover:bg-gray-50 shrink-0">
-                                <ExternalLink className="h-4 w-4" />
-                              </a>
+                      <div className="bg-slate-900 border border-emerald-500/20 p-10 rounded-[56px] relative overflow-hidden ring-1 ring-emerald-500/30">
+                         <div className="absolute -left-24 -bottom-24 w-64 h-64 bg-emerald-600/10 blur-[100px] pointer-events-none" />
+                         <div className="flex items-center gap-3 mb-8">
+                            <CheckCircle className="w-6 h-6 text-emerald-500" />
+                            <h3 className="text-xl font-black text-white uppercase italic tracking-tight underline decoration-emerald-500/30 decoration-2 underline-offset-8">Task Resolution Entry</h3>
+                         </div>
+                         <div className="space-y-6">
+                            <textarea 
+                               placeholder="Enter resolution telemetry data, maintenance notes, and diagnostic results..."
+                               value={completionNote}
+                               onChange={e => setCompletionNote(e.target.value)}
+                               className="w-full bg-slate-950/80 border border-slate-800 rounded-[32px] p-8 min-h-[160px] text-white text-sm font-bold placeholder:text-slate-700 outline-none focus:border-emerald-500 transition-all"
+                            />
+                            <div className="flex flex-col md:flex-row items-center gap-6">
+                               <label className="flex-1 w-full p-2 bg-slate-950 border border-slate-800 rounded-2xl cursor-pointer hover:border-emerald-500/40 transition-all flex items-center gap-4 group">
+                                  <div className="p-3 bg-slate-900 rounded-xl group-hover:bg-emerald-500/10 transition-all">
+                                     <Upload className="w-4 h-4 text-emerald-500" />
+                                  </div>
+                                  <span className="text-xs font-black text-slate-500 uppercase tracking-widest truncate">{evidenceFile ? evidenceFile.name : 'Ingest Evidence File'}</span>
+                                  <input type="file" onChange={e => setEvidenceFile(e.target.files?.[0] ?? null)} className="hidden" />
+                               </label>
+                               <button 
+                                  onClick={handleComplete}
+                                  disabled={saving}
+                                  className="w-full md:w-auto px-12 py-5 bg-gradient-to-r from-emerald-600 to-emerald-500 text-white rounded-[24px] text-[10px] font-black uppercase tracking-widest shadow-2xl shadow-emerald-600/30 hover:scale-[1.05] active:scale-95 transition-all flex items-center justify-center gap-3"
+                               >
+                                  {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <ChevronRight className="w-5 h-5" />} Sequence End & Cycle Reset
+                               </button>
                             </div>
-                            {previewFile?.id === file.id && isImage && file.url && (
-                              <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                                <img
-                                  src={file.url}
-                                  alt={file.originalName}
-                                  className="max-h-64 w-full object-contain"
-                                />
-                              </div>
-                            )}
-                            {isPdf && file.url && (
-                              <div className="mt-3">
-                                <a
-                                  href={file.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
-                                >
-                                  <FileText className="h-4 w-4" />
-                                  Buka PDF di Tab Baru
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
+                         </div>
+                      </div>
+                   </div>
 
-                <div className="rounded-2xl border border-gray-200 p-5">
-                  <div className="mb-4 flex items-center gap-2">
-                    <History className="h-5 w-5 text-brand-500" />
-                    <h3 className="font-semibold text-gray-900">Timeline Histori</h3>
-                  </div>
-                  {loadingHistory ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Memuat histori...
-                    </div>
-                  ) : history.length === 0 ? (
-                    <p className="text-sm text-gray-400">Belum ada histori ticket untuk jadwal ini.</p>
-                  ) : (
-                    <ol className="relative border-l border-gray-200 pl-5 space-y-4">
-                      {history.map((event) => (
-                        <li key={event.id} className="relative">
-                          <div className="absolute -left-[21px] top-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-brand-400" />
-                          <div className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2.5">
-                            <div className="flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-semibold text-brand-700">{event.ticketNumber}</span>
-                                <span className="rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">{event.ticketStatus}</span>
-                              </div>
-                              <span className="text-xs text-gray-400">{new Date(event.createdAt).toLocaleString('id-ID')}</span>
+                   {/* Right Col: Timeline & Visuals */}
+                   <div className="space-y-8">
+                      {/* Evidence Gallery */}
+                      <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[48px]">
+                         <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] mb-8 italic flex items-center gap-3">
+                            <FileImage className="w-4 h-4 text-indigo-400" /> Visual Telemetry Log
+                         </h3>
+                         <div className="space-y-4">
+                            {selected.evidenceFiles.length === 0 ? (
+                               <div className="py-20 text-center grayscale opacity-10">
+                                  <FileImage className="w-12 h-12 mx-auto mb-4" />
+                                  <span className="text-[9px] font-black uppercase tracking-widest">No Captured Media</span>
+                               </div>
+                            ) : (
+                               selected.evidenceFiles.map(file => (
+                                 <div key={file.id} className="bg-slate-950 border border-slate-800 p-5 rounded-[32px] group/item hover:border-indigo-500/30 transition-all">
+                                    <div className="flex items-start justify-between mb-4">
+                                       <div className="flex items-center gap-3">
+                                          <div className="p-2 bg-slate-900 rounded-xl">
+                                             {file.mimeType?.startsWith('image/') ? <FileImage className="w-4 h-4 text-sky-400" /> : <FileText className="w-4 h-4 text-rose-400" />}
+                                          </div>
+                                          <div>
+                                             <h5 className="text-[11px] font-black text-white truncate w-40 italic">{file.originalName}</h5>
+                                             <p className="text-[8px] font-bold text-slate-600 uppercase tracking-widest">{new Date(file.createdAt).toLocaleDateString()}</p>
+                                          </div>
+                                       </div>
+                                       <a href={file.url || '#'} target="_blank" rel="noreferrer" className="p-2 text-slate-700 hover:text-white transition-colors"><ExternalLink className="w-4 h-4" /></a>
+                                    </div>
+                                    <button 
+                                      onClick={() => setPreviewFile(previewFile?.id === file.id ? null : file)}
+                                      className="w-full h-10 bg-slate-900 border border-slate-800 rounded-xl text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-indigo-400 hover:border-indigo-500/30 transition-all"
+                                    >
+                                       {previewFile?.id === file.id ? 'Hide Visual' : 'Manifest Visual'}
+                                    </button>
+                                    {previewFile?.id === file.id && (
+                                       <div className="mt-4 rounded-2xl overflow-hidden border border-slate-800 animate-in slide-in-from-top-4">
+                                          <img src={file.url ?? undefined} alt="telemetry" className="w-full max-h-64 object-cover" />
+                                       </div>
+                                    )}
+                                 </div>
+                               ))
+                            )}
+                         </div>
+                      </div>
+
+                      {/* History Timeline */}
+                      <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[48px]">
+                         <h3 className="text-xs font-black text-white uppercase tracking-[0.2em] mb-8 italic flex items-center gap-3">
+                            <HistoryIcon className="w-4 h-4 text-indigo-400" /> Temporal Signal Log
+                         </h3>
+                         {loadingHistory ? (
+                            <div className="py-10 text-center flex items-center justify-center gap-3">
+                               <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
+                               <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Querying chain...</span>
                             </div>
-                            <p className="mt-1 text-sm font-medium text-gray-800">
-                              {HISTORY_ACTION_LABELS[event.action] ?? event.action}
-                            </p>
-                            {event.note && <p className="mt-1 text-sm text-gray-600">{event.note}</p>}
-                          </div>
-                        </li>
-                      ))}
-                    </ol>
-                  )}
+                         ) : (
+                            <div className="relative pl-8 space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-800">
+                               {history.slice(0, 10).map(event => (
+                                 <div key={event.id} className="relative group/ev">
+                                    <div className="absolute -left-[27px] top-1 w-2 h-2 rounded-full bg-slate-800 ring-4 ring-slate-950 group-hover/ev:bg-indigo-500 group-hover/ev:ring-indigo-500/10 transition-all" />
+                                    <div className="flex justify-between items-start mb-2">
+                                       <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest italic">{event.ticketNumber || 'SYS_EVENT'}</span>
+                                       <span className="text-[8px] font-bold text-slate-700">{new Date(event.createdAt).toLocaleTimeString()}</span>
+                                    </div>
+                                    <h6 className="text-xs font-black text-white uppercase tracking-tight mb-1">{HISTORY_ACTION_LABELS[event.action] || event.action}</h6>
+                                    {event.note && <p className="text-[10px] text-slate-500 leading-relaxed font-bold italic line-clamp-2">"{event.note}"</p>}
+                                 </div>
+                               ))}
+                            </div>
+                         )}
+                      </div>
+                   </div>
                 </div>
-              </div>
-            </div>
+             </div>
           </div>
         </div>
       )}
-      {/* ── Create Schedule Modal ── */}
+
+      {/* Create Modal Ultimate */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowCreate(false)}>
-          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Tambah Jadwal PM Baru</h2>
-                <p className="mt-1 text-sm text-gray-500">Isi detail item maintenance berikut. Tiket akan dibuat otomatis saat due.</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300" onClick={() => setShowCreate(false)}>
+           <div className="w-full max-w-4xl bg-slate-950 border border-indigo-500/20 rounded-[64px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500" onClick={e => e.stopPropagation()}>
+              <div className="p-10 border-b border-indigo-500/10 flex items-center justify-between">
+                 <div>
+                   <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Establish Sequence</h2>
+                   <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-1">Autonomous maintenance matrix initialization</p>
+                 </div>
+                 <button onClick={() => setShowCreate(false)} className="p-4 bg-slate-900 text-slate-500 rounded-3xl hover:text-white transition-all"><X className="w-6 h-6" /></button>
               </div>
-              <button onClick={() => setShowCreate(false)} className="rounded-full p-2 text-gray-500 hover:bg-gray-100">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="px-6 py-6 space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1 text-sm md:col-span-2">
-                  <span className="font-medium text-gray-700">Nama Item <span className="text-red-500">*</span></span>
-                  <input
-                    className="w-full rounded-xl border border-gray-300 px-3 py-2"
-                    value={createForm.title}
-                    onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
-                    placeholder="Contoh: AC Server Room Lt. 2"
-                  />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Customer</span>
-                  <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.customer} onChange={(e) => setCreateForm((f) => ({ ...f, customer: e.target.value }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Lokasi</span>
-                  <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.location} onChange={(e) => setCreateForm((f) => ({ ...f, location: e.target.value }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">SID</span>
-                  <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.sid} onChange={(e) => setCreateForm((f) => ({ ...f, sid: e.target.value }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Service / Tipe Perangkat</span>
-                  <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.service} onChange={(e) => setCreateForm((f) => ({ ...f, service: e.target.value }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Interval PM</span>
-                  <select className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.intervalMonths} onChange={(e) => setCreateForm((f) => ({ ...f, intervalMonths: Number(e.target.value) }))}>
-                    {INTERVAL_OPTIONS.map((opt) => <option key={opt} value={opt}>{intervalLabel(opt)}</option>)}
-                  </select>
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Anchor Month (bulan mulai siklus)</span>
-                  <select className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.anchorMonth} onChange={(e) => setCreateForm((f) => ({ ...f, anchorMonth: Number(e.target.value) }))}>
-                    {MONTH_LABELS.map((label, idx) => <option key={idx + 1} value={idx + 1}>{label}</option>)}
-                  </select>
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Anchor Day (tanggal)</span>
-                  <input type="number" min={1} max={31} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.anchorDay} onChange={(e) => setCreateForm((f) => ({ ...f, anchorDay: Number(e.target.value) }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Follow-up reminder (bulan)</span>
-                  <input type="number" min={1} max={12} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.reminderEveryMonths} onChange={(e) => setCreateForm((f) => ({ ...f, reminderEveryMonths: Number(e.target.value) }))} />
-                </label>
-                <label className="space-y-1 text-sm">
-                  <span className="text-gray-500">Notify H-</span>
-                  <input type="number" min={1} max={60} className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.notifyDaysBefore} onChange={(e) => setCreateForm((f) => ({ ...f, notifyDaysBefore: Number(e.target.value) }))} />
-                </label>
-                <label className="space-y-1 text-sm md:col-span-2">
-                  <span className="text-gray-500">AO (Area of Operation)</span>
-                  <input className="w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.ao} onChange={(e) => setCreateForm((f) => ({ ...f, ao: e.target.value }))} />
-                </label>
+              
+              <div className="p-12 space-y-10">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="md:col-span-2 space-y-2">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-4">Descriptor (Primary Handle)</label>
+                       <input 
+                         className="w-full bg-slate-900 border border-slate-800 rounded-3xl px-8 py-5 text-lg font-black text-white italic outline-none focus:border-indigo-500 transition-all" 
+                         value={createForm.title}
+                         onChange={e => setCreateForm(f => ({...f, title: e.target.value}))}
+                         placeholder="e.g. CORE_NEXUS_ALPHA_01"
+                       />
+                    </div>
+                    <div className="space-y-4">
+                       <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-4">Customer Domain</label>
+                          <input className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:border-indigo-500" value={createForm.customer} onChange={e => setCreateForm(f => ({...f, customer: e.target.value}))} />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-4">Spatial Node (Location)</label>
+                          <input className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:border-indigo-500" value={createForm.location} onChange={e => setCreateForm(f => ({...f, location: e.target.value}))} />
+                       </div>
+                    </div>
+                    <div className="space-y-4">
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-4">Cycle Interval</label>
+                             <select className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:border-indigo-500 cursor-pointer" value={createForm.intervalMonths} onChange={e => setCreateForm(f => ({...f, intervalMonths: Number(e.target.value)}))}>
+                               {INTERVAL_OPTIONS.map(opt => <option key={opt} value={opt}>{intervalLabel(opt)}</option>)}
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-4">Anchor Month</label>
+                             <select className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:border-indigo-500 cursor-pointer" value={createForm.anchorMonth} onChange={e => setCreateForm(f => ({...f, anchorMonth: Number(e.target.value)}))}>
+                               {MONTH_LABELS.map((l, i) => <option key={i+1} value={i+1}>{l}</option>)}
+                             </select>
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-4">Identify (SID / GUID)</label>
+                          <input className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl px-6 py-4 text-sm font-bold text-white outline-none focus:border-indigo-500" value={createForm.sid} onChange={e => setCreateForm(f => ({...f, sid: e.target.value}))} />
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="flex justify-end gap-6 pt-10 border-t border-slate-800/50">
+                    <button onClick={() => setShowCreate(false)} className="px-10 py-5 bg-slate-900 border border-slate-800 text-slate-500 rounded-[28px] text-[10px] font-black uppercase tracking-widest hover:text-white transition-all">Abort Init</button>
+                    <button 
+                       onClick={handleCreate} 
+                       disabled={creating || !createForm.title.trim()}
+                       className="px-16 py-5 bg-indigo-600 text-white rounded-[28px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-600/30 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-3"
+                    >
+                       {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />} Establish Sequence
+                    </button>
+                 </div>
               </div>
-              <label className="block space-y-1 text-sm">
-                <span className="text-gray-500">Deskripsi</span>
-                <textarea className="min-h-[80px] w-full rounded-xl border border-gray-300 px-3 py-2" value={createForm.description} onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))} />
-              </label>
-              <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowCreate(false)} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                  Batal
-                </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={creating || !createForm.title.trim()}
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand-500 px-5 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
-                >
-                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
-                  Buat Jadwal
-                </button>
-              </div>
-            </div>
-          </div>
+           </div>
         </div>
       )}
     </div>

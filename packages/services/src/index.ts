@@ -51,6 +51,7 @@ export * from './report';
 export * from './clustering';
 export * from './maintenance-schedule';
 export * from './insight';
+export * from './live-chat';
 export * from './bootstrap';
 export * from './notification';
 export { TelegramNotifier } from './notification/telegram-notifier';

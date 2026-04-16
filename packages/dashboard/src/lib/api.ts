@@ -702,5 +702,7 @@ export const api = {
   
   // ─── AI Insights ───────────────────────────────────────
   getPredictiveInsights: () =>
-    request<{ data: Array<{ id: string; type: string; location: string; probability: number; reason: string; recommendation: string; severity: string }> }>('/insights'),
+    request<{ data: any[] }>('/predictive', undefined, '/api/insights'),
+  getSLAWeightedReport: () =>
+    request<{ data: { totalScore: number; breakdown: any[]; period: string } }>('/sla/weighted', undefined, '/api/insights'),
 };

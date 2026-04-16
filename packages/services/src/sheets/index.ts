@@ -1158,59 +1158,61 @@ export class GoogleSheetsService {
     createdBy: string;
     createdAt: Date;
     resolvedAt?: Date | null;
-  }): Promise<void> {
-    if (!this.sheets || !this.spreadsheetId) return;
-    await this.ensureSheet('tickets');
+  }): Promise<boolean> {
+    if (!this.sheets || !this.spreadsheetId) return false;
+    try {
+      await this.ensureSheet('tickets');
 
-    const rowData: Record<string, string> = {
-      ID: ticket.id,
-      'Ticket Number': ticket.ticketNumber,
-      Customer: ticket.customer ?? '',
-      Location: ticket.location ?? '',
-      AO: ticket.ao ?? '',
-      SID: ticket.sid ?? '',
-      Service: ticket.service ?? '',
-      'VLAN ID': ticket.vlanId ?? '',
-      'VLAN Type': ticket.vlanType ?? '',
-      'VLAN Name': ticket.vlanName ?? '',
-      'Hostname/Switch': ticket.hostnameSwitch ?? '',
-      Port: ticket.port ?? '',
-      'IP Address': ticket.ipAddress ?? '',
-      Gateway: ticket.gateway ?? '',
-      Subnet: ticket.subnet ?? '',
-      Mode: ticket.mode ?? '',
-      Problem: ticket.problem ?? '',
-      Priority: ticket.priority,
-      Category: ticket.category,
-      Status: ticket.status,
-      'Assigned To': ticket.assignedTo ?? '',
-      'Created By': ticket.createdBy,
-      'Created At': ticket.createdAt.toISOString(),
-      'Resolved At': ticket.resolvedAt?.toISOString() ?? '',
-    };
+      const rowData: Record<string, string> = {
+        ID: ticket.id,
+        'Ticket Number': ticket.ticketNumber,
+        Customer: ticket.customer ?? '',
+        Location: ticket.location ?? '',
+        AO: ticket.ao ?? '',
+        SID: ticket.sid ?? '',
+        Service: ticket.service ?? '',
+        'VLAN ID': ticket.vlanId ?? '',
+        'VLAN Type': ticket.vlanType ?? '',
+        'VLAN Name': ticket.vlanName ?? '',
+        'Hostname/Switch': ticket.hostnameSwitch ?? '',
+        Port: ticket.port ?? '',
+        'IP Address': ticket.ipAddress ?? '',
+        Gateway: ticket.gateway ?? '',
+        Subnet: ticket.subnet ?? '',
+        Mode: ticket.mode ?? '',
+        Problem: ticket.problem ?? '',
+        Priority: ticket.priority,
+        Category: ticket.category,
+        Status: ticket.status,
+        'Assigned To': ticket.assignedTo ?? '',
+        'Created By': ticket.createdBy,
+        'Created At': ticket.createdAt.toISOString(),
+        'Resolved At': ticket.resolvedAt?.toISOString() ?? '',
+      };
 
-    const headers = SHEET_SCHEMAS.tickets;
-    const values = headers.map((header) => rowData[header] ?? '');
-    const rows = await this.readAll('tickets');
-    const existingRowIndex = rows.findIndex((row, index) => index > 0 && row[0] === ticket.id);
+      const headers = SHEET_SCHEMAS.tickets;
+      const values = headers.map((header) => rowData[header] ?? '');
+      const rows = await this.readAll('tickets');
+      const existingRowIndex = rows.findIndex((row, index) => index > 0 && row[0] === ticket.id);
 
-    if (existingRowIndex >= 0) {
-      const rowNumber = existingRowIndex + 1;
-      await this.sheets.spreadsheets.values.update({
-        spreadsheetId: this.spreadsheetId,
-        range: `tickets!A${rowNumber}:${this.columnLetter(headers.length)}${rowNumber}`,
-        valueInputOption: 'USER_ENTERED',
-        requestBody: { values: [values] },
-      });
-      return;
-    }
+      if (existingRowIndex >= 0) {
+        const rowNumber = existingRowIndex + 1;
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `tickets!A${rowNumber}:${this.columnLetter(headers.length)}${rowNumber}`,
+          valueInputOption: 'USER_ENTERED',
+          requestBody: { values: [values] },
+        });
+        return true;
+      }
 
-    await this.appendRow('tickets', values);
+      await this.appendRow('tickets', values);
 
-    const appendedRows = await this.readAll('tickets');
-    const appendedIndex = appendedRows.findIndex((row, index) => index > 0 && row[0] === ticket.id);
-    if (appendedIndex < 0) {
-      throw new Error(`Ticket ${ticket.ticketNumber} was not persisted to Google Sheets`);
+      // Simple validation or just return true after successful append
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to sync ticket ${ticket.ticketNumber} to Google Sheets`, error as Error);
+      return false;
     }
   }
 

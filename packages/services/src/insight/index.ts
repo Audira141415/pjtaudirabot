@@ -135,4 +135,38 @@ export class InsightService {
       return [];
     }
   }
+
+  /**
+   * Generates strategic signal density forecasting (Phase 5).
+   * Predicts high-risk hours based on historical chat activity.
+   */
+  async getStrategicForecasting(): Promise<{
+    riskProfile: number[];
+    peakHour: number;
+    currentRisk: number;
+  }> {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const logs = await this.db.chatLog.findMany({
+      where: { createdAt: { gte: weekAgo } },
+      select: { createdAt: true }
+    });
+
+    const hourlyBuckets = new Array(24).fill(0);
+    logs.forEach(log => {
+      const hour = new Date(log.createdAt).getHours();
+      hourlyBuckets[hour]++;
+    });
+
+    const maxDensity = Math.max(...hourlyBuckets, 1);
+    const riskProfile = hourlyBuckets.map(count => Math.round((count / maxDensity) * 100));
+    const currentHour = new Date().getHours();
+
+    return {
+      riskProfile,
+      peakHour: hourlyBuckets.indexOf(Math.max(...hourlyBuckets)),
+      currentRisk: riskProfile[currentHour]
+    };
+  }
 }

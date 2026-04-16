@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import dotenv from 'dotenv';
 import path from 'node:path';
+import dns from 'node:dns';
+
+// Force IPv4 for DNS resolution to avoid issues with some IPv6 configurations
+dns.setDefaultResultOrder('ipv4first');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

@@ -1,4 +1,4 @@
-import { proto } from '@whiskeysockets/baileys';
+import { proto, downloadMediaMessage } from '@whiskeysockets/baileys';
 import { ILogger, CommandContext } from '@pjtaudirabot/core';
 import {
   CommandExecutor, UserService, SessionService,
@@ -129,6 +129,13 @@ export class WhatsAppMessageHandler {
       );
     } catch (error) {
       this.logger.error('Reply dispatch failed', error as Error);
+    } finally {
+      this.eventBus?.emit('message.sent', {
+        platform: 'whatsapp',
+        userId: jid,
+        text,
+        timestamp: Date.now(),
+      }).catch(() => {});
     }
   }
 
@@ -149,13 +156,24 @@ export class WhatsAppMessageHandler {
     ticketNumber: string,
     priority: string,
     category: string,
+    senderName?: string,
   ): Promise<void> {
     const ackMessage = [
-      `✅ *Ticket Created*`,
-      `📋 ${ticketNumber}`,
-      `🎯 Priority: ${priority}`,
-      `📂 Category: ${category}`,
-      `📨 Detail teknis dikirim ke Telegram NOC.`,
+      `⚡ *AUDI NOC SYSTEMS — TICKET INITIALIZED*`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `🎫 *ID:* [${ticketNumber}]`,
+      `👤 *SENDER:* [${senderName ?? 'System'}]`,
+      `━━━━━━━━━━━━━━━━━━━━`,
+      `📊 *VITAL STATS*`,
+      `• Priority: 🎯 ${priority}`,
+      `• Category: 📁 ${category}`,
+      `• Status: 🔋 ACTIVE TRACKING`,
+      ``,
+      `🛠️ *TRANSMISSION*`,
+      `Detail teknis telah diteruskan ke pusat komando (Telegram NOC).`,
+      ``,
+      `⏱️ *SLA MONITORING:* [STARTED]`,
+      `_Gunakan !ticket-status ${ticketNumber} untuk pembaruan real-time._`,
     ].join('\n');
 
     if (jid.endsWith('@g.us') && senderJid !== jid) {
@@ -185,6 +203,16 @@ export class WhatsAppMessageHandler {
     const pushName = msg.pushName ?? 'Unknown';
 
     this.logger.debug('WhatsApp message received', { platformUserId, text });
+
+    // Broadcast to Live Chat Bridge (Phase 2)
+    this.eventBus?.emit('message.received', {
+      platform: 'whatsapp',
+      userId: platformUserId,
+      userName: pushName,
+      text,
+      timestamp: Date.now(),
+      imageUrl: (msg.message?.imageMessage) ? 'IMAGE_PENDING' : undefined // We'll handle full image pass in pipeline
+    }).catch(() => {});
 
     // Track message analytics
     this.analytics?.track({ eventType: 'message_received', platform: 'whatsapp', userId: platformUserId }).catch(() => {});
@@ -351,6 +379,7 @@ export class WhatsAppMessageHandler {
               ticket.ticketNumber,
               `${priority} (score: ${extraction.priorityScore}/10)`,
               extraction.category,
+              user.displayName,
             );
 
             this.eventBus?.emit('noc.auto_extracted', {
@@ -370,8 +399,25 @@ export class WhatsAppMessageHandler {
       if (!text.startsWith(COMMAND_PREFIX)) {
         if (this.chatPipeline) {
           try {
+            // Check for image media and download if present
+            let imageUrl: string | undefined;
+            if (msg.message?.imageMessage) {
+              const buffer = await downloadMediaMessage(msg, 'buffer', {}, { 
+                logger: this.logger as any,
+                reuploadRequest: this.connection.getSocket().updateMediaMessage
+              }) as Buffer;
+              
+              if (buffer) {
+                imageUrl = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+                this.logger.debug('Image downloaded and converted for Vision analysis', { 
+                  platformUserId, 
+                  bufferSize: buffer.length 
+                });
+              }
+            }
+
             const pipelineResult = await this.chatPipeline.process(
-              user.id, text, 'whatsapp', user.displayName
+              user.id, text, 'whatsapp', user.displayName, imageUrl
             );
             await this.sendReply(jid, senderJid, pipelineResult.reply, msg);
             this.eventBus?.emit('pipeline.processed', {

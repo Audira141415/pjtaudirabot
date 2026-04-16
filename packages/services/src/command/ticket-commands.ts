@@ -105,13 +105,19 @@ export class TicketCreateCommand extends BaseCommandHandler {
       }
 
       return this.createResult(true, [
-        `✅ *Ticket Created*`,
-        `📋 ${ticket.ticketNumber}`,
-        `📝 ${ticket.title}`,
-        `🔴 Priority: ${ticket.priority}`,
-        `📂 Category: ${ticket.category}`,
+        `⚡ *AUDI NOC SYSTEMS — TICKET INITIALIZED*`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `🎫 *ID:* [${ticket.ticketNumber}]`,
+        `👤 *SENDER:* [${context.user.displayName ?? 'System'}]`,
+        `━━━━━━━━━━━━━━━━━━━━`,
+        `📊 *VITAL STATS*`,
+        `• Title: ${ticket.title}`,
+        `• Priority: 🎯 ${ticket.priority}`,
+        `• Category: 📁 ${ticket.category}`,
+        `• Status: 🔋 ACTIVE TRACKING`,
         ``,
-        `_Use !ticket-status ${ticket.ticketNumber} to check_`,
+        `⏱️ *SLA MONITORING:* [STARTED]`,
+        `_Gunakan !ticket-status ${ticket.ticketNumber} untuk pembaruan real-time._`,
       ].join('\n'), { ticketNumber: ticket.ticketNumber });
     } catch (error) {
       this.logger.error('Ticket creation failed', error as Error);
@@ -659,5 +665,99 @@ export class MySLACommand extends BaseCommandHandler {
       this.logger.error('sla-me failed', error as Error);
       return this.createErrorResult('Failed to get personal SLA overview');
     }
+  }
+}
+
+export class TicketSyncCommand extends BaseCommandHandler {
+  constructor(
+    logger: ILogger,
+    private ticketService: TicketService,
+    private onTelegramNotify?: (ticket: any) => Promise<boolean>,
+  ) {
+    super(logger);
+  }
+
+  getName(): string { return 'sync-tickets'; }
+  getDescription(): string { return 'Manually re-sync stuck tickets to GSheet and Telegram (!sync-tickets [limit])'; }
+  getCategory(): string { return 'admin'; }
+  getRequiredRole(): string { return 'admin'; }
+
+  async execute(context: CommandContext): Promise<CommandResult> {
+    const limitArg = context.input.replace(/^!sync-tickets\s*/i, '').trim();
+    const limit = limitArg ? parseInt(limitArg, 10) : 50;
+
+    try {
+      const result = await this.ticketService.syncStuckTickets(this.onTelegramNotify, limit);
+      
+      const lines = [
+        `✅ *Sync Recovery Completed*`,
+        `📊 Checked: ${result.total} stickers`,
+        `📄 Fixed GSheet: ${result.fixedGSheet}`,
+        `💬 Fixed Telegram: ${result.fixedTelegram}`,
+        ``,
+        result.fixedGSheet === 0 && result.fixedTelegram === 0 
+          ? `_All tickets were already up to date._` 
+          : `_Data consistency has been restored._`
+      ];
+
+      return this.createResult(true, lines.join('\n'));
+    } catch (error) {
+      this.logger.error('Ticket sync command failed', error as Error);
+      return this.createErrorResult('Failed to run ticket sync recovery');
+    }
+  }
+}
+export class TicketReportTemplateCommand extends BaseCommandHandler {
+  getName(): string { return 'template-report'; }
+  getDescription(): string { return 'Show neuCentrIX ticket report templates (alias: !template-gangguan)'; }
+  getCategory(): string { return 'ticket'; }
+
+  async execute(_context: CommandContext): Promise<CommandResult> {
+    const template = `═══════════════════════════════════════════════════════
+📋 *TEMPLATE LAPORAN TIKET GANGGUAN - neuCentrIX*
+═══════════════════════════════════════════════════════
+
+📌 *CARA PENGGUNAAN:*
+1. Copy template di bawah ini
+2. Isi data sesuai kondisi gangguan
+3. Kirim ke bot WhatsApp (langsung atau via grup)
+4. Bot akan otomatis proses dan kirim notifikasi
+
+🔴 *TEMPLATE LENGKAP - UNTUK GANGGUAN CRITICAL*
+───────────────────────────────────────────────────────
+Customer: [Nama Customer]
+Location: [neuCentrIX Location]
+Problem: [Deskripsi masalah detail]
+Contact: [Nomor telepon/WhatsApp]
+Priority: Critical
+Category: Incident
+
+AO: [Nomor AO]
+SID: [Service ID]
+Layanan: [Jenis layanan, e.g. Internet/Colocation]
+
+Hostname Switch: [Nama hostname]
+Port: [Nomor port]
+Vlan ID: [Nomor VLAN]
+
+IP Address: [IP customer]
+Gateway: [IP Gateway]
+Subnet Mask: [Subnet mask]
+
+Note: [Catatan tambahan]
+───────────────────────────────────────────────────────
+
+🟡 *TEMPLATE BASIC - UNTUK LAPORAN STANDAR*
+───────────────────────────────────────────────────────
+Customer: PT Maju Jaya
+Location: neuCentrIX Meruya
+Problem: Degradasi speed internet sejak pagi
+Contact: 0812-xxxx-xxxx
+Priority: High
+───────────────────────────────────────────────────────
+
+💡 _Tips: Gunakan Priority *Critical* untuk respon 15 menit & resolusi 2 jam._`;
+
+    return this.createResult(true, template);
   }
 }

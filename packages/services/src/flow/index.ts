@@ -10,6 +10,14 @@ export interface FlowStep {
   validation?: string;       // regex pattern for custom validation
   required?: boolean;
   field: string;             // key in collected data
+  /** 
+   * ADVANCED: Branching logic. 
+   * Maps input values (or choices) to the next step ID.
+   * If not provided, linear progression is used.
+   */
+  logic?: Record<string, string>;
+  /** Next step bypass ID */
+  nextStepId?: string;
 }
 
 export interface FlowDefinitionData {
@@ -22,7 +30,8 @@ export interface FlowState {
   flowName: string;
   userId: string;
   platform: string;
-  currentStep: number;
+  currentStep: number;        // Index in the array (for compatibility)
+  currentStepId?: string;     // Explicit ID for better branching
   data: Record<string, unknown>;
   status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED' | 'EXPIRED';
 }
@@ -126,14 +135,33 @@ export class FlowEngine {
     }
 
     // Store the answer
-    const updatedData = { ...state.data, [currentStep.field]: this.parseInput(currentStep, input) };
-    const nextStepIndex = state.currentStep + 1;
+    const answer = this.parseInput(currentStep, input);
+    const updatedData = { ...state.data, [currentStep.field]: answer };
+    
+    // Determine next step
+    let nextStepIndex = -1;
+    
+    // 1. Check for branching logic (e.g. choice-based jump)
+    if (currentStep.logic && typeof answer === 'string' && currentStep.logic[answer]) {
+      const targetId = currentStep.logic[answer];
+      nextStepIndex = steps.findIndex(s => s.id === targetId);
+    }
+    
+    // 2. Check for explicit nextStepId (default jump)
+    if (nextStepIndex === -1 && currentStep.nextStepId) {
+      nextStepIndex = steps.findIndex(s => s.id === currentStep.nextStepId);
+    }
+    
+    // 3. Fallback to linear progression
+    if (nextStepIndex === -1) {
+      nextStepIndex = state.currentStep + 1;
+    }
 
-    if (nextStepIndex >= steps.length) {
-      // Flow completed
+    if (nextStepIndex < 0 || nextStepIndex >= steps.length) {
+      // Flow completed or invalid jump
       await this.updateState(userId, platform, {
         ...state,
-        currentStep: nextStepIndex,
+        currentStep: steps.length, // Mark as past last step
         data: updatedData,
         status: 'COMPLETED',
       });
@@ -142,13 +170,14 @@ export class FlowEngine {
     }
 
     // Move to next step
+    const nextStep = steps[nextStepIndex];
     await this.updateState(userId, platform, {
       ...state,
       currentStep: nextStepIndex,
+      currentStepId: nextStep.id,
       data: updatedData,
     });
 
-    const nextStep = steps[nextStepIndex];
     return {
       completed: false,
       prompt: this.formatPrompt(nextStep),

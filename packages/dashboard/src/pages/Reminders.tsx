@@ -1,17 +1,29 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
-import { Bell, Trash2, Clock, AlertCircle, Plus, Loader2 } from 'lucide-react';
+import { 
+  Bell, 
+  Trash2, 
+  Clock, 
+  Plus, 
+  Loader2, 
+  ShieldCheck, 
+  MessageSquare,
+  AlertTriangle,
+  XCircle,
+  Activity
+} from 'lucide-react';
+import { toast } from '../components/Toast';
 
 const TYPE_COLORS: Record<string, string> = {
-  SLA_WARNING: 'bg-amber-100 text-amber-700',
-  ESCALATION: 'bg-red-100 text-red-700',
-  TASK_DUE: 'bg-blue-100 text-blue-700',
-  SHIFT_CHANGE: 'bg-purple-100 text-purple-700',
-  MAINTENANCE: 'bg-gray-100 text-gray-700',
+  SLA_WARNING: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+  ESCALATION: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
+  TASK_DUE: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+  SHIFT_CHANGE: 'bg-violet-500/10 text-violet-500 border-violet-500/20',
+  MAINTENANCE: 'bg-slate-500/10 text-slate-500 border-slate-500/20',
 };
 
 export default function RemindersPage() {
-  const [reminders, setReminders] = useState<Array<Record<string, any>>>([]);
+  const [reminders, setReminders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +38,12 @@ export default function RemindersPage() {
   useEffect(() => { load(); }, []);
 
   const remove = async (id: string) => {
-    try { await api.deleteReminder(id); load(); } catch (err) { console.error(err); }
+    if (!confirm('Purge this scheduled signal?')) return;
+    try { 
+      await api.deleteReminder(id); 
+      toast({ type: 'info', title: 'SIGNAL_PURGED', message: 'The scheduled reminder has been deleted.' });
+      load(); 
+    } catch (err) { console.error(err); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -41,9 +58,10 @@ export default function RemindersPage() {
       });
       setForm({ message: '', remindAt: '', platform: 'WHATSAPP', recurring: '' });
       setShowForm(false);
+      toast({ type: 'success', title: 'REMINDER_ESTABLISHED', message: 'Mass communal signal scheduled successfully.' });
       load();
     } catch (err) {
-      console.error(err);
+      toast({ type: 'error', title: 'SCHEDULING_FAILURE', message: 'Could not establish temporal signal.' });
     } finally {
       setSubmitting(false);
     }
@@ -53,126 +71,187 @@ export default function RemindersPage() {
   const upcoming = reminders.filter(r => new Date(r.dueAt ?? r.scheduledAt) > now);
   const overdue = reminders.filter(r => new Date(r.dueAt ?? r.scheduledAt) <= now && !r.completed);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full" /></div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+      <div className="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" />
+      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Accessing Temporal Registry...</span>
+    </div>
+  );
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <Bell className="w-6 h-6 text-brand-500" />
-          <h1 className="text-2xl font-bold">Reminders</h1>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* Header Intelligence */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Bell className="w-5 h-5 text-indigo-400" />
+            <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em]">Neural Alerts</span>
+          </div>
+          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1 underline decoration-indigo-600/30 underline-offset-[12px] decoration-4">Signal Reminders</h1>
+          <p className="text-slate-500 font-medium text-sm mt-4">Scheduled communal updates, SLA triggers, and system follow-ups.</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 text-white rounded-lg hover:bg-brand-600 transition-colors"
+
+        <button 
+           onClick={() => setShowForm(true)} 
+           className="flex items-center gap-2 px-10 py-5 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest rounded-[24px] hover:scale-[1.05] active:scale-95 transition-all shadow-2xl shadow-indigo-600/30"
         >
-          <Plus className="w-4 h-4" />
-          New Reminder
+          <Plus className="w-4 h-4" /> Initialize Reminder
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-xl border p-5 mb-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Message *</label>
-            <textarea
-              required
-              rows={3}
-              value={form.message}
-              onChange={e => setForm({ ...form, message: e.target.value })}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              placeholder="Reminder message…"
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Remind At *</label>
-              <input
-                required
-                type="datetime-local"
-                value={form.remindAt}
-                onChange={e => setForm({ ...form, remindAt: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-              <select
-                value={form.platform}
-                onChange={e => setForm({ ...form, platform: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="WHATSAPP">WhatsApp</option>
-                <option value="TELEGRAM">Telegram</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Recurring</label>
-              <select
-                value={form.recurring}
-                onChange={e => setForm({ ...form, recurring: e.target.value })}
-                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="">None</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setForm({ message: '', remindAt: '', platform: 'WHATSAPP', recurring: '' }); }}
-              className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-50 transition-colors"
-            >
-              Cancel
+        <form onSubmit={handleCreate} className="bg-slate-900 border border-indigo-500/20 rounded-[48px] p-10 space-y-8 animate-in zoom-in-95 duration-500 relative overflow-hidden ring-1 ring-indigo-500/30 shadow-2xl">
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600/10 blur-[100px]" />
+          
+          <div className="flex items-center justify-between relative z-10">
+            <h3 className="text-xl font-black text-white italic uppercase tracking-tight">Construct Temporal Signal</h3>
+            <button type="button" onClick={() => setShowForm(false)} className="p-3 text-slate-500 hover:text-rose-500 transition-colors">
+               <XCircle className="w-6 h-6" />
             </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="flex items-center gap-1.5 px-4 py-2 bg-brand-500 text-white rounded-lg text-sm hover:bg-brand-600 disabled:opacity-50 transition-colors"
-            >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Create Reminder
-            </button>
+          </div>
+
+          <div className="space-y-6 relative z-10">
+             <div>
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1 px-2">Communiqué Message *</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={form.message}
+                  onChange={e => setForm({ ...form, message: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-[32px] p-8 text-white text-sm outline-none focus:border-indigo-500 transition-all font-bold placeholder:text-slate-700 placeholder:italic placeholder:font-normal"
+                  placeholder="The signal content to be dispatched..."
+                />
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Trigger Date/Time *</label>
+                   <input
+                     required
+                     type="datetime-local"
+                     value={form.remindAt}
+                     onChange={e => setForm({ ...form, remindAt: e.target.value })}
+                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-xs outline-none focus:border-indigo-500 transition-colors font-bold"
+                   />
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Dispatch Hub</label>
+                   <select
+                     value={form.platform}
+                     onChange={e => setForm({ ...form, platform: e.target.value })}
+                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                   >
+                     <option value="WHATSAPP">WhatsApp Node</option>
+                     <option value="TELEGRAM">Telegram Bot</option>
+                   </select>
+                </div>
+                <div className="space-y-2">
+                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-2">Cycle Cadence</label>
+                   <select
+                     value={form.recurring}
+                     onChange={e => setForm({ ...form, recurring: e.target.value })}
+                     className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 text-white text-[10px] font-black uppercase tracking-widest outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                   >
+                     <option value="">Discrete Signal (None)</option>
+                     <option value="daily">Daily Loop</option>
+                     <option value="weekly">Weekly Pulse</option>
+                   </select>
+                </div>
+             </div>
+          </div>
+
+          <div className="flex justify-end pt-4 border-t border-slate-800/50 relative z-10">
+             <button 
+                type="submit" 
+                disabled={submitting}
+                className="px-12 py-5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white rounded-[24px] font-black uppercase text-[10px] tracking-widest shadow-2xl shadow-indigo-600/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
+             >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Commit Signal
+             </button>
           </div>
         </form>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-xl border p-4"><p className="text-sm text-gray-500">Total</p><p className="text-2xl font-bold">{reminders.length}</p></div>
-        <div className="bg-white rounded-xl border p-4"><p className="text-sm text-gray-500">Upcoming</p><p className="text-2xl font-bold text-blue-600">{upcoming.length}</p></div>
-        <div className="bg-white rounded-xl border p-4">
-          <div className="flex items-center gap-1"><AlertCircle className="w-4 h-4 text-red-500" /><p className="text-sm text-gray-500">Overdue</p></div>
-          <p className="text-2xl font-bold text-red-600">{overdue.length}</p>
-        </div>
+      {/* Stats Dash */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[
+          { label: 'TOTAL SIGNALS', value: reminders.length, color: 'text-indigo-400', icon: Bell },
+          { label: 'PENDING DISPATCH', value: upcoming.length, color: 'text-sky-400', icon: Clock },
+          { label: 'MISSED FREQUENCY', value: overdue.length, color: 'text-rose-500', icon: AlertTriangle, urgent: overdue.length > 0 },
+        ].map((card, i) => (
+          <div key={i} className="bg-slate-950/40 border border-slate-800/80 p-8 rounded-[40px] relative overflow-hidden group hover:border-indigo-500/30 transition-all duration-500">
+             <div className={`absolute -right-8 -top-8 w-24 h-24 blur-[40px] opacity-10 ${card.color.replace('text-', 'bg-')}`} />
+             <div className="flex items-start justify-between relative z-10">
+                <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 group-hover:scale-110 transition-all ${card.urgent && 'animate-pulse ring-2 ring-rose-500/20'}`}>
+                   <card.icon className={`w-6 h-6 ${card.color}`} />
+                </div>
+                <div className="text-right">
+                   <p className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{card.label}</p>
+                   <p className={`text-4xl font-black italic tracking-tighter ${card.color}`}>{card.value}</p>
+                </div>
+             </div>
+          </div>
+        ))}
       </div>
 
-      <div className="space-y-3">
-        {reminders.map((r) => {
-          const due = new Date(r.dueAt ?? r.scheduledAt);
-          const isOverdue = due <= now && !r.completed;
-          return (
-            <div key={r.id} className={`bg-white rounded-xl border p-4 flex items-center gap-4 ${isOverdue ? 'border-red-200 bg-red-50' : ''}`}>
-              <div className={`rounded-full p-2 ${isOverdue ? 'bg-red-100' : 'bg-gray-100'}`}>
-                {isOverdue ? <AlertCircle className="w-5 h-5 text-red-500" /> : <Clock className="w-5 h-5 text-gray-500" />}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{r.title ?? r.message ?? 'Reminder'}</h3>
-                  {r.type && <span className={`px-2 py-0.5 rounded text-xs font-medium ${TYPE_COLORS[r.type] ?? 'bg-gray-100'}`}>{r.type}</span>}
+      {/* Logic Stream */}
+      <div className="space-y-4">
+        {reminders.length === 0 ? (
+          <div className="py-32 text-center bg-slate-950/20 rounded-[48px] border border-dashed border-slate-800 opacity-50 grayscale">
+             <Bell className="w-16 h-16 mx-auto mb-4 text-slate-800" />
+             <p className="text-[10px] font-black uppercase tracking-[0.4em]">Environmental Scans Show Zero Temporal Signs</p>
+          </div>
+        ) : (
+          reminders.map((r) => {
+            const due = new Date(r.dueAt ?? r.scheduledAt);
+            const isOverdue = due <= now && !r.completed;
+            return (
+              <div key={r.id} className={`group bg-slate-950/40 border p-8 rounded-[40px] flex flex-col md:flex-row items-center gap-8 backdrop-blur-3xl hover:bg-slate-900 transition-all duration-500 relative overflow-hidden ${isOverdue ? 'border-rose-500/30 bg-rose-500/5' : 'border-slate-800'}`}>
+                {isOverdue && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-rose-600" />}
+                
+                <div className={`p-5 rounded-[28px] shrink-0 border transition-all ${isOverdue ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' : 'bg-slate-900 border-slate-800 text-slate-600 group-hover:text-indigo-400 group-hover:border-indigo-500/20'}`}>
+                  {isOverdue ? <AlertTriangle className="w-6 h-6 animate-pulse" /> : <Clock className="w-6 h-6" />}
                 </div>
-                {r.description && <p className="text-sm text-gray-500 truncate">{r.description}</p>}
-                <p className="text-xs text-gray-400 mt-1">
-                  Due: {due.toLocaleString()}
-                  {r.user && ` · For: ${r.user.name ?? r.userId}`}
-                </p>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-3 mb-2">
+                    <h3 className="text-xl font-black text-white italic truncate uppercase tracking-tight">{r.title ?? r.message ?? 'UNTITLED_SIGNAL'}</h3>
+                    {r.type && (
+                       <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${TYPE_COLORS[r.type] || 'bg-slate-800 text-slate-500 border-slate-700'}`}>
+                          {r.type.replace('_', ' ')}
+                       </span>
+                    )}
+                  </div>
+                  {r.description && <p className="text-sm text-slate-500 font-bold mb-3 italic">"{r.description}"</p>}
+                  
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                     <div className="flex items-center gap-2">
+                        <Activity className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Temporal Point: {due.toLocaleString()}</span>
+                     </div>
+                     {r.user && (
+                       <div className="flex items-center gap-2">
+                          <ShieldCheck className="w-3.5 h-3.5 text-slate-600" />
+                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Identity Handle: {r.user.name ?? r.userId}</span>
+                       </div>
+                     )}
+                     <div className="flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-slate-600" />
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocol: {r.platform || 'COMMUNAL'}</span>
+                     </div>
+                  </div>
+                </div>
+
+                <button 
+                   onClick={() => remove(r.id)} 
+                   className="p-4 bg-slate-900 border border-slate-800 rounded-[24px] text-slate-700 hover:text-rose-500 hover:border-rose-500/20 transition-all active:scale-90 shadow-xl opacity-0 group-hover:opacity-100"
+                >
+                   <Trash2 className="w-5 h-5" />
+                </button>
               </div>
-              <button onClick={() => remove(r.id)} className="text-red-400 hover:text-red-600 shrink-0"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          );
-        })}
-        {reminders.length === 0 && <div className="text-center py-12 text-gray-400">No reminders</div>}
+            );
+          })
+        )}
       </div>
     </div>
   );

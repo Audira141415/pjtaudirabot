@@ -426,6 +426,111 @@ export class TicketService {
     this.logger.info('Global ticket purge completed successfully');
   }
 
+  /**
+   * Attempt to sync a single ticket to Google Sheets and Telegram.
+   * Internal helper used by create and the recovery service.
+   */
+  async syncSingleTicket(
+    ticketId: string, 
+    onTelegramNotify?: (ticket: any) => Promise<boolean>
+  ): Promise<{ gsheet: boolean; telegram: boolean }> {
+    const results = { gsheet: false, telegram: false };
+    const ticket = await this.db.ticket.findUnique({
+      where: { id: ticketId },
+      include: { slaTracking: true, assignedTo: true, createdBy: true }
+    });
+
+    if (!ticket) return { gsheet: false, telegram: false };
+
+    // C) Self-Healing Limit (Phase 4)
+    if (ticket.syncAttemptCount >= 5) {
+      this.logger.warn('Skipping sync for terminally stuck ticket', { ticketNumber: ticket.ticketNumber, attempts: ticket.syncAttemptCount });
+      return results;
+    }
+
+    // Increment attempt count
+    await this.db.ticket.update({
+      where: { id: ticketId },
+      data: { syncAttemptCount: { increment: 1 } }
+    });
+
+    // ... (rest of logic)
+    if (!ticket.sheetSynced && this.sheetsService) {
+      try {
+        const success = await this.sheetsService.syncTicket(ticket as any);
+        if (success) {
+          await this.db.ticket.update({
+            where: { id: ticketId },
+            data: { sheetSynced: true }
+          });
+          results.gsheet = true;
+          this.logger.info('Ticket synced to Google Sheets during recovery', { ticketNumber: ticket.ticketNumber });
+        }
+      } catch (error) {
+        this.logger.error('GSheet sync failed during recovery', error as Error, { ticketNumber: ticket.ticketNumber });
+      }
+    }
+
+    // 2. Sync to Telegram if not already notified
+    if (!ticket.telegramNotified && onTelegramNotify) {
+      try {
+        const success = await onTelegramNotify(ticket);
+        if (success) {
+          await this.db.ticket.update({
+            where: { id: ticketId },
+            data: { telegramNotified: true }
+          });
+          results.telegram = true;
+          this.logger.info('Ticket notified to Telegram during recovery', { ticketNumber: ticket.ticketNumber });
+        }
+      } catch (error) {
+        this.logger.error('Telegram notification failed during recovery', error as Error, { ticketNumber: ticket.ticketNumber });
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Find and attempt to repair all tickets that failed to sync.
+   */
+  async syncStuckTickets(
+    onTelegramNotify?: (ticket: any) => Promise<boolean>,
+    limit = 50
+  ): Promise<{ total: number; fixedGSheet: number; fixedTelegram: number }> {
+    const stuckTickets = await this.db.ticket.findMany({
+      where: {
+        OR: [
+          { sheetSynced: false },
+          { telegramNotified: false }
+        ]
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+
+    let fixedGSheet = 0;
+    let fixedTelegram = 0;
+
+    for (const ticket of stuckTickets) {
+      // Small delay between tickets to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const { gsheet, telegram } = await this.syncSingleTicket(ticket.id, onTelegramNotify);
+      
+      if (!ticket.sheetSynced && gsheet) fixedGSheet++;
+      if (!ticket.telegramNotified && telegram) fixedTelegram++;
+
+      // Update attempt count
+      await this.db.ticket.update({
+        where: { id: ticket.id },
+        data: { syncAttemptCount: { increment: 1 } }
+      });
+    }
+
+    return { total: stuckTickets.length, fixedGSheet, fixedTelegram };
+  }
+
   private async addHistory(
     ticketId: string, action: string, field?: string,
     oldValue?: string | null, newValue?: string | null, changedById?: string, note?: string,

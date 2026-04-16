@@ -1,11 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import { ILogger } from '@pjtaudirabot/core';
+import { ISemanticMemory } from '../memory';
 
 export class KnowledgeBaseService {
   private logger: ILogger;
 
   constructor(
     private db: PrismaClient,
+    private semanticMemory: ISemanticMemory,
     logger: ILogger
   ) {
     this.logger = logger.child({ service: 'knowledge-base' });
@@ -20,32 +22,53 @@ export class KnowledgeBaseService {
   }
 
   /**
-   * Search the knowledge base by topic/keywords.
+   * Search the knowledge base using hybrid approach (Keywords + Semantic).
    */
   async search(userId: string, query: string): Promise<any[]> {
+    // A) Keyword Search
     const keywords = query
       .replace(/[?!.,]/g, '')
       .split(/\s+/)
       .filter((w) => w.length > 2);
 
-    if (keywords.length === 0) return [];
+    const keywordEntries = keywords.length > 0 
+      ? await this.db.knowledgeEntry.findMany({
+          where: {
+            userId,
+            OR: [
+              ...keywords.map((kw) => ({ topic: { contains: kw, mode: 'insensitive' as const } })),
+              ...keywords.map((kw) => ({ question: { contains: kw, mode: 'insensitive' as const } })),
+              ...keywords.map((kw) => ({ answer: { contains: kw, mode: 'insensitive' as const } })),
+            ],
+          },
+          take: 5,
+        })
+      : [];
 
-    // Search by topic, question, and answer fields
-    const entries = await this.db.knowledgeEntry.findMany({
-      where: {
-        userId,
-        OR: [
-          ...keywords.map((kw) => ({ topic: { contains: kw, mode: 'insensitive' as const } })),
-          ...keywords.map((kw) => ({ question: { contains: kw, mode: 'insensitive' as const } })),
-          ...keywords.map((kw) => ({ answer: { contains: kw, mode: 'insensitive' as const } })),
-        ],
-      },
-      orderBy: [{ referenceCount: 'desc' }, { updatedAt: 'desc' }],
-      take: 5,
-    });
+    // B) Semantic Search (RAG)
+    const semanticResults = await this.semanticMemory.search(userId, query, 3);
+    const semanticIds = semanticResults
+      .map(r => r.metadata?.knowledgeEntryId as string)
+      .filter(Boolean);
+
+    const semanticEntries = semanticIds.length > 0
+      ? await this.db.knowledgeEntry.findMany({
+          where: { id: { in: semanticIds } }
+        })
+      : [];
+
+    // Combine and Deduplicate
+    const combined = [...keywordEntries];
+    for (const sem of semanticEntries) {
+      if (!combined.some(k => k.id === sem.id)) {
+        combined.push(sem);
+      }
+    }
+
+    const results = combined.slice(0, 5);
 
     // Update reference counts
-    for (const entry of entries) {
+    for (const entry of results) {
       await this.db.knowledgeEntry.update({
         where: { id: entry.id },
         data: {
@@ -55,7 +78,7 @@ export class KnowledgeBaseService {
       });
     }
 
-    return entries;
+    return results;
   }
 
   /**
@@ -79,7 +102,16 @@ export class KnowledgeBaseService {
       },
     });
 
-    this.logger.info('Knowledge stored', { id: entry.id, topic });
+    // C) Strategic Semantic Indexing (Phase 3)
+    // We index the question + answer for high-affinity RAG retrieval
+    const indexContent = `Topic: ${topic}\nQuestion: ${question}\nAnswer: ${answer}`;
+    await this.semanticMemory.store(userId, indexContent, {
+      type: 'knowledge',
+      knowledgeEntryId: entry.id,
+      topic
+    });
+
+    this.logger.info('Knowledge stored and indexed semantically', { id: entry.id, topic });
     return { id: entry.id };
   }
 

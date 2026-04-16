@@ -16,30 +16,103 @@ const AUTO_UNASSIGNED_CATEGORY_SCOPE = (process.env.SLA_AUTO_UNASSIGNED_CATEGORI
 const AUTO_UNASSIGNED_ROOT_CAUSE = 'AUTO_UNASSIGNED_TIMEOUT';
 
 /**
- * neuCentrIX SLA Configuration (migrated from bot old slaConfig.js)
- * L0: 2 hours (Critical/DOWN)
- * L1: 4 hours (Normal)
- * Response: 15 minutes all categories
- * Helpdesk: 15 min response
- * Smarthand: 30 min delivery
- * Fulfillment: 1 day / Network provisioning: 4 hours
+ * neuCentrIX SLA Configuration (aligned with SLA Service neuCentrIX document)
+ * Each entry includes:
+ * - responseMin: Target response time in minutes
+ * - resolutionMin: Target resolution time in minutes
+ * - weight: Total weight percentage (Bobot) for the category
+ * - subWeights: Granular weight breakdown if applicable
  */
-const SLA_TARGETS: Record<string, { responseMin: number; resolutionMin: number }> = {
-  // Priority-based
-  CRITICAL: { responseMin: 5, resolutionMin: 120 },   // 5 min / 2 hr
-  HIGH:     { responseMin: 15, resolutionMin: 240 },   // 15 min / 4 hr
-  MEDIUM:   { responseMin: 30, resolutionMin: 480 },   // 30 min / 8 hr
-  LOW:      { responseMin: 60, resolutionMin: 2880 },  // 1 hr / 48 hr
-  // Category overrides
-  INCIDENT_CRITICAL: { responseMin: 5, resolutionMin: 120 },
-  MAINTENANCE:       { responseMin: 60, resolutionMin: 1440 },
-  REQUEST:           { responseMin: 60, resolutionMin: 2880 },
-  // neuCentrIX-specific categories (from old slaConfig.js)
-  HELPDESK:          { responseMin: 15, resolutionMin: 240 },   // 15 min response / 4 hr
-  SMARTHAND:         { responseMin: 15, resolutionMin: 30 },    // 30 min delivery
-  FULFILLMENT:       { responseMin: 60, resolutionMin: 1440 },  // 1 day delivery
-  NETWORK_PROVISIONING: { responseMin: 60, resolutionMin: 240 }, // 4 hr provisioning
-  VAM_SURVEILLANCE:  { responseMin: 60, resolutionMin: 60 },    // 1 hr visit response
+const SLA_TARGETS: Record<string, { 
+  responseMin: number; 
+  resolutionMin: number; 
+  weight: number;
+  subWeights?: Record<string, number>;
+}> = {
+  // A. Fulfillment & Delivery (Weight: 20%)
+  FULFILLMENT: { 
+    responseMin: 60, 
+    resolutionMin: 1440, // 1 Day
+    weight: 20,
+    subWeights: { ttd: 10, provisioning: 10 }
+  },
+  NETWORK_PROVISIONING: { 
+    responseMin: 60, 
+    resolutionMin: 240, // 4 Hours
+    weight: 10 
+  },
+
+  // B. VAM Surveillance (Weight: 10%)
+  VAM: { 
+    responseMin: 60, // 1 Hour
+    resolutionMin: 0, 
+    weight: 10,
+    subWeights: { visitRequest: 6, visitEscort: 4 }
+  },
+
+  // F. Helpdesk (Weight: 10%)
+  HELPDESK: { 
+    responseMin: 15, 
+    resolutionMin: 0, 
+    weight: 10,
+    subWeights: { response: 6, closedTickets: 4 }
+  },
+
+  // C. Incident Management (Weight: 12%)
+  INCIDENT: { 
+    responseMin: 15, 
+    resolutionMin: 240, // L1 Default (4 Hours)
+    weight: 12,
+    subWeights: { response: 5, resolveL0: 3, resolveL1: 4 }
+  },
+  INCIDENT_CRITICAL: { 
+    responseMin: 15, 
+    resolutionMin: 120, // L0 (2 Hours)
+    weight: 3 // Specific weight for L0 resolve component
+  },
+
+  // D. Smarthand (Weight: 7%)
+  SMARTHAND: { 
+    responseMin: 15, 
+    resolutionMin: 30, // 30 Minutes
+    weight: 7 
+  },
+
+  // E. Manage Inventory (Weight: 12%)
+  INVENTORY: { 
+    responseMin: 0, 
+    resolutionMin: 0, 
+    weight: 12,
+    subWeights: { rack: 6, sid: 6 }
+  },
+
+  // G. Reporting (Weight: 5%)
+  REPORTING: { 
+    responseMin: 0, 
+    resolutionMin: 0, 
+    weight: 5 
+  },
+
+  // H. Instalasi additional service (Weight: 13%)
+  ADDITIONAL_SERVICE: { 
+    responseMin: 0, 
+    resolutionMin: 0, 
+    weight: 13 
+  },
+
+  // I. Availability (Weight: 10%)
+  AVAILABILITY: { 
+    responseMin: 0, 
+    resolutionMin: 0, 
+    weight: 10,
+    subWeights: { onsite: 5, network: 5 }
+  },
+
+  // Priority-based Fallbacks (Legacy support)
+  CRITICAL: { responseMin: 5, resolutionMin: 120, weight: 0 },
+  HIGH:     { responseMin: 15, resolutionMin: 240, weight: 0 },
+  MEDIUM:   { responseMin: 30, resolutionMin: 480, weight: 0 },
+  LOW:      { responseMin: 60, resolutionMin: 2880, weight: 0 },
 };
 
 const CRITICAL_KEYWORDS = [
@@ -491,6 +564,67 @@ export class SLAService {
       resolutionMetPct: Math.round((resolutionMet / total) * 100),
       avgResponseMin: Math.round(avgResponse * 10) / 10,
       avgResolutionMin: Math.round(avgResolution * 10) / 10,
+    };
+  }
+
+  /**
+   * Calculates the composite weighted performance score (Phase 5).
+   * Derived from the "Jumlah 100%" logic in the neuCentrIX SLA document.
+   */
+  async calculateWeightedMonthlyPerformance(month: number, year: number) {
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+
+    const trackings = await this.db.sLATracking.findMany({
+      where: {
+        createdAt: { gte: startDate, lte: endDate },
+      },
+      include: { ticket: true },
+    });
+
+    const categoryScores: Record<string, { count: number; met: number; score: number }> = {};
+
+    // 1. Group by ticket category and check compliance
+    for (const t of trackings) {
+      const cat = t.ticket.category;
+      if (!categoryScores[cat]) {
+        categoryScores[cat] = { count: 0, met: 0, score: 0 };
+      }
+      categoryScores[cat].count++;
+      
+      // Compliance check: both response and resolution must be met for 100% item credit
+      // (Simplified logic: taking average of response + resolution compliance)
+      let complianceFactor = 0;
+      if (!t.responseBreached) complianceFactor += 0.5;
+      if (!t.resolutionBreached) complianceFactor += 0.5;
+      
+      categoryScores[cat].met += complianceFactor;
+    }
+
+    // 2. Apply weights from SLA_TARGETS
+    let totalWeightedScore = 0;
+    const breakdown = [];
+
+    for (const [cat, target] of Object.entries(SLA_TARGETS)) {
+      if (target.weight <= 0) continue;
+
+      const stats = categoryScores[cat] || { count: 0, met: 0, score: 0 };
+      const compliance = stats.count > 0 ? (stats.met / stats.count) : 1; // Default to 1 (100%) if no incidents
+      const weightedScore = compliance * target.weight;
+      
+      totalWeightedScore += weightedScore;
+      breakdown.push({
+        category: cat,
+        weight: target.weight,
+        compliance: Math.round(compliance * 100),
+        weightedScore: Math.round(weightedScore * 100) / 100,
+      });
+    }
+
+    return {
+      totalScore: Math.round(totalWeightedScore * 100) / 100,
+      breakdown,
+      period: `${year}-${String(month + 1).padStart(2, '0')}`,
     };
   }
 }

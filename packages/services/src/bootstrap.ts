@@ -43,8 +43,10 @@ import {
   TicketPickCommand,
   TicketResolveCommand,
   TicketCloseCommand,
+  TicketSyncCommand,
   TicketStatsCommand,
   MySLACommand,
+  TicketReportTemplateCommand,
 } from './command/ticket-commands';
 import {
   MonitorAddCommand,
@@ -64,6 +66,7 @@ import {
   ShortTermMemory,
   LongTermMemory,
   SemanticMemory,
+  ISemanticMemory,
   NoOpSemanticMemory,
   MemoryExtractor,
   RuleBasedExtractor,
@@ -93,6 +96,8 @@ import { TicketClusteringService } from './clustering';
 import { UptimeMonitorService } from './uptime-monitor';
 import { ShiftHandoverService } from './shift-handover';
 import { MaintenanceScheduleService } from './maintenance-schedule';
+import { DataExtractionService } from './data-extraction';
+import { LiveChatService } from './live-chat';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -135,6 +140,8 @@ export interface BotServices {
   uptimeMonitorService: UptimeMonitorService;
   shiftHandoverService: ShiftHandoverService;
   maintenanceScheduleService: MaintenanceScheduleService;
+  liveChatService: LiveChatService;
+  dataExtractionService: DataExtractionService;
   scheduler: Scheduler;
 }
 
@@ -197,11 +204,12 @@ export async function createBotServices(
   );
 
   // Memory system
+  let semantic: ISemanticMemory = new NoOpSemanticMemory();
   if (config.MEMORY_ENABLED === 'true') {
     const shortTerm = new ShortTermMemory(redis, logger, config.MEMORY_SHORT_TERM_MAX, config.MEMORY_SHORT_TERM_TTL);
     const longTerm = new LongTermMemory(db, logger);
 
-    const semantic =
+    semantic =
       config.MEMORY_SEMANTIC_ENABLED === 'true' && config.OPENAI_API_KEY
         ? new SemanticMemory(
             db,
@@ -284,16 +292,12 @@ export async function createBotServices(
   checklistService.seedDefaults().catch(() => {});
   const documentationService = new DocumentationService(db, sheetsService, logger);
   const devopsService = new DevOpsService(db, sheetsService, logger);
-  const knowledgeBase = new KnowledgeBaseService(db, logger);
+  const knowledgeBase = new KnowledgeBaseService(db, semantic, logger);
   const reportingService = new ReportingService(db, sheetsService, logger);
   const reminderService = new ReminderService(db, redis, logger);
-  const intentDetector = new IntentDetector(taskManager, documentationService, reminderService, knowledgeBase, logger);
-
-  // AI Extractor & Chat Pipeline
-  const aiExtractor = new AIExtractor(aiService.getProvider(), logger);
-  const chatPipeline = new ChatPipeline(db, aiExtractor, sheetsService, logger);
-
-  // Ticket & SLA & Clustering
+  const dataExtractionService = new DataExtractionService(db, logger);
+  
+  // Ticket & SLA (Need to move these up so they can be passed to IntentDetector)
   const clusteringService = new TicketClusteringService(db, logger, {
     windowMinutes: parseInt(process.env.CLUSTERING_WINDOW_MIN ?? '60', 10),
     similarityThreshold: parseFloat(process.env.CLUSTERING_SIMILARITY_THRESHOLD ?? '0.75'),
@@ -301,6 +305,21 @@ export async function createBotServices(
   });
   const ticketService = new TicketService(db, redis, logger, clusteringService, sheetsService);
   const slaService = new SLAService(db, redis, logger);
+
+  const intentDetector = new IntentDetector(
+    taskManager, 
+    documentationService, 
+    reminderService, 
+    knowledgeBase, 
+    dataExtractionService,
+    ticketService,
+    slaService,
+    logger
+  );
+
+  // AI Extractor & Chat Pipeline
+  const aiExtractor = new AIExtractor(aiService.getProvider(), logger);
+  const chatPipeline = new ChatPipeline(db, aiExtractor, sheetsService, logger);
 
   // Uptime & Shift Handover
   const uptimeMonitorService = new UptimeMonitorService(db, redis, logger);
@@ -311,6 +330,9 @@ export async function createBotServices(
 
   // Scheduler
   const scheduler = new Scheduler(db, redis, logger);
+
+  // Live Chat WebSocket Bridge (Phase 2)
+  const liveChatService = new LiveChatService(eventBus, logger, infra.ports.getPort('terminal') ?? 4005);
 
   // ── Register common commands ───────────────────────────────
 
@@ -359,7 +381,8 @@ export async function createBotServices(
     taskManager, checklistService, documentationService, devopsService,
     knowledgeBase, reportingService, reminderService, intentDetector,
     aiExtractor, chatPipeline, ticketService, slaService,
-    uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, scheduler,
+    uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, 
+    liveChatService, dataExtractionService, scheduler,
   };
 }
 
@@ -385,8 +408,13 @@ export function registerTicketCommands(
   registry.register(new TicketPickCommand(logger, ticketService, slaService, sheetsService, broadcasts.onTicketPicked));
   registry.register(new TicketResolveCommand(logger, ticketService, slaService, sheetsService, broadcasts.onTicketResolved));
   registry.register(new TicketCloseCommand(logger, ticketService, sheetsService));
+  registry.register(new TicketSyncCommand(logger, ticketService, async (ticket) => {
+    await broadcasts.onNewTicket(ticket);
+    return true;
+  }));
   registry.register(new TicketStatsCommand(logger, ticketService, slaService));
   registry.register(new MySLACommand(logger, ticketService));
+  registry.register(new TicketReportTemplateCommand(logger));
 }
 
 // ─── Maintenance Scheduler ────────────────────────────────────
@@ -441,6 +469,31 @@ export function setupMaintenanceScheduler(services: BotServices, infra: BotInfra
       }
       if (msgs.length > 0 && onMaintenanceAlert) {
         await onMaintenanceAlert(msgs).catch((err) => logger.error('Maintenance alert callback failed', err));
+      }
+    },
+  });
+  
+  // Ticket self-repair sync (every 1 hour)
+  scheduler.register({
+    name: 'ticket-auto-sync',
+    intervalMs: 1 * 60 * 60 * 1000, 
+    lockTtlMs: 30 * 60 * 1000,
+    runOnStart: false,
+    handler: async () => {
+      logger.info('Running automated ticket sync recovery...');
+      try {
+        const result = await ticketService.syncStuckTickets(
+          onMaintenanceAlert ? async (ticket) => {
+            // Re-trigger alert as generic notify
+            await onMaintenanceAlert([`[RECOVERY] New ticket: ${ticket.ticketNumber} - ${ticket.title}`]);
+            return true;
+          } : undefined
+        );
+        if (result.fixedGSheet > 0 || result.fixedTelegram > 0) {
+          logger.info('Automated ticket sync completed', result);
+        }
+      } catch (err) {
+        logger.error('Automated ticket sync failed', err as Error);
       }
     },
   });

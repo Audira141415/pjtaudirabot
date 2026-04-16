@@ -28,7 +28,23 @@ export class OpenAIProvider implements IAIProvider {
 
     const response = await this.client.chat.completions.create({
       model,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      messages: messages.map((m) => {
+        if (typeof m.content === 'string') {
+          return { role: m.role, content: m.content };
+        }
+        return {
+          role: m.role,
+          content: m.content.map((part) => {
+            if (part.type === 'text') {
+              return { type: 'text', text: part.text ?? '' };
+            }
+            return {
+              type: 'image_url',
+              image_url: { url: part.image_url?.url ?? '' },
+            };
+          }) as any,
+        };
+      }),
       temperature,
       max_tokens: maxTokens,
     });
