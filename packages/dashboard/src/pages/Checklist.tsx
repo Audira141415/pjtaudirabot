@@ -63,7 +63,7 @@ export default function ChecklistPage() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
       <div className="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" />
-      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Loading Operational Procedures...</span>
+      <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Loading Operational Procedures...</span>
     </div>
   );
 
@@ -76,11 +76,11 @@ export default function ChecklistPage() {
             <ClipboardCheck className="w-5 h-5 text-indigo-400" />
             <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em]">Procedural Compliance</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1 underline decoration-indigo-600/30 underline-offset-[12px] decoration-4">Checklist Matrices</h1>
+          <h1 className="text-4xl font-black text-slate-950 dark:text-white tracking-tight uppercase italic mb-1 underline decoration-indigo-600/30 underline-offset-[12px] decoration-4">Checklist Matrices</h1>
           <p className="text-slate-500 font-medium text-sm mt-4">Standardized operational protocols, audit sequences, and task verification paths.</p>
         </div>
 
-        <div className="flex gap-2 bg-slate-950/50 p-2 rounded-[24px] border border-slate-800 backdrop-blur-md">
+        <div className="flex gap-2 bg-white dark:bg-slate-950/50 p-2 rounded-[24px] border border-slate-200 dark:border-slate-800 backdrop-blur-md shadow-sm dark:shadow-none">
           <button 
              onClick={() => setTab('templates')} 
              className={`flex items-center gap-2 px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${tab === 'templates' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-500 hover:text-white'}`}

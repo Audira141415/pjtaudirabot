@@ -47,7 +47,7 @@ export default function BroadcastPage() {
   if (loading) return (
     <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
       <div className="w-10 h-10 border-4 border-indigo-500/10 border-t-indigo-500 rounded-full animate-spin" />
-      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.4em] animate-pulse italic">Connecting to Signal Towers...</span>
+      <span className="text-[10px] font-black text-slate-400 dark:text-indigo-400 uppercase tracking-[0.4em] animate-pulse italic">Connecting to Signal Towers...</span>
     </div>
   );
 
@@ -60,11 +60,11 @@ export default function BroadcastPage() {
             <Radio className="w-5 h-5 text-rose-500" />
             <span className="text-rose-400 text-[10px] font-black uppercase tracking-[0.3em]">Mass Communiqué</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1">Signal Broadcast</h1>
+          <h1 className="text-4xl font-black text-slate-950 dark:text-white tracking-tight uppercase italic mb-1">Signal Broadcast</h1>
           <p className="text-slate-500 font-medium text-sm">Disseminate critical maintenance updates, marketing alerts, or system notifications.</p>
         </div>
 
-        <div className="px-6 py-4 bg-slate-900/40 border border-slate-800 rounded-[24px] backdrop-blur-xl">
+        <div className="px-6 py-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-[24px] backdrop-blur-xl shadow-sm dark:shadow-none transition-all">
            <div className="flex items-center gap-3 text-emerald-500">
               <Signal className="w-4 h-4" />
               <span className="text-[10px] font-black uppercase tracking-widest italic animate-pulse">Omni-Channel Sync Active</span>
@@ -73,13 +73,13 @@ export default function BroadcastPage() {
       </div>
 
       {/* Broadcast Form */}
-      <div className="relative group bg-slate-950/40 border border-slate-800/80 rounded-[48px] p-8 md:p-10 backdrop-blur-3xl overflow-hidden shadow-2xl">
-         <div className="absolute -left-24 -top-24 w-64 h-64 bg-rose-600/10 blur-[100px] pointer-events-none" />
+      <div className="relative group bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 rounded-[48px] p-8 md:p-10 backdrop-blur-3xl overflow-hidden shadow-sm dark:shadow-2xl transition-all">
+         <div className="absolute -left-24 -top-24 w-64 h-64 bg-rose-600/5 dark:bg-rose-600/10 blur-[100px] pointer-events-none" />
          
          <form onSubmit={handleSend} className="relative z-10">
             <div className="flex items-center gap-3 mb-6">
                <Zap className="w-5 h-5 text-indigo-500" />
-               <h2 className="text-lg font-black text-white uppercase italic tracking-tight underline decoration-indigo-500 decoration-2 underline-offset-8">New Sequence Dispatch</h2>
+               <h2 className="text-lg font-black text-slate-950 dark:text-white uppercase italic tracking-tight underline decoration-indigo-500 decoration-2 underline-offset-8">New Sequence Dispatch</h2>
             </div>
 
             <div className="space-y-6">
@@ -124,20 +124,20 @@ export default function BroadcastPage() {
 
       {/* History Stream */}
       <div className="space-y-6 pt-6">
-         <div className="flex items-center gap-3 px-2">
+          <div className="flex items-center gap-3 px-2">
             <Activity className="w-5 h-5 text-slate-500" />
-            <h2 className="text-xl font-black text-white uppercase italic tracking-tight">Transmission Logs</h2>
+            <h2 className="text-xl font-black text-slate-950 dark:text-white uppercase italic tracking-tight">Transmission Logs</h2>
          </div>
 
          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {broadcasts.length === 0 ? (
-              <div className="col-span-full py-24 text-center bg-slate-950/20 rounded-[48px] border border-dashed border-slate-800 opacity-50">
-                 <Radio className="w-12 h-12 text-slate-700 mx-auto mb-4" />
-                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Temporal silence — No broadcasts found</p>
+              <div className="col-span-full py-24 text-center bg-white dark:bg-slate-950/20 rounded-[48px] border border-dashed border-slate-200 dark:border-slate-800 opacity-50 shadow-sm dark:shadow-none">
+                 <Radio className="w-12 h-12 text-slate-400 dark:text-slate-700 mx-auto mb-4" />
+                 <p className="text-[10px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest">Temporal silence — No broadcasts found</p>
               </div>
             ) : (
               broadcasts.slice(0, 10).map((b) => (
-                <div key={b.id} className="bg-slate-950/40 border border-slate-800/80 p-8 rounded-[40px] hover:bg-slate-900 transition-all duration-500 backdrop-blur-2xl relative overflow-hidden group">
+                <div key={b.id} className="bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 p-8 rounded-[40px] hover:bg-slate-50 dark:hover:bg-slate-900 transition-all duration-500 backdrop-blur-2xl relative overflow-hidden group shadow-sm dark:shadow-none">
                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-rose-600 hidden group-hover:block" />
                    
                    <div className="flex justify-between items-start mb-6">
@@ -150,15 +150,15 @@ export default function BroadcastPage() {
                       <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest">{new Date(b.createdAt).toLocaleString()}</div>
                    </div>
 
-                   <p className="text-slate-300 font-bold text-sm leading-relaxed mb-8 line-clamp-3 italic group-hover:text-white transition-colors">
+                   <p className="text-slate-600 dark:text-slate-300 font-bold text-sm leading-relaxed mb-8 line-clamp-3 italic group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
                       "{b.content}"
                    </p>
 
-                   <div className="grid grid-cols-3 gap-3 border-t border-slate-800/50 pt-6">
+                   <div className="grid grid-cols-3 gap-3 border-t border-slate-100 dark:border-slate-800/50 pt-6">
                       <div className="flex flex-col items-center text-center">
-                         <Users className="w-3.5 h-3.5 text-slate-500 mb-2" />
-                         <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Target</span>
-                         <span className="text-white text-[10px] font-black">{b.recipientCount}</span>
+                         <Users className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 mb-2" />
+                         <span className="text-[8px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest">Target</span>
+                         <span className="text-slate-900 dark:text-white text-[10px] font-black">{b.recipientCount}</span>
                       </div>
                       <div className="flex flex-col items-center text-center">
                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 mb-2" />

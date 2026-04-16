@@ -6,6 +6,7 @@ import { KnowledgeBaseService } from '../knowledge';
 import { DataExtractionService } from '../data-extraction';
 import { TicketService } from '../ticket';
 import { SLAService } from '../sla';
+import { SheetsService } from '../sheets';
 
 export type IntentType =
   | 'task'
@@ -37,6 +38,7 @@ export class IntentDetector {
     private dataExtraction: DataExtractionService,
     private ticketService: TicketService,
     private slaService: SLAService,
+    private sheetsService: SheetsService,
     logger: ILogger
   ) {
     this.logger = logger.child({ service: 'intent-detector' });
@@ -162,6 +164,13 @@ export class IntentDetector {
       : 'MEDIUM';
     
     await this.slaService.startTracking(ticket.id, priority as any, ticket.category, ticket.problem);
+    
+    // Immediate GSheet Sync
+    if (this.sheetsService) {
+      await this.ticketService.syncSingleTicket(ticket.id).catch(err => {
+        this.logger.error('Failed immediate gsheet sync for structured report', err);
+      });
+    }
 
     let response = `✅ *Structured Ticket Created*\n\n`;
     response += `🎫 *No:* ${ticket.ticketNumber}\n`;

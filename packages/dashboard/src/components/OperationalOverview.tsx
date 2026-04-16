@@ -90,24 +90,24 @@ function formatHoursLeft(dateValue?: string): string {
 function severityClass(severity?: string): string {
   switch ((severity ?? '').toUpperCase()) {
     case 'CRITICAL':
-      return 'bg-red-100 text-red-700';
+      return 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
     case 'MAJOR':
     case 'ERROR':
-      return 'bg-orange-100 text-orange-700';
+      return 'bg-orange-500/10 text-orange-500 border border-orange-500/20';
     case 'MINOR':
     case 'WARNING':
-      return 'bg-amber-100 text-amber-700';
+      return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
     default:
-      return 'bg-slate-100 text-slate-700';
+      return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
   }
 }
 
 
 function Metric({ label, value, tone }: { label: string; value: string | number; tone: string }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${tone}`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">{value}</p>
+    <div className={`rounded-2xl border p-4 shadow-sm ${tone} dark:bg-slate-950/50 dark:border-white/5`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -136,9 +136,9 @@ export default function OperationalOverview({
 
   return (
     <section className="mt-8 space-y-6">
-      <div className="flex flex-col gap-4 border-b border-slate-200/60 pb-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-white/5 pb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900">
+          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
             <ShieldCheck className="w-7 h-7 text-indigo-600" />
             Operational Command
           </h2>
@@ -149,7 +149,7 @@ export default function OperationalOverview({
             <Link 
               key={label}
               to={`/${label.toLowerCase().split(' ')[0]}`} 
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-white/20 hover:-translate-y-0.5"
             >
               <ArrowUpRight className="w-4 h-4 text-slate-400" /> {label}
             </Link>
@@ -159,14 +159,14 @@ export default function OperationalOverview({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left Column: SLA & Backlog (Large Bento) */}
-        <article className="lg:col-span-7 flex flex-col rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+        <article className="lg:col-span-7 flex flex-col rounded-[32px] border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-950/40 p-7 shadow-sm dark:shadow-none">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
+              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
                 <ShieldAlert className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900">SLA & Backlog Pressure</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">SLA & Backlog Pressure</h3>
                 <p className="text-sm text-slate-500">Managing {ticketOverview?.openTickets ?? 0} active tickets</p>
               </div>
             </div>
@@ -254,7 +254,7 @@ export default function OperationalOverview({
 
         {/* Right Column: Alerts & Response (Incidents/Escalations) */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          <article className="flex flex-col rounded-[32px] border border-slate-200 bg-slate-900 p-7 text-white shadow-xl shadow-slate-200/50">
+          <article className="flex flex-col rounded-[32px] border border-slate-200 dark:border-white/10 bg-slate-900 dark:bg-slate-950 p-7 text-white shadow-xl shadow-slate-200/50 dark:shadow-none">
              <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-rose-500/20 text-rose-400 ring-1 ring-rose-500/30">
@@ -311,15 +311,15 @@ export default function OperationalOverview({
           </article>
 
           {/* Bot Connectivity detail (Compact) */}
-          <article className="flex-1 rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+          <article className="flex-1 rounded-[32px] border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-950/40 p-7 shadow-sm dark:shadow-none">
              <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                     <Bot className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-slate-900 tracking-tight">Bot Connectivity</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white tracking-tight">Bot Connectivity</h3>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full">
                   {readyBots}/{botComponents.length} Active
                 </span>
              </div>

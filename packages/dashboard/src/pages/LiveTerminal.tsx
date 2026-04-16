@@ -85,11 +85,11 @@ const LiveTerminal: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white italic tracking-tight flex items-center gap-2">
-            <Terminal className="w-8 h-8 text-indigo-400" />
-            LIVE <span className="text-indigo-400">TERMINAL</span>
+          <h1 className="text-3xl font-black text-slate-950 dark:text-white italic tracking-tight flex items-center gap-2">
+            <Terminal className="w-8 h-8 text-indigo-500 dark:text-indigo-400" />
+            LIVE <span className="text-indigo-600 dark:text-indigo-400">TERMINAL</span>
           </h1>
-          <p className="text-white/50 text-sm mt-1 uppercase tracking-widest font-medium">Strategic Signal Bridge — Alpha Stream</p>
+          <p className="text-slate-500 dark:text-white/50 text-sm mt-1 uppercase tracking-widest font-medium">Strategic Signal Bridge — Alpha Stream</p>
         </div>
         <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${connected ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' : 'border-red-500/30 bg-red-500/10 text-red-400'}`}>
           <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />

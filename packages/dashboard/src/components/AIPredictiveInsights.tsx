@@ -32,15 +32,15 @@ const AIPredictiveInsights: React.FC = () => {
   if (loading) return null;
 
   return (
-    <article className="mt-8 rounded-[32px] border border-slate-200 bg-white p-7 shadow-sm">
+    <article className="mt-8 rounded-[32px] border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-950/40 p-7 shadow-sm dark:shadow-none">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-violet-50 text-violet-600">
+          <div className="p-2.5 rounded-xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400">
             <BrainCircuit className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              AI Predictive Insights <div className="px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[10px] font-black uppercase">Alpha Beta</div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              AI Predictive Insights <div className="px-2 py-0.5 rounded-md bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-400 text-[10px] font-black uppercase">Alpha Beta</div>
             </h3>
             <p className="text-sm text-slate-500">Forecasting potential failures before they breach SLA</p>
           </div>
@@ -52,19 +52,19 @@ const AIPredictiveInsights: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {predictions.map((pred) => (
-          <div key={pred.id} className="relative group p-6 rounded-[24px] bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-xl hover:shadow-violet-500/5 hover:border-violet-200">
+          <div key={pred.id} className="relative group p-6 rounded-[24px] bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-white/10 hover:shadow-xl hover:shadow-violet-500/5 hover:border-violet-200 dark:hover:border-violet-500/20">
              <div className="flex items-start justify-between mb-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] font-black uppercase tracking-widest text-violet-500 mb-1">{pred.type}</span>
-                  <h4 className="font-bold text-slate-800">{pred.location}</h4>
+                  <h4 className="font-bold text-slate-800 dark:text-slate-200">{pred.location}</h4>
                 </div>
                 <div className="text-right">
-                   <div className="text-2xl font-black text-slate-900">{pred.probability}%</div>
+                   <div className="text-2xl font-black text-slate-900 dark:text-white">{pred.probability}%</div>
                    <div className="text-[10px] font-bold text-slate-400 uppercase">Risk Level</div>
                 </div>
              </div>
 
-             <div className="p-4 rounded-xl bg-white border border-slate-100 mb-4 text-xs leading-relaxed text-slate-600">
+             <div className="p-4 rounded-xl bg-white dark:bg-slate-950/50 border border-slate-100 dark:border-white/5 mb-4 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                 <div className="flex items-center gap-2 text-slate-400 mb-2 font-bold uppercase tracking-tighter text-[10px]">
                    <Info className="w-3.5 h-3.5" /> Pattern Discovery
                 </div>

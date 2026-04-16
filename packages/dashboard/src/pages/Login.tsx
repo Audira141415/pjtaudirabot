@@ -27,45 +27,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-brand-900">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden selection:bg-indigo-500/30">
+      {/* Decorative Gradients */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 dark:bg-indigo-600/5 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-rose-600/5 dark:bg-rose-600/5 blur-[150px] pointer-events-none" />
+
+      <div className="w-full max-w-md relative z-10 px-6">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-500 mb-4">
-            <Bot className="w-9 h-9 text-white" />
+        <div className="text-center mb-10 group">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[24px] bg-indigo-600 shadow-2xl shadow-indigo-600/30 mb-6 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
+            <Bot className="w-9 h-9 text-white group-hover:animate-pulse" />
           </div>
-          <h1 className="text-2xl font-bold text-white">AudiraBot Dashboard</h1>
-          <p className="text-gray-400 mt-1">Sign in to manage your bots</p>
+          <h1 className="text-4xl font-black italic tracking-tighter uppercase text-slate-950 dark:text-white leading-none">
+             Audira<span className="text-indigo-500 underline decoration-indigo-400 decoration-4 underline-offset-4">OS</span>
+          </h1>
+          <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] mt-4">Administrative Neural Link</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-8 space-y-5">
+        <form onSubmit={handleSubmit} className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-3xl rounded-[40px] border border-slate-200 dark:border-white/5 p-10 space-y-8 shadow-2xl shadow-slate-950/20 dark:shadow-none">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-lg border border-red-200">
+            <div className="bg-rose-500/10 text-rose-500 text-[11px] font-black uppercase tracking-wider px-4 py-3 rounded-2xl border border-rose-500/20 animate-in fade-in slide-in-from-top-1">
               {error}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Username</label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Identity Secret</label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
-              placeholder="admin"
+              className="w-full bg-slate-50 dark:bg-slate-950/50 px-6 py-4 rounded-[20px] border border-slate-200 dark:border-white/5 text-slate-950 dark:text-white font-bold text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
+              placeholder="operator_id"
               required
               autoFocus
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Access Fragment</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-shadow"
+              className="w-full bg-slate-50 dark:bg-slate-950/50 px-6 py-4 rounded-[20px] border border-slate-200 dark:border-white/5 text-slate-950 dark:text-white font-bold text-sm focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700"
               placeholder="••••••••"
               required
             />
@@ -74,12 +80,16 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+            className="w-full py-5 px-4 rounded-[24px] bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.3em] hover:bg-white hover:text-indigo-600 hover:shadow-2xl hover:shadow-indigo-600/30 border-2 border-transparent hover:border-indigo-600 disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-3 active:scale-[0.98]"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-            Sign In
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+            Establish Link
           </button>
         </form>
+        
+        <p className="mt-8 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+           Authenticated End-to-End Encryption Active
+        </p>
       </div>
     </div>
   );

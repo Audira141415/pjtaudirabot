@@ -142,20 +142,20 @@ export default function Layout() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-100 selection:bg-indigo-500/30">
+    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-indigo-500/30`}>
       {/* Sidebar - Ultimate Aesthetic */}
-      <aside className="w-80 bg-slate-950 border-r border-white/5 flex flex-col shrink-0 relative z-50 overflow-hidden">
+      <aside className="w-80 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-white/5 flex flex-col shrink-0 relative z-50 overflow-hidden">
         {/* Decorative Glow */}
         <div className="absolute -left-20 -top-20 w-64 h-64 bg-indigo-600/10 blur-[100px] pointer-events-none" />
         
         {/* Logo Section */}
-        <div className="relative px-8 py-10 flex items-center gap-4 border-b border-white/5">
+        <div className="relative px-8 py-10 flex items-center gap-4 border-b border-slate-200 dark:border-white/5">
            <div className="p-3 bg-indigo-600 rounded-[20px] shadow-2xl shadow-indigo-600/30 group cursor-pointer hover:scale-110 transition-transform">
               <Brain className="w-6 h-6 text-white group-hover:animate-pulse" />
            </div>
            <div>
-              <h1 className="text-xl font-black italic tracking-tighter uppercase text-white leading-none">Audira<span className="text-indigo-500 underline decoration-2 underline-offset-4 decoration-indigo-400">OS</span></h1>
-              <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.4em] mt-2">Core Neural Link</p>
+              <h1 className="text-xl font-black italic tracking-tighter uppercase text-slate-950 dark:text-white leading-none">Audira<span className="text-indigo-500 underline decoration-2 underline-offset-4 decoration-indigo-400">OS</span></h1>
+              <p className="text-[9px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-[0.4em] mt-2">Core Neural Link</p>
            </div>
         </div>
 
@@ -177,7 +177,7 @@ export default function Layout() {
                          `group flex items-center gap-4 px-6 py-4 rounded-[18px] text-[11px] font-black uppercase tracking-widest transition-all duration-300 border ${
                            isActive
                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-600/20 active:scale-95'
-                             : 'text-slate-500 border-transparent hover:text-white hover:bg-white/5 hover:translate-x-1'
+                             : 'text-slate-500 border-transparent hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-1'
                          }`
                        }
                      >
@@ -191,14 +191,14 @@ export default function Layout() {
         </nav>
 
         {/* User Footer Context */}
-        <div className="px-6 py-8 border-t border-white/5 relative bg-slate-950/80 backdrop-blur-md">
-           <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-[24px] border border-white/5 group hover:border-indigo-500/30 transition-all">
+        <div className="px-6 py-8 border-t border-slate-200 dark:border-white/5 relative bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
+           <div className="flex items-center justify-between p-4 bg-slate-100 dark:bg-slate-900/50 rounded-[24px] border border-slate-200 dark:border-white/5 group hover:border-indigo-500/30 transition-all">
               <div className="flex items-center gap-3">
                  <div className="w-10 h-10 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400">
                     <User className="w-5 h-5" />
                  </div>
                  <div>
-                    <p className="text-[10px] font-black text-white italic truncate w-24 uppercase">Admin Nucleus</p>
+                    <p className="text-[10px] font-black text-slate-950 dark:text-white italic truncate w-24 uppercase">Admin Nucleus</p>
                     <div className="flex items-center gap-1">
                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Linked</span>
@@ -207,7 +207,7 @@ export default function Layout() {
               </div>
               <button 
                  onClick={handleLogout}
-                 className="p-3 bg-slate-950 text-slate-700 hover:text-rose-500 rounded-xl transition-all border border-slate-800 hover:border-rose-500/20 active:scale-90"
+                 className="p-3 bg-white dark:bg-slate-950 text-slate-400 dark:text-slate-700 hover:text-rose-500 rounded-xl transition-all border border-slate-200 dark:border-slate-800 hover:border-rose-500/20 active:scale-90"
               >
                  <Power className="w-4 h-4" />
               </button>
@@ -221,11 +221,11 @@ export default function Layout() {
         <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-indigo-600/5 blur-[150px] pointer-events-none" />
         
         {/* Top Intelligence Bar */}
-        <header className="h-20 bg-slate-950/20 backdrop-blur-3xl border-b border-white/5 flex items-center justify-between px-10 shrink-0 relative z-40">
+        <header className="h-20 bg-white/20 dark:bg-slate-950/20 backdrop-blur-3xl border-b border-slate-200 dark:border-white/5 flex items-center justify-between px-10 shrink-0 relative z-40">
            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 rounded-2xl border border-white/5">
+              <div className="flex items-center gap-3 px-4 py-2 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-white/5">
                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
-                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest italic">Grid Status: Synchronized</span>
+                 <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-widest italic">Grid Status: Synchronized</span>
               </div>
            </div>
 
@@ -233,12 +233,12 @@ export default function Layout() {
               {/* Theme Toggle Premium */}
               <button
                 onClick={toggleTheme}
-                className="p-3 rounded-2xl border border-white/5 bg-slate-900/40 hover:bg-slate-800 hover:border-white/10 transition-all active:scale-90"
+                className="p-3 rounded-2xl border border-slate-200 dark:border-white/5 bg-white/50 dark:bg-slate-900/40 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all active:scale-90"
               >
                 {theme === 'dark' ? (
                   <Sun className="w-5 h-5 text-amber-400 transition-transform hover:rotate-90 duration-500" />
                 ) : (
-                  <Moon className="w-5 h-5 text-indigo-400" />
+                  <Moon className="w-5 h-5 text-indigo-500" />
                 )}
               </button>
 
@@ -319,7 +319,7 @@ export default function Layout() {
         </header>
 
         {/* Neural Outlet - Content Terminal */}
-        <main className="flex-1 overflow-y-auto bg-slate-950 relative scrollbar-thin scrollbar-thumb-indigo-600/20 scrollbar-track-transparent">
+        <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} relative scrollbar-thin scrollbar-thumb-indigo-600/20 scrollbar-track-transparent`}>
            <div className="p-10 max-w-[1920px] mx-auto">
               <Outlet />
            </div>

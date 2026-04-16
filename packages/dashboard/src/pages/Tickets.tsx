@@ -40,7 +40,7 @@ const PremiumPriorityBadge = ({ priority }: { priority: string }) => {
     CRITICAL: 'bg-rose-600 text-white border-rose-500 shadow-[0_0_20px_rgba(225,29,72,0.3)] animate-pulse',
     HIGH: 'bg-orange-500/20 text-orange-500 border-orange-500/30',
     MEDIUM: 'bg-amber-500/20 text-amber-500 border-amber-500/30',
-    LOW: 'bg-slate-800 text-slate-400 border-slate-700',
+    LOW: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700',
   };
 
   return (
@@ -59,6 +59,7 @@ export default function TicketsPage() {
   const [appliedSearch, setAppliedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [selected, setSelected] = useState<any | null>(null);
   const [bulkResolving, setBulkResolving] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -76,6 +77,7 @@ export default function TicketsPage() {
       if (appliedSearch) filters.search = appliedSearch;
       if (statusFilter) filters.status = statusFilter;
       if (priorityFilter) filters.priority = priorityFilter;
+      if (categoryFilter) filters.category = categoryFilter;
       const res = await api.getTickets(page, limit, filters);
       setTickets(res.data);
       setTotal(res.pagination.total);
@@ -84,7 +86,7 @@ export default function TicketsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, appliedSearch, statusFilter, priorityFilter]);
+  }, [page, appliedSearch, statusFilter, priorityFilter, categoryFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -152,18 +154,18 @@ export default function TicketsPage() {
             </div>
             <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em]">Service Desk</span>
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight uppercase italic mb-1">Ticket Repository</h1>
+          <h1 className="text-4xl font-black text-slate-950 dark:text-white tracking-tight uppercase italic mb-1">Ticket Repository</h1>
           <p className="text-slate-500 font-medium text-sm">Unified management for customer inquiries, technical faults, and service requests.</p>
         </div>
 
         <div className="flex gap-4">
-          <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-indigo-500/30 transition-all">
+          <div className="bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-indigo-500/30 transition-all shadow-sm dark:shadow-none">
              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-indigo-400 transition-colors">Open Tickets</div>
-             <div className="text-3xl font-black text-white">{tickets.filter(t => t.status === 'OPEN').length}</div>
+             <div className="text-3xl font-black text-slate-950 dark:text-white">{tickets.filter(t => t.status === 'OPEN').length}</div>
           </div>
-          <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-rose-500/30 transition-all">
+          <div className="bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 p-5 rounded-[28px] min-w-[140px] backdrop-blur-xl group hover:border-rose-500/30 transition-all shadow-sm dark:shadow-none">
              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1 group-hover:text-rose-500 transition-colors">Critical</div>
-             <div className="text-3xl font-black text-white">{tickets.filter(t => t.priority === 'CRITICAL').length}</div>
+             <div className="text-3xl font-black text-slate-950 dark:text-white">{tickets.filter(t => t.priority === 'CRITICAL').length}</div>
           </div>
         </div>
       </div>
@@ -172,31 +174,39 @@ export default function TicketsPage() {
       <div className="bg-slate-900/50 p-4 rounded-[32px] border border-slate-800/50 backdrop-blur-lg">
         <form onSubmit={handleSearch} className="flex flex-col xl:flex-row gap-4">
           <div className="relative flex-1 group">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
             <input
               type="text"
               placeholder="Filter by Ticket Number, Customer, or Keywords..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-950/50 border border-slate-800 text-white pl-12 pr-6 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-700 font-bold text-xs tracking-tight"
+              className="w-full bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-950 dark:text-white pl-12 pr-6 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-700 font-bold text-xs tracking-tight"
             />
           </div>
           <div className="flex flex-wrap gap-4">
-            <select 
-              value={statusFilter} 
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="bg-slate-950/50 border border-slate-800 text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
-            >
-              <option value="">All Status</option>
-              {['OPEN', 'IN_PROGRESS', 'WAITING', 'ESCALATED', 'RESOLVED', 'CLOSED'].map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select 
-              value={priorityFilter} 
-              onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
-              className="bg-slate-950/50 border border-slate-800 text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
-            >
-              <option value="">All Priority</option>
-              {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
+             <select 
+               value={statusFilter} 
+               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+               className="bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
+             >
+               <option value="">All Status</option>
+               {['OPEN', 'IN_PROGRESS', 'WAITING', 'ESCALATED', 'RESOLVED', 'CLOSED'].map(s => <option key={s} value={s}>{s}</option>)}
+             </select>
+             <select 
+               value={priorityFilter} 
+               onChange={(e) => { setPriorityFilter(e.target.value); setPage(1); }}
+               className="bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
+             >
+               <option value="">All Priority</option>
+               {['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map(p => <option key={p} value={p}>{p}</option>)}
+             </select>
+             <select 
+               value={categoryFilter} 
+               onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+               className="bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-6 py-4 rounded-2xl outline-none focus:border-indigo-500/50 text-xs font-black uppercase tracking-widest cursor-pointer"
+             >
+              <option value="">All Categories</option>
+              {['INCIDENT', 'REQUEST', 'MAINTENANCE', 'CONFIGURATION', 'MONITORING', 'FULFILLMENT', 'VAM', 'HELPDESK', 'SMARTHAND', 'INVENTORY', 'REPORTING', 'ADDITIONAL_SERVICE', 'AVAILABILITY'].map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <button 
               type="button"
@@ -230,12 +240,12 @@ export default function TicketsPage() {
              <h3 className="text-xl font-black text-slate-500 uppercase tracking-widest italic">Signal Lost — No Tickets Found</h3>
           </div>
         ) : (
-          tickets.map((ticket) => (
+    tickets.map((ticket) => (
             <div 
               key={ticket.id}
               onClick={() => openDetail(ticket.id)}
-              className={`group relative bg-slate-950/40 border border-slate-800/80 p-6 rounded-[32px] hover:bg-slate-900 hover:border-indigo-500/40 transition-all duration-500 cursor-pointer backdrop-blur-xl flex flex-col md:flex-row md:items-center gap-6 overflow-hidden ${
-                ticket.priority === 'CRITICAL' ? 'shadow-[L-0_0_20px_rgba(244,63,94,0.05)]' : ''
+              className={`group relative bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 p-6 rounded-[32px] hover:bg-slate-100 dark:hover:bg-slate-900 hover:border-indigo-200 dark:hover:border-indigo-500/40 transition-all duration-500 cursor-pointer backdrop-blur-xl flex flex-col md:flex-row md:items-center gap-6 overflow-hidden ${
+                ticket.priority === 'CRITICAL' ? 'shadow-[0_0_20px_rgba(244,63,94,0.05)]' : 'shadow-sm dark:shadow-none'
               }`}
             >
               {/* Vertical Accent */}
@@ -249,21 +259,26 @@ export default function TicketsPage() {
                 <div className="flex flex-wrap items-center gap-3 mb-3">
                   <span className="font-mono text-[10px] text-slate-600 font-bold group-hover:text-indigo-400 transition-colors uppercase tracking-widest whitespace-nowrap">
                     #{ticket.ticketNumber}
-                  </span>
-                  <PremiumPriorityBadge priority={ticket.priority} />
-                  <PremiumStatusBadge status={ticket.status} />
-                  {ticket.slaTracking?.resolutionBreached && (
-                    <span className="bg-rose-600/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
-                      <Zap className="w-2.5 h-2.5" /> SLA Breach
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-white font-black text-lg group-hover:translate-x-1 transition-all duration-500 truncate">{ticket.customer || 'Unknown Subscriber'}</h3>
-                <div className="flex items-center gap-4 mt-2 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                  <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-slate-600" /> {ticket.location || 'N/A'}</div>
-                  <div className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-slate-600" /> {new Date(ticket.createdAt).toLocaleDateString()}</div>
-                </div>
-              </div>
+                   </span>
+                   <PremiumPriorityBadge priority={ticket.priority} />
+                   <PremiumStatusBadge status={ticket.status} />
+                   {ticket.category && ticket.category !== 'INCIDENT' && (
+                     <span className="bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest">
+                       {ticket.category}
+                     </span>
+                   )}
+                   {ticket.slaTracking?.resolutionBreached && (
+                     <span className="bg-rose-600/10 text-rose-500 border border-rose-500/20 px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest flex items-center gap-1">
+                       <Zap className="w-2.5 h-2.5" /> SLA Breach
+                     </span>
+                   )}
+                 </div>
+                 <h3 className="text-slate-950 dark:text-white font-black text-lg group-hover:translate-x-1 transition-all duration-500 truncate">{ticket.customer || 'Unknown Subscriber'}</h3>
+                 <div className="flex items-center gap-4 mt-2 text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest">
+                   <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-slate-300 dark:text-slate-600" /> {ticket.location || 'N/A'}</div>
+                   <div className="flex items-center gap-1.5"><Clock className="w-3 h-3 text-slate-300 dark:text-slate-600" /> {new Date(ticket.createdAt).toLocaleDateString()}</div>
+                 </div>
+               </div>
 
               <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-4 md:pt-0 border-slate-800/50">
                 <div className="text-right flex flex-col items-end">
@@ -352,6 +367,54 @@ export default function TicketsPage() {
               </div>
 
               <div className="space-y-6 mb-10">
+                {/* Technical Specifications Section */}
+                {(selected.ao || selected.sid || selected.ipAddress || selected.hostnameSwitch) && (
+                  <div className="bg-slate-50 dark:bg-slate-900/40 p-6 rounded-[32px] border border-indigo-500/10 backdrop-blur-md">
+                     <div className="flex items-center gap-2 mb-4">
+                        <Activity className="w-4 h-4 text-indigo-400" />
+                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Technical Specifications</span>
+                     </div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {selected.ao && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">AO Number</div>
+                            <div className="text-white text-xs font-mono bg-slate-950/50 px-2 py-1 rounded inline-block">{selected.ao}</div>
+                          </div>
+                        )}
+                        {selected.sid && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">SID</div>
+                            <div className="text-white text-xs font-mono bg-slate-950/50 px-2 py-1 rounded inline-block">{selected.sid}</div>
+                          </div>
+                        )}
+                        {selected.service && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Service Type</div>
+                            <div className="text-white text-xs font-bold">{selected.service}</div>
+                          </div>
+                        )}
+                        {selected.ipAddress && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">IP Address / Gateway</div>
+                            <div className="text-white text-xs font-mono">{selected.ipAddress} <span className="text-slate-500">/</span> {selected.gateway || '-'}</div>
+                          </div>
+                        )}
+                        {selected.vlanId && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">VLAN (ID/Name)</div>
+                            <div className="text-white text-xs font-bold">{selected.vlanId} <span className="text-slate-500">-</span> {selected.vlanName || 'N/A'}</div>
+                          </div>
+                        )}
+                        {selected.hostnameSwitch && (
+                          <div>
+                            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Hostname / Port</div>
+                            <div className="text-white text-xs font-bold">{selected.hostnameSwitch} <span className="text-slate-500">@</span> {selected.port || '-'}</div>
+                          </div>
+                        )}
+                     </div>
+                  </div>
+                )}
+
                 <div className="group bg-slate-950/80 p-6 rounded-[32px] border border-slate-800 transition-all hover:border-slate-600">
                    <div className="flex items-center gap-2 mb-4">
                       <ShieldAlert className="w-4 h-4 text-amber-500" />

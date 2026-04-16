@@ -36,7 +36,7 @@ function StatCard({ icon: Icon, label, value, color, delay = "0ms" }: {
 }) {
   return (
     <div 
-      className="group relative overflow-hidden bg-slate-900/50 backdrop-blur-xl rounded-[32px] border border-slate-800/50 p-7 transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-600/5"
+      className="group relative overflow-hidden bg-white dark:bg-slate-900/50 backdrop-blur-xl rounded-[32px] border border-slate-200 dark:border-slate-800/50 p-7 transition-all duration-500 hover:border-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-600/5 shadow-sm dark:shadow-none"
       style={{ transitionDelay: delay }}
     >
       <div className={`absolute -right-8 -top-8 w-24 h-24 blur-[40px] opacity-10 group-hover:opacity-20 transition-all ${color.replace('bg-', 'bg-')}`} />
@@ -45,8 +45,8 @@ function StatCard({ icon: Icon, label, value, color, delay = "0ms" }: {
           <Icon className={`w-6 h-6 ${color.replace('bg-', 'text-').replace('-600', '-400')}`} />
         </div>
         <div className="text-right">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-1">{label}</p>
-          <p className="text-3xl font-black text-white italic tracking-tighter">{value}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-1">{label}</p>
+          <p className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter">{value}</p>
         </div>
       </div>
       <div className="mt-4 flex items-center gap-1 text-[9px] font-bold text-slate-600 uppercase tracking-widest">
@@ -173,7 +173,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh] gap-4">
         <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
-        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Initializing Neural Link...</span>
+        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] animate-pulse italic">Initializing Neural Link...</span>
       </div>
     );
   }
@@ -184,12 +184,12 @@ export default function DashboardPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" />
-            <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em]">Command Center V2.0</span>
-          </div>
-          <h1 className="text-5xl font-black text-white tracking-tighter uppercase italic mb-1 underline decoration-indigo-600/30 underline-offset-[12px] decoration-4">Operational Pulse</h1>
-          <p className="text-slate-500 font-medium text-sm mt-3">Advanced telemetry diagnostics and AI-driven predictive insights.</p>
-        </div>
+             <ShieldCheck className="w-5 h-5 text-indigo-400" />
+             <span className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em]">Command Center V2.0</span>
+           </div>
+           <h1 className="text-5xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic mb-1 underline decoration-indigo-600/30 underline-offset-[12px] decoration-4">Operational Pulse</h1>
+           <p className="text-slate-500 font-medium text-sm mt-3">Advanced telemetry diagnostics and AI-driven predictive insights.</p>
+         </div>
 
         <div className="flex items-center gap-3 px-6 py-4 bg-slate-900/40 border border-slate-800 rounded-[28px] backdrop-blur-xl">
            <div className={`w-3 h-3 rounded-full ${health?.overallStatus === 'healthy' ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.6)]' : 'bg-rose-600 animate-ping'}`} />
@@ -230,12 +230,12 @@ export default function DashboardPage() {
       />
 
       {/* Visualization Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-slate-950/40 border border-slate-800/60 p-8 rounded-[40px] backdrop-blur-2xl">
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-white dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/60 p-8 rounded-[40px] backdrop-blur-2xl shadow-sm dark:shadow-none">
            <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                  <TrendingUp className="w-5 h-5 text-indigo-400" />
-                 <h2 className="text-sm font-black text-white uppercase tracking-widest italic">Signal Volume (14d)</h2>
+                 <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest italic">Signal Volume (14d)</h2>
               </div>
            </div>
            <div className="h-72">
@@ -290,12 +290,12 @@ export default function DashboardPage() {
 
       <AIPredictiveInsights />
 
-      {/* Ticket Intelligence */}
-      <div className="space-y-6 pt-10 border-t border-slate-800/40">
+       {/* Ticket Intelligence */}
+      <div className="space-y-6 pt-10 border-t border-slate-200 dark:border-slate-800/40">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
              <Ticket className="w-6 h-6 text-indigo-500" />
-             <h2 className="text-2xl font-black text-white uppercase italic tracking-tight">Support Analytics</h2>
+             <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Support Analytics</h2>
           </div>
           <div className="flex items-center gap-2 bg-slate-950/50 p-2 rounded-2xl border border-slate-800">
             {[7, 14, 30].map((days) => (

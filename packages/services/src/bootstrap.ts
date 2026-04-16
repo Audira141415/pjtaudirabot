@@ -314,6 +314,7 @@ export async function createBotServices(
     dataExtractionService,
     ticketService,
     slaService,
+    sheetsService,
     logger
   );
 

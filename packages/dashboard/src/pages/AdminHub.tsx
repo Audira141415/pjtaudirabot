@@ -186,7 +186,7 @@ const AdminHub = () => {
   if (loading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <div className="animate-spin p-2 bg-indigo-500/10 rounded-full border-t-2 border-indigo-500 w-12 h-12" />
-      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Synchronizing Core Services...</p>
+      <p className="text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest text-xs">Synchronizing Core Services...</p>
     </div>
   );
 
@@ -228,14 +228,14 @@ const AdminHub = () => {
               ))}
             </div>
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-400">
+            <div className="p-8 bg-slate-50 dark:bg-slate-950/50 border-t border-slate-100 dark:border-white/5 flex items-center justify-between">
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500">
                 {selectedModules.length} CATEGORIES SELECTED
               </div>
               <div className="flex gap-3">
                 <button 
                   onClick={() => setShowPurgeModal(false)}
-                  className="px-6 py-3 text-slate-600 font-bold hover:text-slate-900 transition-colors"
+                  className="px-6 py-3 text-slate-600 dark:text-slate-400 font-bold hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
                   Batal
                 </button>
@@ -253,8 +253,8 @@ const AdminHub = () => {
       )}
 
       {/* Header Panel */}
-      <div className="bg-slate-900 rounded-[32px] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+      <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-2xl relative overflow-hidden transition-all">
+        <div className="absolute top-0 right-0 p-12 opacity-5 dark:opacity-10 pointer-events-none">
           <ShieldCheck className="w-64 h-64 text-indigo-400" />
         </div>
         
@@ -262,16 +262,16 @@ const AdminHub = () => {
           <div>
              <div className="flex items-center gap-3 mb-2">
                 <span className={`w-2.5 h-2.5 rounded-full animate-pulse ${health?.overallStatus === 'healthy' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                <h1 className="text-3xl font-black text-white tracking-tight">Super Admin Hub</h1>
+                <h1 className="text-3xl font-black text-slate-950 dark:text-white tracking-tight italic">Super Admin Hub</h1>
              </div>
-             <p className="text-slate-400 text-sm max-w-md font-medium">AudiraBot Central Nervous System. Monitor core services and manage bot connectivity from here.</p>
+             <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md font-medium">AudiraBot Central Nervous System. Monitor core services and manage bot connectivity from here.</p>
           </div>
           
           <div className="flex items-center gap-3">
              <button 
                 onClick={handleManualSync}
                 disabled={syncing || purging}
-                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-95 text-sm"
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-white hover:text-indigo-600 border-2 border-transparent hover:border-indigo-600 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95 text-sm"
              >
                 <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? 'Syncing...' : 'Sync All Data'}
@@ -280,7 +280,7 @@ const AdminHub = () => {
                 onClick={handlePurgeResync}
                 disabled={syncing || purging}
                 title="Reset Maintenance Sheets"
-                className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all border border-rose-500/30 active:scale-95 text-sm"
+                className="flex items-center gap-2 px-6 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-2xl font-bold transition-all border border-slate-200 dark:border-rose-500/30 hover:border-rose-500 active:scale-95 text-sm"
              >
                 <RefreshCw className={`w-4 h-4 ${purging ? 'animate-spin' : ''}`} />
                 {purging ? 'Purging...' : 'Reset PM Sheets'}
@@ -288,7 +288,7 @@ const AdminHub = () => {
              <button 
                 onClick={() => setShowPurgeModal(true)}
                 disabled={syncing || purging}
-                className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg shadow-rose-600/20 active:scale-95 text-sm"
+                className="flex items-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-500 disabled:bg-slate-700 text-white rounded-2xl font-bold transition-all shadow-lg active:scale-95 text-sm"
              >
                 <Trash2 className={`w-4 h-4 ${purging ? 'animate-bounce' : ''}`} />
                 Purge Center
@@ -297,11 +297,11 @@ const AdminHub = () => {
                 onClick={handleCleanupSchedules}
                 disabled={syncing || purging}
                 title="Cleanup Invalid PM Schedules"
-                className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-rose-900 hover:text-white transition-all border border-slate-700"
+                className="p-3 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-300 rounded-2xl hover:bg-rose-600 hover:text-white transition-all border border-slate-200 dark:border-slate-700"
              >
                 <Trash2 className="w-5 h-5" />
              </button>
-             <button className="p-3 bg-slate-800 text-slate-300 rounded-2xl hover:bg-slate-700 hover:text-white transition-all border border-slate-700">
+             <button className="p-3 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-300 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-indigo-600 transition-all border border-slate-200 dark:border-slate-700">
                 <Settings className="w-5 h-5" />
              </button>
           </div>
@@ -317,10 +317,10 @@ const AdminHub = () => {
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  {health?.components.map((c) => (
-                    <div key={c.name} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm hover:border-indigo-100 transition-all group">
+                    <div key={c.name} className="bg-white dark:bg-slate-950/40 rounded-3xl p-6 border border-slate-100 dark:border-white/5 shadow-sm hover:border-indigo-100 dark:hover:border-indigo-500/20 transition-all group">
                        <div className="flex items-center justify-between mb-4">
                           <div className={`p-3 rounded-2xl ${
-                             c.status === 'online' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                             c.status === 'online' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'
                           }`}>
                              {c.name.includes('DB') ? <Database className="w-5 h-5" /> : 
                               c.name.includes('Bot') ? <Zap className="w-5 h-5" /> : 
@@ -330,8 +330,8 @@ const AdminHub = () => {
                              c.status === 'online' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                           }`}>{c.status}</span>
                        </div>
-                       <h3 className="font-bold text-slate-800 mb-1">{c.name}</h3>
-                       <p className="text-xs text-slate-500 font-medium truncate mb-4">{c.details || 'Operational and responding normally.'}</p>
+                       <h3 className="font-bold text-slate-800 dark:text-slate-200 mb-1">{c.name}</h3>
+                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate mb-4">{c.details || 'Operational and responding normally.'}</p>
                        
                        {c.latency && (
                           <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 grayscale group-hover:grayscale-0 transition-all">
@@ -429,7 +429,7 @@ const AdminHub = () => {
 
         {/* Right Column: Resource Usage */}
         <div className="space-y-8">
-           <section className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-xl">
+           <section className="bg-white dark:bg-slate-950/40 rounded-[32px] p-8 border border-slate-100 dark:border-white/5 shadow-sm dark:shadow-xl">
               <h2 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
                  <HardDrive className="w-4 h-4" /> Resource Utilization
               </h2>
@@ -496,15 +496,15 @@ const AdminHub = () => {
 
       {/* QR Code Modal (Placeholder) */}
       {showQr && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-900/60">
-           <div className="bg-white rounded-[40px] p-12 max-w-sm w-full text-center shadow-2xl relative">
-              <button onClick={() => setShowQr(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md bg-slate-950/80">
+           <div className="bg-white dark:bg-slate-900 rounded-[40px] p-12 max-w-sm w-full text-center shadow-2xl relative border border-slate-200 dark:border-white/5">
+              <button onClick={() => setShowQr(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800 dark:hover:text-white">
                  <XCircleIcon className="w-6 h-6" />
               </button>
-              <h3 className="text-2xl font-black text-slate-900 mb-2">Snap to Connect</h3>
-              <p className="text-sm text-slate-500 font-medium mb-8">Scan this QR code with your WhatsApp to link AudiraBot.</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Snap to Connect</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mb-8">Scan this QR code with your WhatsApp to link AudiraBot.</p>
               
-              <div className="aspect-square bg-slate-50 flex items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 mb-8 p-8">
+              <div className="aspect-square bg-slate-50 dark:bg-slate-950 flex items-center justify-center rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10 mb-8 p-8">
                  {qrToken ? (
                     <QRCodeSVG 
                       value={qrToken} 
