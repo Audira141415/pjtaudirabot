@@ -121,6 +121,7 @@ export class TelegramNotifier {
       `────────────────────`,
       lokasi ? `📍 <b>Lokasi:</b> ${this.esc(lokasi)}` : null,
       alokasi ? `🔧 <b>Alokasi:</b> ${this.esc(alokasi)}` : null,
+      technical.port ? `🔌 <b>Port:</b> <code>${this.esc(technical.port)}</code>` : null,
       vlan ? `🌐 <b>VLAN ID:</b> <code>${this.esc(vlan)}</code>` : null,
       mode ? `🧭 <b>Mode:</b> ${this.esc(mode)}` : null,
       problemText ? `📝 <b>Catatan:</b> ${this.esc(problemText)}` : null,
