@@ -57,6 +57,23 @@ import {
   MonitorResumeCommand,
 } from './command/uptime-commands';
 import { HandoverCommand, HandoverAckCommand, ShiftInfoCommand } from './command/handover-commands';
+import { SearchCommand, SaveSearchCommand, SearchSavedCommand, UseSearchCommand } from './command/search-commands';
+import { 
+  CustomerAddCommand, 
+  CustomerListCommand, 
+  CustomerInfoCommand, 
+  CustomerTicketsCommand, 
+  CustomerUpdateCommand, 
+  CustomerDeleteCommand 
+} from './command/crm-commands';
+import { AssetAddCommand, AssetSyncAllCommand, CustomerAssetsCommand } from './command/asset-commands';
+import { 
+  TemplateCreateCommand, 
+  TemplateListCommand, 
+  TemplateUseCommand, 
+  AutomationCreateCommand, 
+  AutomationListCommand 
+} from './command/automation-commands';
 
 import { RedisRateLimiter } from './rate-limiter';
 import { AIService } from './ai';
@@ -98,6 +115,9 @@ import { ShiftHandoverService } from './shift-handover';
 import { MaintenanceScheduleService } from './maintenance-schedule';
 import { DataExtractionService } from './data-extraction';
 import { LiveChatService } from './live-chat';
+import { SearchService } from './search';
+import { CRMService } from './crm';
+import { AutomationService } from './automation';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -144,6 +164,9 @@ export interface BotServices {
   liveChatService: LiveChatService;
   dataExtractionService: DataExtractionService;
   scheduler: Scheduler;
+  searchService: SearchService;
+  crmService: CRMService;
+  automationService: AutomationService;
 }
 
 export interface CreateServicesOptions {
@@ -245,6 +268,10 @@ export async function createBotServices(
     logger,
   );
 
+  // Phase 2 Services (Move up to allow command registration)
+  const searchService = new SearchService(db, logger);
+  const automationService = new AutomationService(db, logger);
+
   // Command registry + base commands
   const registry = new CommandRegistry(logger);
   registry.register(new HelpCommand(logger, registry));
@@ -255,6 +282,9 @@ export async function createBotServices(
   registry.register(new AIClearCommand(logger, aiService));
 
   const executor = new CommandExecutor(registry, rateLimiter, logger);
+
+  // Register commands that need executor reference (Phase 2)
+  registry.register(new UseSearchCommand(logger, searchService, executor));
 
   // Professional services
   const analytics = new AnalyticsService(db, redis, logger);
@@ -286,6 +316,8 @@ export async function createBotServices(
       throw new Error('Google Sheets is enabled but the service is not available; check credentials and spreadsheet ID');
     }
   }
+
+  const crmService = new CRMService(db, logger, sheetsService);
 
   // Productivity services
   const taskManager = new TaskManagerService(db, sheetsService, logger);
@@ -384,6 +416,29 @@ export async function createBotServices(
   registry.register(new HandoverAckCommand(logger, shiftHandoverService));
   registry.register(new ShiftInfoCommand(logger, shiftHandoverService));
 
+  // Search Commands (Phase 2)
+  registry.register(new SearchCommand(logger, searchService));
+  registry.register(new SaveSearchCommand(logger, searchService));
+  registry.register(new SearchSavedCommand(logger, searchService));
+
+  // CRM Commands (Phase 2)
+  registry.register(new CustomerAddCommand(logger, crmService));
+  registry.register(new CustomerListCommand(logger, crmService));
+  registry.register(new CustomerInfoCommand(logger, crmService));
+  registry.register(new CustomerTicketsCommand(logger, crmService));
+  registry.register(new CustomerUpdateCommand(logger, crmService));
+  registry.register(new CustomerDeleteCommand(logger, crmService));
+  registry.register(new AssetAddCommand(logger, crmService));
+  registry.register(new AssetSyncAllCommand(logger, crmService));
+  registry.register(new CustomerAssetsCommand(logger, crmService));
+
+  // Automation Commands (Phase 2)
+  registry.register(new TemplateCreateCommand(logger, automationService));
+  registry.register(new TemplateListCommand(logger, automationService));
+  registry.register(new TemplateUseCommand(logger, automationService));
+  registry.register(new AutomationCreateCommand(logger, automationService));
+  registry.register(new AutomationListCommand(logger, automationService));
+
   return {
     userService, sessionService, aiService, rateLimiter, registry, executor,
     analytics, moderation, flowEngine, eventBus, i18n, sheetsService,
@@ -392,6 +447,7 @@ export async function createBotServices(
     aiExtractor, chatPipeline, ticketService, slaService,
     uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, 
     liveChatService, dataExtractionService, scheduler,
+    searchService, crmService, automationService,
   };
 }
 
@@ -408,9 +464,9 @@ export function registerTicketCommands(
   logger: ILogger,
   broadcasts: TicketBroadcasts,
 ): void {
-  const { registry, ticketService, slaService, sheetsService } = services;
+  const { registry, ticketService, slaService, sheetsService, crmService } = services;
 
-  registry.register(new TicketCreateCommand(logger, ticketService, slaService, sheetsService, broadcasts.onNewTicket));
+  registry.register(new TicketCreateCommand(logger, ticketService, slaService, crmService, sheetsService, broadcasts.onNewTicket));
   registry.register(new TicketStatusCommand(logger, ticketService));
   registry.register(new TicketListCommand(logger, ticketService));
   registry.register(new TicketAssignCommand(logger, ticketService, slaService, sheetsService));

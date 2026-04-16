@@ -123,7 +123,7 @@ if errorlevel 1 (
 
 echo  → checking staged file sizes
 set HAS_BIG_FILE=0
-for /f "usebackq delims=" %%f in (`powershell -NoProfile -Command "$files = git diff --cached --name-only; $big = @(); foreach($f in $files){ if(Test-Path $f -PathType Leaf){ $len = (Get-Item $f).Length; if($len -gt 95MB){ $big += ($f + ' (' + [math]::Round($len/1MB,2) + ' MB)') } } }; $big | ForEach-Object { Write-Output $_ }; if($big.Count -gt 0){ exit 2 }"`) do (
+for /f "usebackq delims=" %%f in (`powershell -NoProfile -Command "git diff --cached --name-only | foreach { if(Test-Path $_ -PathType Leaf){ $len = (Get-Item $_).Length; if($len -gt 95MB){ write-output ($_ + ' (' + [math]::Round($len/1MB,2) + ' MB)') } } }; if($LASTEXITCODE -ne 0){ exit 2 }"`) do (
     echo  [BLOCKED] Large staged file: %%f
     set HAS_BIG_FILE=1
 )

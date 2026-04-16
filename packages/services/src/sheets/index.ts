@@ -15,6 +15,7 @@ const SHEET_SCHEMAS: Record<string, string[]> = {
   uptime: ['ID', 'Target Name', 'Host', 'Check Type', 'Status', 'Response Ms', 'Uptime %', 'Last Check', 'Last Down', 'Tags'],
   handover: ['ID', 'Shift', 'Date', 'Open Tickets', 'SLA Due Soon', 'SLA Breached', 'Critical Alerts', 'Active Incidents', 'Generated At'],
   maintenance_schedules: ['ID', 'Judul PM', 'Deskripsi', 'Lokasi Perangkat', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'No. Tiket Terakhir', 'Penanggung Jawab', 'Status', 'Dibuat Pada'],
+  crm_assets: ['ID', 'Contact ID', 'Customer Name', 'Type', 'Identifier', 'Service Type', 'Description', 'Created At'],
 };
 
 export interface SheetsConfig {
@@ -424,7 +425,7 @@ export class SheetsService {
 
   private isSheetAllowed(sheetName: string): boolean {
     if (!this.ticketsOnly) return true;
-    return sheetName === 'tickets' || sheetName === 'dashboard' || sheetName === 'maintenance_schedules';
+    return sheetName === 'tickets' || sheetName === 'dashboard' || sheetName === 'maintenance_schedules' || sheetName === 'crm_assets';
   }
 
   private initClient(credentials: string): void {

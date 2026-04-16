@@ -116,6 +116,7 @@ export class TelegramNotifier {
       vlan ? `🌐 <b>VLAN:</b> ${this.esc(vlan)}` : null,
       mode ? `🧭 <b>Mode:</b> ${this.esc(mode)}` : null,
       problemText ? `📝 <b>Problem:</b> ${this.esc(problemText)}` : null,
+      params.customerServices?.length ? `🛠️ <b>Layanan Terdaftar:</b>\n   ${params.customerServices.map(s => `• ${this.esc(s)}`).join('\n   ')}` : null,
       ``,
       `────────────────`,
       `👉 Ambil tiket:`,

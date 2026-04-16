@@ -2,6 +2,7 @@ import { CommandContext, CommandResult, ILogger } from '@pjtaudirabot/core';
 import { BaseCommandHandler } from './handler';
 import { TicketService } from '../ticket';
 import { SLAService } from '../sla';
+import { CRMService } from '../crm';
 import { GoogleSheetsService } from '../sheets';
 
 /** Payload sent to the new-ticket broadcast callback */
@@ -16,6 +17,7 @@ export interface NewTicketBroadcast {
   createdByName: string;
   groupId?: string | null;
   technicalDetails?: string;
+  customerServices?: string[]; // ["VLAN 100: IPTX", "VLAN 200: METRO"]
 }
 
 export interface TicketPickedBroadcast {
@@ -42,6 +44,7 @@ export class TicketCreateCommand extends BaseCommandHandler {
     logger: ILogger,
     private ticketService: TicketService,
     private slaService: SLAService,
+    private crmService?: CRMService | null,
     private sheetsService?: GoogleSheetsService | null,
     private onCreated?: (params: NewTicketBroadcast) => Promise<void>,
   ) {
@@ -76,6 +79,19 @@ export class TicketCreateCommand extends BaseCommandHandler {
       // Start SLA tracking
       await this.slaService.startTracking(ticket.id, ticket.priority, ticket.category, problem);
 
+      // Enrich with CRM Assets if possible
+      let customerServices: string[] | undefined;
+      if (this.crmService && ticket.customer) {
+        try {
+          const contact = await this.crmService.findContactWithAssets(ticket.customer);
+          if (contact && contact.assets.length > 0) {
+            customerServices = contact.assets.map(a => `${a.identifier} (${a.serviceType || 'Unknown'})`);
+          }
+        } catch (err) {
+          this.logger.warn('Failed to fetch CRM assets for notification enrichment', err as Error);
+        }
+      }
+
       // Broadcast new ticket to admin groups (non-blocking)
       if (this.onCreated) {
         this.onCreated({
@@ -87,6 +103,7 @@ export class TicketCreateCommand extends BaseCommandHandler {
           problem,
           createdByName: context.user.displayName ?? context.user.phoneNumber ?? 'Unknown',
           groupId: ticket.groupId,
+          customerServices,
         }).catch(() => {});
       }
 

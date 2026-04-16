@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,38 +8,38 @@ datasource db {
 }
 
 model User {
-  id                String   @id @default(cuid())
-  platform          Platform
-  platformUserId    String   // WhatsApp: phone+timestamp, Telegram: chat_id
-  phoneNumber       String?
-  username          String?
-  displayName       String
-  profileImage      String?
-  role              UserRole @default(USER)
-  status            UserStatus @default(ACTIVE)
-  settings          Json     @default("{\"language\": \"en\", \"notifications\": true}")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  lastActivityAt    DateTime?
-
-  sessions              Session[]
-  commandExecutions     CommandExecution[]
+  id                    String                @id @default(cuid())
+  platform              Platform
+  platformUserId        String
+  phoneNumber           String?
+  username              String?
+  displayName           String
+  profileImage          String?
+  role                  UserRole              @default(USER)
+  status                UserStatus            @default(ACTIVE)
+  settings              Json                  @default("{\"language\": \"en\", \"notifications\": true}")
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  lastActivityAt        DateTime?
   auditLogs             AuditLog[]
-  memories              UserMemory[]
-  embeddings            MemoryEmbedding[]
-  conversationSummaries ConversationSummary[]
   broadcastReceipts     BroadcastReceipt[]
-  moderationLogs        ModerationLog[]
-  tasks                 Task[]
-  checklistItems        ChecklistItem[]
-  incidents             Incident[]
-  reminders             Reminder[]
-  knowledgeEntries      KnowledgeEntry[]
-  notes                 Note[]
   chatLogs              ChatLog[]
-  createdTickets        Ticket[]   @relation("CreatedTickets")
-  assignedTickets       Ticket[]   @relation("AssignedTickets")
+  checklistItems        ChecklistItem[]
+  commandExecutions     CommandExecution[]
+  conversationSummaries ConversationSummary[]
+  incidents             Incident[]
+  knowledgeEntries      KnowledgeEntry[]
   maintenanceSchedules  MaintenanceSchedule[]
+  embeddings            MemoryEmbedding[]
+  moderationLogs        ModerationLog[]
+  notes                 Note[]
+  reminders             Reminder[]
+  savedSearches         SavedSearch[]
+  sessions              Session[]
+  tasks                 Task[]
+  assignedTickets       Ticket[]              @relation("AssignedTickets")
+  createdTickets        Ticket[]              @relation("CreatedTickets")
+  memories              UserMemory[]
 
   @@unique([platform, platformUserId])
   @@index([status])
@@ -50,16 +47,16 @@ model User {
 }
 
 model Session {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  botPlatform       Platform
-  sessionToken      String   @unique
-  metadata          Json     @default("{}")
-  expiresAt         DateTime
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  botPlatform  Platform
+  sessionToken String   @unique
+  metadata     Json     @default("{}")
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([sessionToken])
@@ -67,40 +64,39 @@ model Session {
 }
 
 model Command {
-  id                String   @id @default(cuid())
-  name              String   @unique
-  description       String
-  category          String
-  handler           String   // Function identifier
-  requiredRole      UserRole @default(USER)
-  rateLimitConfig   Json     @default("{\"perMinute\": 30, \"perHour\": 300}")
-  isEnabled         Boolean  @default(true)
-  aiPowered         Boolean  @default(false)
-  version           Int      @default(1)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  executions        CommandExecution[]
+  id              String             @id @default(cuid())
+  name            String             @unique
+  description     String
+  category        String
+  handler         String
+  requiredRole    UserRole           @default(USER)
+  rateLimitConfig Json               @default("{\"perHour\": 300, \"perMinute\": 30}")
+  isEnabled       Boolean            @default(true)
+  aiPowered       Boolean            @default(false)
+  version         Int                @default(1)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  executions      CommandExecution[]
 
   @@index([name])
   @@index([category])
 }
 
 model CommandExecution {
-  id                String   @id @default(cuid())
-  commandId         String
-  command           Command  @relation(fields: [commandId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionId         String?
-  botPlatform       Platform
-  input             String
-  output            String?
-  executionTimeMs   Int      @default(0)
-  status            ExecutionStatus @default(PENDING)
-  errorMessage      String?
-  aiUsed            Boolean  @default(false)
-  createdAt         DateTime @default(now())
+  id              String          @id @default(cuid())
+  commandId       String
+  userId          String
+  sessionId       String?
+  botPlatform     Platform
+  input           String
+  output          String?
+  executionTimeMs Int             @default(0)
+  status          ExecutionStatus @default(PENDING)
+  errorMessage    String?
+  aiUsed          Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  command         Command         @relation(fields: [commandId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([commandId])
@@ -109,18 +105,18 @@ model CommandExecution {
 }
 
 model AuditLog {
-  id                String   @id @default(cuid())
-  userId            String?
-  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  action            String   // create, update, delete, execute, login, etc
-  resource          String   // user, command, session, config, etc
-  resourceId        String?
-  changes           Json?    @default("{}")
-  ipAddress         String?
-  userAgent         String?
-  status            AuditStatus @default(SUCCESS)
-  errorDetails      String?
-  createdAt         DateTime @default(now())
+  id           String      @id @default(cuid())
+  userId       String?
+  action       String
+  resource     String
+  resourceId   String?
+  changes      Json?       @default("{}")
+  ipAddress    String?
+  userAgent    String?
+  status       AuditStatus @default(SUCCESS)
+  errorDetails String?
+  createdAt    DateTime    @default(now())
+  user         User?       @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([action])
@@ -129,48 +125,61 @@ model AuditLog {
 }
 
 model BotConfig {
-  id                String   @id @default(cuid())
-  platform          Platform @unique
-  isActive          Boolean  @default(true)
-  configuration     Json     @default("{}")
-  lastConnectedAt   DateTime?
-  connectionStatus  ConnectionStatus @default(DISCONNECTED)
-  version           String   @default("1.0.0")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String           @id @default(cuid())
+  platform         Platform         @unique
+  isActive         Boolean          @default(true)
+  configuration    Json             @default("{}")
+  lastConnectedAt  DateTime?
+  connectionStatus ConnectionStatus @default(DISCONNECTED)
+  version          String           @default("1.0.0")
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([platform])
 }
 
 model RateLimitSnapshot {
-  id                String   @id @default(cuid())
-  userId            String
-  commandId         String?
-  requestCount      Int      @default(1)
-  windowStart       DateTime
-  windowEnd         DateTime
-  createdAt         DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  commandId    String?
+  requestCount Int      @default(1)
+  windowStart  DateTime
+  windowEnd    DateTime
+  createdAt    DateTime @default(now())
 
   @@index([userId])
   @@index([commandId])
   @@index([windowStart])
 }
 
-// ── AI Memory System ──
+model SavedSearch {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  type      String
+  query     String
+  filters   Json?    @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name])
+  @@index([userId])
+}
 
 model UserMemory {
-  id                String       @id @default(cuid())
-  userId            String
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category          MemoryCategory
-  key               String       // e.g. "name", "language", "preference_theme"
-  value             String       // the extracted fact
-  confidence        Float        @default(0.8)
-  source            String?      // message that produced this fact
-  lastReferencedAt  DateTime?
-  expiresAt         DateTime?    // optional TTL for ephemeral facts
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id               String         @id @default(cuid())
+  userId           String
+  category         MemoryCategory
+  key              String
+  value            String
+  confidence       Float          @default(0.8)
+  source           String?
+  lastReferencedAt DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, category, key])
   @@index([userId])
@@ -179,52 +188,42 @@ model UserMemory {
 }
 
 model MemoryEmbedding {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content           String   // original text chunk
-  embedding         Bytes    // serialized Float32Array
-  dimensions        Int      @default(1536)
-  metadata          Json     @default("{}")
-  createdAt         DateTime @default(now())
+  id         String   @id @default(cuid())
+  userId     String
+  content    String
+  embedding  Bytes
+  dimensions Int      @default(1536)
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
 
 model ConversationSummary {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform          Platform
-  summary           String
-  messageCount      Int
-  startedAt         DateTime
-  endedAt           DateTime
-  createdAt         DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  platform     Platform
+  summary      String
+  messageCount Int
+  startedAt    DateTime
+  endedAt      DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([platform])
   @@index([endedAt])
 }
 
-enum MemoryCategory {
-  PERSONAL       // name, age, location
-  PREFERENCE     // likes, dislikes, settings
-  CONTEXT        // ongoing topics, current task
-  KNOWLEDGE      // things the user taught the bot
-  RELATIONSHIP   // how user relates to others
-}
-
-// ── Analytics ──
-
 model AnalyticsEvent {
-  id                String   @id @default(cuid())
-  eventType         String   // command_executed, ai_request, message_received, error, etc.
-  userId            String?
-  platform          Platform?
-  metadata          Json     @default("{}")
-  value             Float?   // numeric value (e.g. response time ms)
-  createdAt         DateTime @default(now())
+  id        String    @id @default(cuid())
+  eventType String
+  userId    String?
+  platform  Platform?
+  metadata  Json      @default("{}")
+  value     Float?
+  createdAt DateTime  @default(now())
 
   @@index([eventType])
   @@index([userId])
@@ -233,145 +232,1300 @@ model AnalyticsEvent {
 }
 
 model DailyStats {
-  id                String   @id @default(cuid())
-  date              DateTime @db.Date
+  id                String    @id @default(cuid())
+  date              DateTime  @db.Date
   platform          Platform?
-  totalMessages     Int      @default(0)
-  totalCommands     Int      @default(0)
-  totalAIRequests   Int      @default(0)
-  totalErrors       Int      @default(0)
-  uniqueUsers       Int      @default(0)
-  avgResponseTimeMs Float    @default(0)
-  topCommands       Json     @default("{}") // { "ai": 50, "help": 30 }
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  totalMessages     Int       @default(0)
+  totalCommands     Int       @default(0)
+  totalAIRequests   Int       @default(0)
+  totalErrors       Int       @default(0)
+  uniqueUsers       Int       @default(0)
+  avgResponseTimeMs Float     @default(0)
+  topCommands       Json      @default("{}")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@unique([date, platform])
   @@index([date])
 }
 
-// ── Broadcast ──
-
 model BroadcastMessage {
-  id                String            @id @default(cuid())
-  title             String
-  content           String
-  targetPlatform    Platform?         // null = all platforms
-  targetRole        UserRole?         // null = all roles
-  status            BroadcastStatus   @default(PENDING)
-  scheduledAt       DateTime?
-  sentAt            DateTime?
-  totalRecipients   Int               @default(0)
-  successCount      Int               @default(0)
-  failureCount      Int               @default(0)
-  createdBy         String
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  receipts          BroadcastReceipt[]
+  id              String             @id @default(cuid())
+  title           String
+  content         String
+  targetPlatform  Platform?
+  targetRole      UserRole?
+  status          BroadcastStatus    @default(PENDING)
+  scheduledAt     DateTime?
+  sentAt          DateTime?
+  totalRecipients Int                @default(0)
+  successCount    Int                @default(0)
+  failureCount    Int                @default(0)
+  createdBy       String
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  receipts        BroadcastReceipt[]
 
   @@index([status])
   @@index([scheduledAt])
 }
 
 model BroadcastReceipt {
-  id                String   @id @default(cuid())
-  broadcastId       String
-  broadcast         BroadcastMessage @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status            BroadcastReceiptStatus @default(PENDING)
-  sentAt            DateTime?
-  errorMessage      String?
-  createdAt         DateTime @default(now())
+  id           String                 @id @default(cuid())
+  broadcastId  String
+  userId       String
+  status       BroadcastReceiptStatus @default(PENDING)
+  sentAt       DateTime?
+  errorMessage String?
+  createdAt    DateTime               @default(now())
+  broadcast    BroadcastMessage       @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([broadcastId, userId])
   @@index([broadcastId])
   @@index([userId])
 }
 
-// ── Webhook ──
-
 model WebhookConfig {
-  id                String   @id @default(cuid())
-  name              String   @unique
-  url               String
-  secret            String?  // HMAC signing secret
-  events            Json     @default("[]") // ["user.created", "command.executed"]
-  isActive          Boolean  @default(true)
-  failureCount      Int      @default(0)
-  lastTriggeredAt   DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String    @id @default(cuid())
+  name            String    @unique
+  url             String
+  secret          String?
+  events          Json      @default("[]")
+  isActive        Boolean   @default(true)
+  failureCount    Int       @default(0)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([isActive])
 }
 
-// ── Moderation ──
-
 model ModerationRule {
-  id                String           @id @default(cuid())
-  name              String           @unique
-  ruleType          ModerationType
-  pattern           String           // regex or keyword list (JSON array)
-  action            ModerationAction @default(WARN)
-  message           String?          // custom response when triggered
-  isActive          Boolean          @default(true)
-  priority          Int              @default(0)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  name      String           @unique
+  ruleType  ModerationType
+  pattern   String
+  action    ModerationAction @default(WARN)
+  message   String?
+  isActive  Boolean          @default(true)
+  priority  Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   @@index([ruleType])
   @@index([isActive])
 }
 
 model ModerationLog {
-  id                String           @id @default(cuid())
-  userId            String
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ruleId            String?
-  ruleName          String
-  ruleType          ModerationType
-  action            ModerationAction
-  originalMessage   String
-  platform          Platform
-  createdAt         DateTime         @default(now())
+  id              String           @id @default(cuid())
+  userId          String
+  ruleId          String?
+  ruleName        String
+  ruleType        ModerationType
+  action          ModerationAction
+  originalMessage String
+  platform        Platform
+  createdAt       DateTime         @default(now())
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([ruleType])
   @@index([createdAt])
 }
 
-// ── Conversation Flow ──
-
 model FlowDefinition {
-  id                String   @id @default(cuid())
-  name              String   @unique
-  description       String?
-  steps             Json     // array of step definitions
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  steps       Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([name])
 }
 
 model FlowSession {
-  id                String   @id @default(cuid())
-  flowName          String
-  userId            String
-  platform          Platform
-  currentStep       Int      @default(0)
-  data              Json     @default("{}") // collected user input
-  status            FlowStatus @default(ACTIVE)
-  expiresAt         DateTime
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id          String     @id @default(cuid())
+  flowName    String
+  userId      String
+  platform    Platform
+  currentStep Int        @default(0)
+  data        Json       @default("{}")
+  status      FlowStatus @default(ACTIVE)
+  expiresAt   DateTime
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([flowName, userId, platform])
   @@index([userId])
   @@index([status])
   @@index([expiresAt])
+}
+
+model Task {
+  id            String       @id @default(cuid())
+  userId        String
+  title         String
+  description   String?
+  status        TaskStatus   @default(PENDING)
+  priority      TaskPriority @default(MEDIUM)
+  category      String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  client        String?
+  location      String?
+  tags          Json         @default("[]")
+  sourceMessage String?
+  sheetSynced   Boolean      @default(false)
+  platform      Platform?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([priority])
+}
+
+model ChecklistTemplate {
+  id          String          @id @default(cuid())
+  name        String          @unique
+  description String?
+  items       Json
+  schedule    String?
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  instances   ChecklistItem[]
+
+  @@index([name])
+  @@index([schedule])
+}
+
+model ChecklistItem {
+  id            String            @id @default(cuid())
+  templateId    String
+  userId        String
+  title         String
+  isCompleted   Boolean           @default(false)
+  completedAt   DateTime?
+  scheduledDate DateTime          @db.Date
+  notes         String?
+  sheetSynced   Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  template      ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([templateId])
+  @@index([scheduledDate])
+  @@index([isCompleted])
+}
+
+model Incident {
+  id            String           @id @default(cuid())
+  userId        String
+  title         String
+  description   String
+  rootCause     String?
+  solution      String?
+  severity      IncidentSeverity @default(MEDIUM)
+  status        IncidentStatus   @default(OPEN)
+  service       String?
+  tags          Json             @default("[]")
+  sourceMessage String?
+  resolvedAt    DateTime?
+  sheetSynced   Boolean          @default(false)
+  platform      Platform?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([severity])
+  @@index([service])
+  @@index([createdAt])
+}
+
+model Reminder {
+  id            String    @id @default(cuid())
+  userId        String
+  message       String
+  remindAt      DateTime
+  isDelivered   Boolean   @default(false)
+  deliveredAt   DateTime?
+  recurring     String?
+  platform      Platform
+  sourceMessage String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([remindAt])
+  @@index([isDelivered])
+}
+
+model KnowledgeEntry {
+  id               String    @id @default(cuid())
+  userId           String
+  topic            String
+  question         String
+  answer           String
+  tags             Json      @default("[]")
+  sourceMessages   Json      @default("[]")
+  referenceCount   Int       @default(0)
+  lastReferencedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([topic])
+  @@index([createdAt])
+}
+
+model ServerLog {
+  id          String   @id @default(cuid())
+  hostname    String
+  service     String
+  logLevel    String
+  message     String
+  metadata    Json     @default("{}")
+  sheetSynced Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([hostname])
+  @@index([service])
+  @@index([logLevel])
+  @@index([createdAt])
+}
+
+model Note {
+  id            String    @id @default(cuid())
+  userId        String
+  content       String
+  tags          Json      @default("[]")
+  sourceMessage String?
+  platform      Platform?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ChatLog {
+  id            String        @id @default(cuid())
+  userId        String
+  message       String
+  extractedType ExtractedType
+  extractedData Json          @default("{}")
+  platform      Platform
+  confidence    Float         @default(0)
+  createdAt     DateTime      @default(now())
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([extractedType])
+  @@index([createdAt])
+}
+
+model Ticket {
+  id                String                @id @default(cuid())
+  ticketNumber      String                @unique
+  createdById       String
+  assignedToId      String?
+  title             String
+  description       String
+  status            TicketStatus          @default(OPEN)
+  priority          TicketPriority        @default(MEDIUM)
+  category          TicketCategory        @default(INCIDENT)
+  customer          String?
+  location          String?
+  ao                String?
+  sid               String?
+  service           String?
+  vlanId            String?
+  vlanType          String?
+  vlanName          String?
+  hostnameSwitch    String?
+  port              String?
+  ipAddress         String?
+  gateway           String?
+  subnet            String?
+  mode              String?
+  problem           String
+  rootCause         String?
+  solution          String?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
+  source            Platform?
+  groupId           String?
+  sourceMessage     String?
+  tags              Json                  @default("[]")
+  metadata          Json                  @default("{}")
+  sheetSynced       Boolean               @default(false)
+  telegramNotified  Boolean               @default(false)
+  lastSyncError     String?
+  syncAttemptCount  Int                   @default(0)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  dataExtractions   DataExtraction[]
+  escalations       Escalation[]
+  slaTracking       SLATracking?
+  assignedTo        User?                 @relation("AssignedTickets", fields: [assignedToId], references: [id])
+  createdBy         User                  @relation("CreatedTickets", fields: [createdById], references: [id])
+  clusterMaster     TicketCluster[]       @relation("ClusterMaster")
+  clusterMembership TicketClusterMember[] @relation("ClusterMembers")
+  ticketHistory     TicketHistory[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([customer])
+  @@index([location])
+  @@index([assignedToId])
+  @@index([createdAt])
+  @@index([createdById])
+}
+
+model TicketHistory {
+  id          String   @id @default(cuid())
+  ticketId    String
+  action      String
+  field       String?
+  oldValue    String?
+  newValue    String?
+  changedById String?
+  note        String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model SLATracking {
+  id                  String    @id @default(cuid())
+  ticketId            String    @unique
+  responseTargetMin   Int       @default(15)
+  resolutionTargetMin Int       @default(240)
+  responseDeadline    DateTime
+  resolutionDeadline  DateTime
+  respondedAt         DateTime?
+  resolvedAt          DateTime?
+  responseBreached    Boolean   @default(false)
+  resolutionBreached  Boolean   @default(false)
+  responseWarned      Boolean   @default(false)
+  resolutionWarned    Boolean   @default(false)
+  responseTimeMin     Float?
+  resolutionTimeMin   Float?
+  slaLevel            String    @default("L1")
+  isPaused            Boolean   @default(false)
+  pausedAt            DateTime?
+  pausedDurationMin   Float     @default(0)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  ticket              Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([responseBreached])
+  @@index([resolutionBreached])
+  @@index([responseDeadline])
+  @@index([resolutionDeadline])
+}
+
+model EscalationRule {
+  id          String            @id @default(cuid())
+  name        String            @unique
+  description String?
+  triggerType EscalationTrigger
+  condition   Json
+  targetLevel EscalationLevel   @default(L2)
+  isActive    Boolean           @default(true)
+  priority    Int               @default(0)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([triggerType])
+  @@index([isActive])
+}
+
+model Escalation {
+  id             String            @id @default(cuid())
+  ticketId       String
+  fromLevel      EscalationLevel
+  toLevel        EscalationLevel
+  reason         String
+  triggerType    EscalationTrigger
+  escalatedById  String?
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  notes          String?
+  createdAt      DateTime          @default(now())
+  ticket         Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([toLevel])
+  @@index([createdAt])
+}
+
+model AlertRule {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String?
+  alertType       AlertType
+  conditions      Json
+  actions         Json
+  cooldownMin     Int       @default(5)
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  triggerCount    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  alerts          Alert[]
+
+  @@index([alertType])
+  @@index([isActive])
+}
+
+model Alert {
+  id               String        @id @default(cuid())
+  ruleId           String
+  title            String
+  message          String
+  severity         AlertSeverity @default(WARNING)
+  status           AlertStatus   @default(ACTIVE)
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  metadata         Json          @default("{}")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  rule             AlertRule     @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([severity])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DataExtraction {
+  id             String          @id @default(cuid())
+  ticketId       String?
+  extractedById  String?
+  customer       String?
+  location       String?
+  ao             String?
+  sid            String?
+  service        String?
+  vlanId         String?
+  vlanType       String?
+  vlanName       String?
+  hostnameSwitch String?
+  port           String?
+  ipAddress      String?
+  gateway        String?
+  subnet         String?
+  mode           String?
+  problem        String?
+  notes          String?
+  rawMessage     String
+  confidence     Float           @default(0)
+  isDuplicate    Boolean         @default(false)
+  duplicateOfId  String?
+  category       TicketCategory?
+  priorityScore  Int             @default(0)
+  platform       Platform?
+  groupId        String?
+  sheetSynced    Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  ticket         Ticket?         @relation(fields: [ticketId], references: [id])
+
+  @@index([customer])
+  @@index([location])
+  @@index([createdAt])
+  @@index([ticketId])
+}
+
+model TicketCluster {
+  id                  String                 @id @default(cuid())
+  clusterNumber       String                 @unique
+  masterTicketId      String
+  commonLocation      String?
+  commonCustomer      String?
+  commonService       String?
+  commonProblem       String?
+  affectedAssets      Json                   @default("[]")
+  status              ClusterStatus          @default(OPEN)
+  severity            TicketPriority         @default(MEDIUM)
+  impactScore         Float                  @default(0)
+  affectedTicketCount Int                    @default(1)
+  detectedAt          DateTime               @default(now())
+  escalatedAt         DateTime?
+  resolvedAt          DateTime?
+  closedAt            DateTime?
+  cascadeOnResolve    Boolean                @default(true)
+  resolutionAlias     String?
+  metadata            Json                   @default("{}")
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  masterTicket        Ticket                 @relation("ClusterMaster", fields: [masterTicketId], references: [id], onDelete: Cascade)
+  history             TicketClusterHistory[]
+  members             TicketClusterMember[]
+
+  @@index([status])
+  @@index([severity])
+  @@index([masterTicketId])
+  @@index([detectedAt])
+  @@index([createdAt])
+}
+
+model TicketClusterMember {
+  id              String        @id @default(cuid())
+  clusterId       String
+  ticketId        String
+  similarityScore Float         @default(0)
+  matchingFactors Json          @default("[]")
+  isResolved      Boolean       @default(false)
+  resolvedAt      DateTime?
+  position        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  cluster         TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  ticket          Ticket        @relation("ClusterMembers", fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, ticketId])
+  @@index([clusterId])
+  @@index([ticketId])
+}
+
+model TicketClusterHistory {
+  id        String        @id @default(cuid())
+  clusterId String
+  action    String
+  details   Json          @default("{}")
+  changedBy String?
+  note      String?
+  createdAt DateTime      @default(now())
+  cluster   TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+
+  @@index([clusterId])
+  @@index([createdAt])
+}
+
+model NetworkBranch {
+  id                String       @id @default(cuid())
+  branchId          String       @unique
+  name              String
+  region            String
+  city              String?
+  totalDevices      Int          @default(0)
+  activeDevices     Int          @default(0)
+  uptimePercent     Float        @default(100)
+  healthScore       Float        @default(100)
+  healthStatus      HealthStatus @default(HEALTHY)
+  latencyMs         Float        @default(0)
+  jitterMs          Float        @default(0)
+  bandwidthIn       Float        @default(0)
+  bandwidthOut      Float        @default(0)
+  utilization       Float        @default(0)
+  criticalIncidents Int          @default(0)
+  warningIncidents  Int          @default(0)
+  metadata          Json         @default("{}")
+  lastUpdatedAt     DateTime     @default(now())
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([region])
+  @@index([healthStatus])
+}
+
+model BulkJob {
+  id             String        @id @default(cuid())
+  jobType        BulkJobType
+  status         BulkJobStatus @default(PENDING)
+  totalItems     Int           @default(0)
+  processedItems Int           @default(0)
+  successCount   Int           @default(0)
+  failureCount   Int           @default(0)
+  input          Json          @default("{}")
+  results        Json          @default("[]")
+  errorLog       Json          @default("[]")
+  createdById    String
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([status])
+  @@index([jobType])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model Backup {
+  id          String       @id @default(cuid())
+  backupType  BackupType
+  fileName    String
+  filePath    String
+  fileSize    Int          @default(0)
+  checksum    String?
+  recordCount Int          @default(0)
+  metadata    Json         @default("{}")
+  status      BackupStatus @default(PENDING)
+  completedAt DateTime?
+  expiresAt   DateTime?
+  createdById String?
+  createdAt   DateTime     @default(now())
+
+  @@index([backupType])
+  @@index([status])
+  @@index([createdAt])
+  @@index([expiresAt])
+}
+
+model MaintenanceSchedule {
+  id                      String        @id @default(cuid())
+  title                   String
+  description             String?
+  customer                String?
+  location                String?
+  ao                      String?
+  sid                     String?
+  service                 String?
+  hostnameSwitch          String?
+  intervalMonths          Int           @default(3)
+  anchorMonth             Int           @default(1)
+  anchorDay               Int           @default(1)
+  reminderEveryMonths     Int           @default(3)
+  notifyDaysBefore        Int           @default(7)
+  nextDueDate             DateTime
+  lastCreatedAt           DateTime?
+  lastTicketId            String?
+  lastMaintainedAt        DateTime?
+  lastMaintenanceTicketId String?
+  lastCompletionNote      String?
+  isActive                Boolean       @default(true)
+  createdById             String
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+  createdBy               User          @relation(fields: [createdById], references: [id])
+  evidenceFiles           ManagedFile[]
+
+  @@index([nextDueDate])
+  @@index([isActive])
+  @@index([createdById])
+}
+
+model ScheduledReport {
+  id         String     @id @default(cuid())
+  name       String     @unique
+  reportType ReportType
+  schedule   String
+  recipients Json       @default("[]")
+  filters    Json       @default("{}")
+  format     String     @default("text")
+  isActive   Boolean    @default(true)
+  lastRunAt  DateTime?
+  nextRunAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([isActive])
+  @@index([nextRunAt])
+}
+
+model ChatGroup {
+  id               String             @id @default(cuid())
+  groupJid         String             @unique
+  groupName        String
+  description      String?
+  groupPicture     String?
+  isMonitored      Boolean            @default(false)
+  isReportTarget   Boolean            @default(false)
+  reportTypes      Json               @default("[]")
+  participantCount Int                @default(0)
+  lastMessageAt    DateTime?
+  metadata         Json               @default("{}")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  reportConfig     ReportGroupConfig?
+
+  @@index([isMonitored])
+  @@index([isReportTarget])
+  @@index([createdAt])
+}
+
+model ReportGroupConfig {
+  id             String    @id @default(cuid())
+  chatGroupId    String    @unique
+  enableDaily    Boolean   @default(false)
+  enableWeekly   Boolean   @default(false)
+  enableMonthly  Boolean   @default(false)
+  dailyHour      Int?
+  weeklyDay      Int?
+  weeklyHour     Int?
+  monthlyDay     Int?
+  monthlyHour    Int?
+  timezone       String?
+  includeCharts  Boolean   @default(true)
+  includeSummary Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  chatGroup      ChatGroup @relation(fields: [chatGroupId], references: [id], onDelete: Cascade)
+
+  @@index([enableDaily])
+  @@index([enableWeekly])
+  @@index([enableMonthly])
+}
+
+model UptimeTarget {
+  id               String          @id @default(cuid())
+  name             String          @unique
+  host             String
+  port             Int?
+  checkType        UptimeCheckType @default(PING)
+  intervalSec      Int             @default(60)
+  timeoutMs        Int             @default(5000)
+  retries          Int             @default(3)
+  isActive         Boolean         @default(true)
+  tags             Json            @default("[]")
+  metadata         Json            @default("{}")
+  status           UptimeStatus    @default(UNKNOWN)
+  lastCheckAt      DateTime?
+  lastUpAt         DateTime?
+  lastDownAt       DateTime?
+  consecutiveFails Int             @default(0)
+  uptimePercent    Float           @default(100)
+  autoTicket       Boolean         @default(true)
+  lastTicketId     String?
+  createdById      String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  checks           UptimeCheck[]
+
+  @@index([status])
+  @@index([isActive])
+  @@index([host])
+}
+
+model UptimeCheck {
+  id           String       @id @default(cuid())
+  targetId     String
+  status       UptimeStatus
+  responseMs   Float?
+  errorMessage String?
+  checkedAt    DateTime     @default(now())
+  target       UptimeTarget @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([targetId])
+  @@index([status])
+  @@index([checkedAt])
+}
+
+model ShiftHandover {
+  id              String   @id @default(cuid())
+  shiftLabel      String
+  shiftDate       DateTime @db.Date
+  generatedAt     DateTime @default(now())
+  openTickets     Int      @default(0)
+  slaDueSoon      Int      @default(0)
+  slaBreached     Int      @default(0)
+  pendingTasks    Int      @default(0)
+  activeIncidents Int      @default(0)
+  criticalAlerts  Int      @default(0)
+  content         String
+  highlights      Json     @default("[]")
+  actionItems     Json     @default("[]")
+  deliveredTo     Json     @default("[]")
+  createdAt       DateTime @default(now())
+
+  @@unique([shiftLabel, shiftDate])
+  @@index([shiftDate])
+  @@index([shiftLabel])
+}
+
+model SentimentLog {
+  id         String        @id @default(cuid())
+  userId     String?
+  platform   Platform?
+  message    String
+  sentiment  SentimentType @default(NEUTRAL)
+  score      Float         @default(0)
+  confidence Float         @default(0)
+  emotions   Json          @default("{}")
+  language   String?
+  groupId    String?
+  metadata   Json          @default("{}")
+  createdAt  DateTime      @default(now())
+
+  @@index([sentiment])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([platform])
+}
+
+model ScheduledMessage {
+  id             String                 @id @default(cuid())
+  title          String
+  content        String
+  targetPlatform Platform?
+  targetGroupId  String?
+  targetUserId   String?
+  schedule       String?
+  scheduledAt    DateTime
+  recurring      Boolean                @default(false)
+  status         ScheduledMessageStatus @default(PENDING)
+  sentAt         DateTime?
+  errorMessage   String?
+  createdBy      String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdBy])
+}
+
+model Campaign {
+  id              String         @id @default(cuid())
+  name            String
+  description     String?
+  content         String
+  targetPlatform  Platform?
+  targetSegment   String?
+  status          CampaignStatus @default(DRAFT)
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  totalRecipients Int            @default(0)
+  sentCount       Int            @default(0)
+  deliveredCount  Int            @default(0)
+  readCount       Int            @default(0)
+  repliedCount    Int            @default(0)
+  failedCount     Int            @default(0)
+  createdBy       String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CRMContact {
+  id                String           @id @default(cuid())
+  name              String
+  phone             String?
+  email             String?
+  company           String?
+  position          String?
+  tags              Json             @default("[]")
+  segment           String?
+  source            String?
+  notes             String?
+  customFields      Json             @default("{}")
+  totalInteractions Int              @default(0)
+  lastInteractionAt DateTime?
+  score             Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  interactions      CRMInteraction[]
+  assets            CRMAsset[]
+
+  @@index([segment])
+  @@index([score])
+  @@index([createdAt])
+}
+
+model CRMAsset {
+  id                String          @id @default(cuid())
+  contactId         String
+  contact           CRMContact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type              String          // e.g., "VLAN"
+  identifier        String          // e.g., "VLAN 100"
+  serviceType       String?         // e.g., "IPTX", "METRO"
+  description       String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([contactId])
+}
+
+model CRMInteraction {
+  id        String          @id @default(cuid())
+  contactId String
+  type      InteractionType
+  channel   String?
+  subject   String?
+  content   String
+  sentiment SentimentType?
+  metadata  Json            @default("{}")
+  createdBy String?
+  createdAt DateTime        @default(now())
+  contact   CRMContact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model PaymentTransaction {
+  id            String        @id @default(cuid())
+  transactionId String        @unique
+  contactId     String?
+  amount        Float
+  currency      String        @default("IDR")
+  status        PaymentStatus @default(PENDING)
+  method        String?
+  description   String?
+  invoiceNumber String?
+  paidAt        DateTime?
+  metadata      Json          @default("{}")
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status])
+  @@index([contactId])
+  @@index([createdAt])
+}
+
+model InboxMessage {
+  id         String         @id @default(cuid())
+  platform   Platform
+  fromUserId String?
+  fromName   String
+  fromNumber String?
+  groupId    String?
+  groupName  String?
+  content    String
+  mediaUrl   String?
+  mediaType  String?
+  isRead     Boolean        @default(false)
+  isStarred  Boolean        @default(false)
+  isArchived Boolean        @default(false)
+  replyTo    String?
+  sentiment  SentimentType?
+  tags       Json           @default("[]")
+  assignedTo String?
+  metadata   Json           @default("{}")
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([platform])
+  @@index([fromUserId])
+  @@index([isRead])
+  @@index([isStarred])
+  @@index([isArchived])
+  @@index([createdAt])
+}
+
+model AutoModConfig {
+  id        String           @id @default(cuid())
+  feature   AutoModFeature   @unique
+  isEnabled Boolean          @default(true)
+  config    Json             @default("{}")
+  action    ModerationAction @default(WARN)
+  message   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model FAQEntry {
+  id         String   @id @default(cuid())
+  question   String
+  answer     String
+  category   String?
+  keywords   Json     @default("[]")
+  aliases    Json     @default("[]")
+  priority   Int      @default(0)
+  matchCount Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@index([matchCount])
+}
+
+model MessageTemplate {
+  id         String           @id @default(cuid())
+  name       String
+  category   TemplateCategory
+  platform   String           @default("ALL")
+  language   String           @default("id")
+  subject    String?
+  body       String
+  variables  Json             @default("[]")
+  isActive   Boolean          @default(true)
+  usageCount Int              @default(0)
+  createdBy  String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([category])
+  @@index([platform])
+  @@index([isActive])
+}
+
+model ChatbotFlow {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  triggerKeyword String?
+  nodes          Json     @default("[]")
+  edges          Json     @default("[]")
+  isActive       Boolean  @default(true)
+  version        Int      @default(1)
+  executionCount Int      @default(0)
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([triggerKeyword])
+}
+
+model CSATSurvey {
+  id          String   @id @default(cuid())
+  ticketId    String?
+  contactId   String?
+  platform    String
+  rating      Int
+  comment     String?
+  agentId     String?
+  respondedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([agentId])
+  @@index([rating])
+  @@index([respondedAt])
+}
+
+model Agent {
+  id              String      @id @default(cuid())
+  name            String
+  email           String?     @unique
+  avatar          String?
+  role            AgentRole   @default(AGENT)
+  status          AgentStatus @default(OFFLINE)
+  department      String?
+  maxConcurrent   Int         @default(5)
+  activeTickets   Int         @default(0)
+  totalResolved   Int         @default(0)
+  avgResponseTime Int?
+  rating          Float?
+  lastActiveAt    DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([status])
+  @@index([department])
+  @@index([role])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  color       String   @default("#6366f1")
+  description String?
+  category    String?
+  usageCount  Int      @default(0)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([usageCount])
+}
+
+model CRMDeal {
+  id            String    @id @default(cuid())
+  title         String
+  contactId     String?
+  contactName   String?
+  value         Float     @default(0)
+  currency      String    @default("IDR")
+  stage         DealStage @default(LEAD)
+  probability   Int       @default(0)
+  expectedClose DateTime?
+  assignedTo    String?
+  notes         String?
+  tags          Json      @default("[]")
+  lostReason    String?
+  wonAt         DateTime?
+  lostAt        DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([stage])
+  @@index([assignedTo])
+  @@index([contactId])
+}
+
+model ManagedFile {
+  id                    String               @id @default(cuid())
+  filename              String
+  originalName          String
+  mimeType              String
+  size                  Int
+  path                  String
+  url                   String?
+  category              String?
+  uploadedBy            String?
+  platform              String?
+  messageId             String?
+  metadata              Json                 @default("{}")
+  maintenanceScheduleId String?
+  thumbnailUrl          String?
+  isPublic              Boolean              @default(false)
+  downloads             Int                  @default(0)
+  createdAt             DateTime             @default(now())
+  maintenanceSchedule   MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id])
+
+  @@index([category])
+  @@index([mimeType])
+  @@index([uploadedBy])
+  @@index([maintenanceScheduleId])
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  name        String
+  keyHash     String    @unique
+  prefix      String
+  permissions Json      @default("[]")
+  rateLimit   Int       @default(1000)
+  expiresAt   DateTime?
+  lastUsedAt  DateTime?
+  usageCount  Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([prefix])
+  @@index([isActive])
+}
+
+model CannedResponse {
+  id         String   @id @default(cuid())
+  shortcut   String   @unique
+  title      String
+  content    String
+  category   String?
+  tags       Json     @default("[]")
+  usageCount Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([shortcut])
+  @@index([category])
+  @@index([isActive])
+}
+
+model WebhookLog {
+  id             String           @id @default(cuid())
+  webhookId      String
+  url            String
+  method         String           @default("POST")
+  requestHeaders Json?
+  requestBody    Json?
+  responseStatus Int?
+  responseBody   String?
+  duration       Int?
+  status         WebhookLogStatus @default(PENDING)
+  retryCount     Int              @default(0)
+  error          String?
+  createdAt      DateTime         @default(now())
+
+  @@index([webhookId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ExportJob {
+  id          String       @id @default(cuid())
+  module      String
+  format      ExportFormat
+  filters     Json         @default("{}")
+  status      ExportStatus @default(PENDING)
+  fileName    String?
+  fileUrl     String?
+  fileSize    Int?
+  totalRows   Int?
+  error       String?
+  requestedBy String?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([module])
+  @@index([status])
+  @@index([requestedBy])
+}
+
+model NotificationRule {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  triggerEvent  String
+  conditions    Json      @default("[]")
+  actions       Json      @default("[]")
+  channels      Json      @default("[]")
+  isActive      Boolean   @default(true)
+  lastTriggered DateTime?
+  triggerCount  Int       @default(0)
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([triggerEvent])
+  @@index([isActive])
+}
+
+model UserPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  theme           String   @default("light")
+  language        String   @default("id")
+  timezone        String   @default("Asia/Jakarta")
+  notifications   Json     @default("{}")
+  dashboardLayout Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model AnalyticsSnapshot {
+  id        String   @id @default(cuid())
+  period    String
+  date      DateTime
+  metrics   Json
+  breakdown Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@unique([period, date])
+  @@index([period])
+  @@index([date])
+}
+
+enum MemoryCategory {
+  PERSONAL
+  PREFERENCE
+  CONTEXT
+  KNOWLEDGE
+  RELATIONSHIP
 }
 
 enum BroadcastStatus {
@@ -388,17 +1542,17 @@ enum BroadcastReceiptStatus {
 }
 
 enum ModerationType {
-  KEYWORD      // banned words
-  REGEX        // regex pattern
-  SPAM         // flood/duplicate detection
-  LINK         // URL filtering
+  KEYWORD
+  REGEX
+  SPAM
+  LINK
 }
 
 enum ModerationAction {
-  WARN         // reply with warning
-  BLOCK        // block the message
-  MUTE         // temp mute user
-  BAN          // ban user
+  WARN
+  BLOCK
+  MUTE
+  BAN
 }
 
 enum FlowStatus {
@@ -445,34 +1599,6 @@ enum ConnectionStatus {
   ERROR
 }
 
-// ── Task Management ──
-
-model Task {
-  id                String       @id @default(cuid())
-  userId            String
-  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title             String
-  description       String?
-  status            TaskStatus   @default(PENDING)
-  priority          TaskPriority @default(MEDIUM)
-  category          String?      // e.g. "meeting", "devops", "documentation"
-  dueDate           DateTime?
-  completedAt       DateTime?
-  client            String?      // extracted client/person name
-  location          String?
-  tags              Json         @default("[]")
-  sourceMessage     String?      // original chat message that created this task
-  sheetSynced       Boolean      @default(false)
-  platform          Platform?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([dueDate])
-  @@index([priority])
-}
-
 enum TaskStatus {
   PENDING
   IN_PROGRESS
@@ -485,73 +1611,6 @@ enum TaskPriority {
   MEDIUM
   HIGH
   URGENT
-}
-
-// ── Checklist System ──
-
-model ChecklistTemplate {
-  id                String          @id @default(cuid())
-  name              String          @unique
-  description       String?
-  items             Json            // array of { title, order }
-  schedule          String?         // cron-like schedule: "daily", "weekly", "monthly"
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  instances         ChecklistItem[]
-
-  @@index([name])
-  @@index([schedule])
-}
-
-model ChecklistItem {
-  id                String            @id @default(cuid())
-  templateId        String
-  template          ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  userId            String
-  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title             String
-  isCompleted       Boolean           @default(false)
-  completedAt       DateTime?
-  scheduledDate     DateTime          @db.Date
-  notes             String?
-  sheetSynced       Boolean           @default(false)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-
-  @@index([userId])
-  @@index([templateId])
-  @@index([scheduledDate])
-  @@index([isCompleted])
-}
-
-// ── Incident / Auto-Documentation ──
-
-model Incident {
-  id                String          @id @default(cuid())
-  userId            String
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title             String
-  description       String
-  rootCause         String?
-  solution          String?
-  severity          IncidentSeverity @default(MEDIUM)
-  status            IncidentStatus   @default(OPEN)
-  service           String?         // e.g. "nginx", "docker", "database"
-  tags              Json            @default("[]")
-  sourceMessage     String?
-  resolvedAt        DateTime?
-  sheetSynced       Boolean         @default(false)
-  platform          Platform?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([userId])
-  @@index([status])
-  @@index([severity])
-  @@index([service])
-  @@index([createdAt])
 }
 
 enum IncidentSeverity {
@@ -568,101 +1627,6 @@ enum IncidentStatus {
   CLOSED
 }
 
-// ── Reminder System ──
-
-model Reminder {
-  id                String        @id @default(cuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  message           String
-  remindAt          DateTime
-  isDelivered       Boolean       @default(false)
-  deliveredAt       DateTime?
-  recurring         String?       // "daily", "weekly", null for one-time
-  platform          Platform
-  sourceMessage     String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([userId])
-  @@index([remindAt])
-  @@index([isDelivered])
-}
-
-// ── Knowledge Base ──
-
-model KnowledgeEntry {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic             String
-  question          String
-  answer            String
-  tags              Json     @default("[]")
-  sourceMessages    Json     @default("[]") // array of original messages
-  referenceCount    Int      @default(0)
-  lastReferencedAt  DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([userId])
-  @@index([topic])
-  @@index([createdAt])
-}
-
-// ── Server Monitoring ──
-
-model ServerLog {
-  id                String   @id @default(cuid())
-  hostname          String
-  service           String   // "nginx", "docker", "postgresql", etc.
-  logLevel          String   // "info", "warn", "error", "critical"
-  message           String
-  metadata          Json     @default("{}")
-  sheetSynced       Boolean  @default(false)
-  createdAt         DateTime @default(now())
-
-  @@index([hostname])
-  @@index([service])
-  @@index([logLevel])
-  @@index([createdAt])
-}
-
-// ── Notes ──
-
-model Note {
-  id                String   @id @default(cuid())
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content           String
-  tags              Json     @default("[]")
-  sourceMessage     String?
-  platform          Platform?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// ── Chat Log (raw message → structured extraction audit trail) ──
-
-model ChatLog {
-  id                String        @id @default(cuid())
-  userId            String
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  message           String
-  extractedType     ExtractedType
-  extractedData     Json          @default("{}")
-  platform          Platform
-  confidence        Float         @default(0)
-  createdAt         DateTime      @default(now())
-
-  @@index([userId])
-  @@index([extractedType])
-  @@index([createdAt])
-}
-
 enum ExtractedType {
   TASK
   NOTE
@@ -670,97 +1634,6 @@ enum ExtractedType {
   INCIDENT
   GREETING
   UNKNOWN
-}
-
-// ══════════════════════════════════════════════════════
-// MIGRATED FROM BOT OLD — Ticket / SLA / NOC features
-// ══════════════════════════════════════════════════════
-
-// ── Ticket Management ──
-
-model Ticket {
-  id                String          @id @default(cuid())
-  ticketNumber      String          @unique // e.g. TKT-20260405-0001
-  createdById       String
-  createdBy         User            @relation("CreatedTickets", fields: [createdById], references: [id])
-  assignedToId      String?
-  assignedTo        User?           @relation("AssignedTickets", fields: [assignedToId], references: [id])
-
-  // Core fields
-  title             String
-  description       String
-  status            TicketStatus    @default(OPEN)
-  priority          TicketPriority  @default(MEDIUM)
-  category          TicketCategory  @default(INCIDENT)
-
-  // NOC-specific fields (from old bot data extraction)
-  customer          String?
-  location          String?
-  ao                String?          // Area of Operation
-  sid               String?          // Service ID
-  service           String?          // Layanan (METRO, IPTX, etc.)
-  vlanId            String?
-  vlanType          String?
-  vlanName          String?
-  hostnameSwitch    String?
-  port              String?
-  ipAddress         String?
-  gateway           String?
-  subnet            String?
-  mode              String?
-  problem           String
-
-  // Resolution
-  rootCause         String?
-  solution          String?
-  resolvedAt        DateTime?
-  closedAt          DateTime?
-
-  // Metadata
-  source            Platform?
-  groupId           String?
-  sourceMessage     String?
-  tags              Json             @default("[]")
-  metadata          Json             @default("{}")
-  sheetSynced       Boolean          @default(false)
-  telegramNotified  Boolean          @default(false)
-  lastSyncError     String?
-  syncAttemptCount  Int              @default(0)
-
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  slaTracking       SLATracking?
-  escalations       Escalation[]
-  ticketHistory     TicketHistory[]
-  dataExtractions   DataExtraction[]
-  clusterMaster     TicketCluster[]  @relation("ClusterMaster")
-  clusterMembership TicketClusterMember[]  @relation("ClusterMembers")
-
-  @@index([status])
-  @@index([priority])
-  @@index([category])
-  @@index([customer])
-  @@index([location])
-  @@index([assignedToId])
-  @@index([createdAt])
-  @@index([createdById])
-}
-
-model TicketHistory {
-  id                String   @id @default(cuid())
-  ticketId          String
-  ticket            Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  action            String   // created, updated, assigned, escalated, resolved, closed
-  field             String?  // which field changed
-  oldValue          String?
-  newValue          String?
-  changedById       String?
-  note              String?
-  createdAt         DateTime @default(now())
-
-  @@index([ticketId])
-  @@index([createdAt])
 }
 
 enum TicketStatus {
@@ -779,13 +1652,12 @@ enum TicketPriority {
   CRITICAL
 }
 
-enum     TicketCategory {
+enum TicketCategory {
   INCIDENT
   REQUEST
   MAINTENANCE
   CONFIGURATION
   MONITORING
-  // neuCentrIX SLA Categories
   FULFILLMENT
   VAM
   HELPDESK
@@ -794,86 +1666,6 @@ enum     TicketCategory {
   REPORTING
   ADDITIONAL_SERVICE
   AVAILABILITY
-}
-
-// ── SLA Tracking ──
-
-model SLATracking {
-  id                   String      @id @default(cuid())
-  ticketId             String      @unique
-  ticket               Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  // SLA Targets (in minutes)
-  responseTargetMin    Int         @default(15)   // 15 min response SLA
-  resolutionTargetMin  Int         @default(240)  // 4 hr resolution SLA
-
-  // Deadlines
-  responseDeadline     DateTime
-  resolutionDeadline   DateTime
-
-  // Actual times
-  respondedAt          DateTime?
-  resolvedAt           DateTime?
-
-  // Status
-  responseBreached     Boolean     @default(false)
-  resolutionBreached   Boolean     @default(false)
-  responseWarned       Boolean     @default(false)  // 80% threshold warning
-  resolutionWarned     Boolean     @default(false)
-
-  // Metrics
-  responseTimeMin      Float?      // actual response time in minutes
-  resolutionTimeMin    Float?      // actual resolution time in minutes
-
-  slaLevel             String      @default("L1") // L0, L1, helpdesk, smarthand, fulfillment
-  isPaused             Boolean     @default(false)
-  pausedAt             DateTime?
-  pausedDurationMin    Float       @default(0)
-
-  createdAt            DateTime    @default(now())
-  updatedAt            DateTime    @updatedAt
-
-  @@index([responseBreached])
-  @@index([resolutionBreached])
-  @@index([responseDeadline])
-  @@index([resolutionDeadline])
-}
-
-// ── Escalation System ──
-
-model EscalationRule {
-  id                String           @id @default(cuid())
-  name              String           @unique
-  description       String?
-  triggerType       EscalationTrigger
-  condition         Json             // e.g. { "keyword": ["down","outage"], "timeout_min": 15 }
-  targetLevel       EscalationLevel  @default(L2)
-  isActive          Boolean          @default(true)
-  priority          Int              @default(0)
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-
-  @@index([triggerType])
-  @@index([isActive])
-}
-
-model Escalation {
-  id                String           @id @default(cuid())
-  ticketId          String
-  ticket            Ticket           @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  fromLevel         EscalationLevel
-  toLevel           EscalationLevel
-  reason            String
-  triggerType       EscalationTrigger
-  escalatedById     String?          // user or "system"
-  acknowledgedAt    DateTime?
-  resolvedAt        DateTime?
-  notes             String?
-  createdAt         DateTime         @default(now())
-
-  @@index([ticketId])
-  @@index([toLevel])
-  @@index([createdAt])
 }
 
 enum EscalationLevel {
@@ -890,48 +1682,6 @@ enum EscalationTrigger {
   MANUAL
   VIP
   THRESHOLD
-}
-
-// ── Alert System ──
-
-model AlertRule {
-  id                String       @id @default(cuid())
-  name              String       @unique
-  description       String?
-  alertType         AlertType
-  conditions        Json         // { "field": "priority", "operator": "equals", "value": "CRITICAL" }
-  actions           Json         // [{ "type": "whatsapp", "target": "group_id" }]
-  cooldownMin       Int          @default(5) // min between repeated alerts
-  isActive          Boolean      @default(true)
-  lastTriggeredAt   DateTime?
-  triggerCount      Int          @default(0)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  alerts            Alert[]
-
-  @@index([alertType])
-  @@index([isActive])
-}
-
-model Alert {
-  id                String       @id @default(cuid())
-  ruleId            String
-  rule              AlertRule    @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  title             String
-  message           String
-  severity          AlertSeverity @default(WARNING)
-  status            AlertStatus   @default(ACTIVE)
-  acknowledgedAt    DateTime?
-  acknowledgedById  String?
-  metadata          Json          @default("{}")
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([ruleId])
-  @@index([severity])
-  @@index([status])
-  @@index([createdAt])
 }
 
 enum AlertType {
@@ -956,136 +1706,6 @@ enum AlertStatus {
   EXPIRED
 }
 
-// ── Data Extraction (NOC message parsing) ──
-
-model DataExtraction {
-  id                String   @id @default(cuid())
-  ticketId          String?
-  ticket            Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
-  extractedById     String?
-
-  // Extracted fields
-  customer          String?
-  location          String?
-  ao                String?
-  sid               String?
-  service           String?
-  vlanId            String?
-  vlanType          String?
-  vlanName          String?
-  hostnameSwitch    String?
-  port              String?
-  ipAddress         String?
-  gateway           String?
-  subnet            String?
-  mode              String?
-  problem           String?
-  notes             String?
-
-  // Metadata
-  rawMessage        String
-  confidence        Float    @default(0)
-  isDuplicate       Boolean  @default(false)
-  duplicateOfId     String?
-  category          TicketCategory?
-  priorityScore     Int      @default(0)
-
-  platform          Platform?
-  groupId           String?
-  sheetSynced       Boolean  @default(false)
-  createdAt         DateTime @default(now())
-
-  @@index([customer])
-  @@index([location])
-  @@index([createdAt])
-  @@index([ticketId])
-}
-
-// ── Ticket Clustering / Incident Grouping ──
-
-model TicketCluster {
-  id                String          @id @default(cuid())
-  clusterNumber     String          @unique  // e.g. CLUSTER-20260412-0001
-  masterTicketId    String
-  masterTicket      Ticket          @relation("ClusterMaster", fields: [masterTicketId], references: [id], onDelete: Cascade)
-  
-  // Cluster characteristics
-  commonLocation    String?         // shared location (if all tickets same location)
-  commonCustomer    String?         // shared customer
-  commonService     String?         // shared service type
-  commonProblem     String?         // synthesized problem summary
-  affectedAssets    Json            @default("[]")  // array of {id, hostname, port, location}
-  
-  // Status
-  status            ClusterStatus   @default(OPEN)  // OPEN, ESCALATED, RESOLVED, CLOSED
-  severity          TicketPriority  @default(MEDIUM)
-  impactScore       Float           @default(0)   // 0-100 based on: count + priority + SLA urgency
-  affectedTicketCount Int          @default(1)
-  
-  // Timeline
-  detectedAt        DateTime        @default(now())
-  escalatedAt       DateTime?
-  resolvedAt        DateTime?
-  closedAt          DateTime?
-  
-  // Resolution cascade
-  cascadeOnResolve  Boolean         @default(true)  // auto-resolve members when master resolved?
-  resolutionAlias   String?         // master resolution applied to all members
-  
-  metadata          Json            @default("{}")
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  
-  members           TicketClusterMember[]
-  history           TicketClusterHistory[]
-  
-  @@index([status])
-  @@index([severity])
-  @@index([masterTicketId])
-  @@index([detectedAt])
-  @@index([createdAt])
-}
-
-model TicketClusterMember {
-  id                String    @id @default(cuid())
-  clusterId         String
-  cluster           TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
-  ticketId          String
-  ticket            Ticket    @relation("ClusterMembers", fields: [ticketId], references: [id], onDelete: Cascade)
-  
-  // Similarity score between this ticket and master
-  similarityScore   Float     @default(0)  // 0-1, how similar to master problem
-  matchingFactors   Json      @default("[]")  // ["location", "customer", "service"]
-  
-  // Member specific tracking
-  isResolved        Boolean   @default(false)
-  resolvedAt        DateTime?
-  
-  position          Int       @default(0)  // order in cluster
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  
-  @@unique([clusterId, ticketId])
-  @@index([clusterId])
-  @@index([ticketId])
-}
-
-model TicketClusterHistory {
-  id                String    @id @default(cuid())
-  clusterId         String
-  cluster           TicketCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
-  
-  action            String    // created, member_added, escalated, resolved, closed
-  details           Json      @default("{}")
-  changedBy         String?
-  note              String?
-  
-  createdAt         DateTime  @default(now())
-  
-  @@index([clusterId])
-  @@index([createdAt])
-}
-
 enum ClusterStatus {
   OPEN
   ESCALATED
@@ -1095,66 +1715,12 @@ enum ClusterStatus {
   FALSE_POSITIVE
 }
 
-// ── Network Monitoring ──
-
-model NetworkBranch {
-  id                String   @id @default(cuid())
-  branchId          String   @unique  // e.g. "JKT-HQ"
-  name              String
-  region            String   // e.g. "Java", "Sumatra"
-  city              String?
-  totalDevices      Int      @default(0)
-  activeDevices     Int      @default(0)
-  uptimePercent     Float    @default(100)
-  healthScore       Float    @default(100)
-  healthStatus      HealthStatus @default(HEALTHY)
-  latencyMs         Float    @default(0)
-  jitterMs          Float    @default(0)
-  bandwidthIn       Float    @default(0)
-  bandwidthOut      Float    @default(0)
-  utilization       Float    @default(0)
-  criticalIncidents Int      @default(0)
-  warningIncidents  Int      @default(0)
-  metadata          Json     @default("{}")
-  lastUpdatedAt     DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([region])
-  @@index([healthStatus])
-}
-
 enum HealthStatus {
   HEALTHY
   DEGRADED
   WARNING
   CRITICAL
   OFFLINE
-}
-
-// ── Bulk Operations ──
-
-model BulkJob {
-  id                String        @id @default(cuid())
-  jobType           BulkJobType
-  status            BulkJobStatus @default(PENDING)
-  totalItems        Int           @default(0)
-  processedItems    Int           @default(0)
-  successCount      Int           @default(0)
-  failureCount      Int           @default(0)
-  input             Json          @default("{}") // filters, file data
-  results           Json          @default("[]") // per-item results
-  errorLog          Json          @default("[]")
-  createdById       String
-  startedAt         DateTime?
-  completedAt       DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([status])
-  @@index([jobType])
-  @@index([createdById])
-  @@index([createdAt])
 }
 
 enum BulkJobType {
@@ -1173,29 +1739,6 @@ enum BulkJobStatus {
   PARTIAL
 }
 
-// ── Backup System ──
-
-model Backup {
-  id                String      @id @default(cuid())
-  backupType        BackupType
-  fileName          String
-  filePath          String
-  fileSize          Int         @default(0) // bytes
-  checksum          String?     // SHA-256
-  recordCount       Int         @default(0)
-  metadata          Json        @default("{}") // dateRange, filters, etc.
-  status            BackupStatus @default(PENDING)
-  completedAt       DateTime?
-  expiresAt         DateTime?
-  createdById       String?
-  createdAt         DateTime    @default(now())
-
-  @@index([backupType])
-  @@index([status])
-  @@index([createdAt])
-  @@index([expiresAt])
-}
-
 enum BackupType {
   FULL
   INCREMENTAL
@@ -1209,69 +1752,6 @@ enum BackupStatus {
   FAILED
 }
 
-// ── Maintenance Schedule (Preventive Maintenance / PM) ──
-
-model MaintenanceSchedule {
-  id                String    @id @default(cuid())
-  title             String
-  description       String?
-
-  // NOC fields (used when auto-creating ticket)
-  customer          String?
-  location          String?
-  ao                String?   // Area of Operation
-  sid               String?   // Service ID
-  service           String?
-  hostnameSwitch    String?
-
-  // Schedule configuration
-  intervalMonths    Int       @default(3)   // 1=monthly, 3=quarterly, 6=semi-annual, 12=annual
-  anchorMonth       Int       @default(1)   // all cycles start from January by default
-  anchorDay         Int       @default(1)   // cycle day in month (default 1st)
-  reminderEveryMonths Int     @default(3)   // periodic reminder cadence for pending items
-  notifyDaysBefore  Int       @default(7)   // send reminder N days before due
-
-  // Tracking
-  nextDueDate       DateTime
-  lastCreatedAt     DateTime?
-  lastTicketId      String?
-  lastMaintainedAt  DateTime?
-  lastMaintenanceTicketId String?
-  lastCompletionNote String?
-
-  isActive          Boolean   @default(true)
-  createdById       String
-  createdBy         User      @relation(fields: [createdById], references: [id])
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  evidenceFiles     ManagedFile[]
-
-  @@index([nextDueDate])
-  @@index([isActive])
-  @@index([createdById])
-}
-
-// ── Report Templates / Scheduled Reports ──
-
-model ScheduledReport {
-  id                String        @id @default(cuid())
-  name              String        @unique
-  reportType        ReportType
-  schedule          String        // cron expression
-  recipients        Json          @default("[]") // [{platform, userId}]
-  filters           Json          @default("{}")
-  format            String        @default("text") // text, excel, csv
-  isActive          Boolean       @default(true)
-  lastRunAt         DateTime?
-  nextRunAt         DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([isActive])
-  @@index([nextRunAt])
-}
-
 enum ReportType {
   DAILY
   WEEKLY
@@ -1282,190 +1762,18 @@ enum ReportType {
   PERFORMANCE
 }
 
-// ── WhatsApp Group Management ──
-
-model ChatGroup {
-  id                String        @id @default(cuid())
-  groupJid          String        @unique  // e.g. "120363xxx-1632212345@g.us"
-  groupName         String
-  description       String?
-  groupPicture      String?       // URL to group picture
-
-  // Group Configuration
-  isMonitored       Boolean       @default(false) // Should bot listen to messages here?
-  isReportTarget    Boolean       @default(false) // Should reports be sent here?
-  reportTypes       Json          @default("[]") // ["DAILY", "WEEKLY", "MONTHLY"]
-  
-  // Group Info
-  participantCount  Int           @default(0)
-  lastMessageAt     DateTime?
-  
-  // Metadata
-  metadata          Json          @default("{}")
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  reportConfig      ReportGroupConfig?
-
-  @@index([isMonitored])
-  @@index([isReportTarget])
-  @@index([createdAt])
-}
-
-model ReportGroupConfig {
-  id                String        @id @default(cuid())
-  chatGroupId       String        @unique
-  chatGroup         ChatGroup     @relation(fields: [chatGroupId], references: [id], onDelete: Cascade)
-
-  // Report Configuration
-  enableDaily       Boolean       @default(false)
-  enableWeekly      Boolean       @default(false)
-  enableMonthly     Boolean       @default(false)
-  
-  // Delivery Schedule (will override global schedule if set)
-  dailyHour         Int?          // 0-23, null = use default (7)
-  weeklyDay         Int?          // 0-6 (0=Sunday), null = use default (1=Monday)
-  weeklyHour        Int?          // 0-23, null = use default (8)
-  monthlyDay        Int?          // 1-31, null = use default (last day)
-  monthlyHour       Int?          // 0-23, null = use default (18)
-  
-  // Timezone for this group (optional)
-  timezone          String?       // e.g. "Asia/Jakarta"
-  
-  // Additional Options
-  includeCharts     Boolean       @default(true)
-  includeSummary    Boolean       @default(true)
-  
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@index([enableDaily])
-  @@index([enableWeekly])
-  @@index([enableMonthly])
-}
-
-// ══════════════════════════════════════════════════════
-// UPTIME MONITORING
-// ══════════════════════════════════════════════════════
-
-model UptimeTarget {
-  id                String              @id @default(cuid())
-  name              String              @unique  // friendly name, e.g. "SW-CORE-JKT01"
-  host              String              // IP or hostname
-  port              Int?                // TCP port (null = ICMP ping)
-  checkType         UptimeCheckType     @default(PING)
-  intervalSec       Int                 @default(60)     // check every N seconds
-  timeoutMs         Int                 @default(5000)   // fail threshold
-  retries           Int                 @default(3)      // consecutive fails before DOWN
-  isActive          Boolean             @default(true)
-  tags              Json                @default("[]")   // ["core","jkt","switch"]
-  metadata          Json                @default("{}")   // extra info (model, SN, rack)
-
-  // Current state
-  status            UptimeStatus        @default(UNKNOWN)
-  lastCheckAt       DateTime?
-  lastUpAt          DateTime?
-  lastDownAt        DateTime?
-  consecutiveFails  Int                 @default(0)
-  uptimePercent     Float               @default(100)
-
-  // Auto-ticket
-  autoTicket        Boolean             @default(true)   // create ticket on DOWN?
-  lastTicketId      String?             // prevent duplicate tickets
-
-  createdById       String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-
-  checks            UptimeCheck[]
-
-  @@index([status])
-  @@index([isActive])
-  @@index([host])
-}
-
-model UptimeCheck {
-  id                String          @id @default(cuid())
-  targetId          String
-  target            UptimeTarget    @relation(fields: [targetId], references: [id], onDelete: Cascade)
-  status            UptimeStatus
-  responseMs        Float?          // latency in ms
-  errorMessage      String?
-  checkedAt         DateTime        @default(now())
-
-  @@index([targetId])
-  @@index([status])
-  @@index([checkedAt])
-}
-
 enum UptimeCheckType {
-  PING          // ICMP ping
-  TCP           // TCP port connect
-  HTTP          // HTTP GET with status check
-  HTTPS         // HTTPS GET
+  PING
+  TCP
+  HTTP
+  HTTPS
 }
 
 enum UptimeStatus {
   UP
   DOWN
-  DEGRADED      // high latency
+  DEGRADED
   UNKNOWN
-}
-
-// ══════════════════════════════════════════════════════
-// SHIFT HANDOVER
-// ══════════════════════════════════════════════════════
-
-model ShiftHandover {
-  id                String          @id @default(cuid())
-  shiftLabel        String          // "PAGI", "SIANG", "MALAM"
-  shiftDate         DateTime        @db.Date
-  generatedAt       DateTime        @default(now())
-
-  // Summary counts
-  openTickets       Int             @default(0)
-  slaDueSoon        Int             @default(0)
-  slaBreached       Int             @default(0)
-  pendingTasks      Int             @default(0)
-  activeIncidents   Int             @default(0)
-  criticalAlerts    Int             @default(0)
-
-  // Serialized handover content
-  content           String          // Full formatted handover text
-  highlights        Json            @default("[]")  // Array of highlight strings
-  actionItems       Json            @default("[]")  // Array of action item strings
-
-  // Who received it
-  deliveredTo       Json            @default("[]")  // Array of {jid, name, deliveredAt}
-  createdAt         DateTime        @default(now())
-
-  @@unique([shiftLabel, shiftDate])
-  @@index([shiftDate])
-  @@index([shiftLabel])
-}
-
-// ══════════════════════════════════════════════════════
-// SENTIMENT ANALYSIS
-// ══════════════════════════════════════════════════════
-
-model SentimentLog {
-  id                String          @id @default(cuid())
-  userId            String?
-  platform          Platform?
-  message           String
-  sentiment         SentimentType   @default(NEUTRAL)
-  score             Float           @default(0)    // -1.0 to 1.0
-  confidence        Float           @default(0)
-  emotions          Json            @default("{}") // {joy:0.8, anger:0.1, ...}
-  language          String?
-  groupId           String?
-  metadata          Json            @default("{}")
-  createdAt         DateTime        @default(now())
-
-  @@index([sentiment])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([platform])
 }
 
 enum SentimentType {
@@ -1475,66 +1783,11 @@ enum SentimentType {
   MIXED
 }
 
-// ══════════════════════════════════════════════════════
-// SCHEDULED MESSAGES
-// ══════════════════════════════════════════════════════
-
-model ScheduledMessage {
-  id                String                @id @default(cuid())
-  title             String
-  content           String
-  targetPlatform    Platform?
-  targetGroupId     String?
-  targetUserId      String?
-  schedule          String?               // cron expression for recurring
-  scheduledAt       DateTime              // when to send
-  recurring         Boolean               @default(false)
-  status            ScheduledMessageStatus @default(PENDING)
-  sentAt            DateTime?
-  errorMessage      String?
-  createdBy         String
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-
-  @@index([status])
-  @@index([scheduledAt])
-  @@index([createdBy])
-}
-
 enum ScheduledMessageStatus {
   PENDING
   SENT
   FAILED
   CANCELLED
-}
-
-// ══════════════════════════════════════════════════════
-// CAMPAIGN MANAGEMENT
-// ══════════════════════════════════════════════════════
-
-model Campaign {
-  id                String          @id @default(cuid())
-  name              String
-  description       String?
-  content           String
-  targetPlatform    Platform?
-  targetSegment     String?         // tag/role filter
-  status            CampaignStatus  @default(DRAFT)
-  scheduledAt       DateTime?
-  startedAt         DateTime?
-  completedAt       DateTime?
-  totalRecipients   Int             @default(0)
-  sentCount         Int             @default(0)
-  deliveredCount    Int             @default(0)
-  readCount         Int             @default(0)
-  repliedCount      Int             @default(0)
-  failedCount       Int             @default(0)
-  createdBy         String
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([status])
-  @@index([createdAt])
 }
 
 enum CampaignStatus {
@@ -1543,53 +1796,6 @@ enum CampaignStatus {
   RUNNING
   COMPLETED
   CANCELLED
-}
-
-// ══════════════════════════════════════════════════════
-// CRM / CONTACT MANAGEMENT
-// ══════════════════════════════════════════════════════
-
-model CRMContact {
-  id                String          @id @default(cuid())
-  name              String
-  phone             String?
-  email             String?
-  company           String?
-  position          String?
-  tags              Json            @default("[]")
-  segment           String?         // VIP, Regular, New, Churned
-  source            String?         // whatsapp, telegram, manual
-  notes             String?
-  customFields      Json            @default("{}")
-  totalInteractions Int             @default(0)
-  lastInteractionAt DateTime?
-  score             Int             @default(0)    // lead score
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  interactions      CRMInteraction[]
-
-  @@index([segment])
-  @@index([score])
-  @@index([createdAt])
-}
-
-model CRMInteraction {
-  id                String              @id @default(cuid())
-  contactId         String
-  contact           CRMContact          @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  type              InteractionType
-  channel           String?             // whatsapp, telegram, email, phone
-  subject           String?
-  content           String
-  sentiment         SentimentType?
-  metadata          Json                @default("{}")
-  createdBy         String?
-  createdAt         DateTime            @default(now())
-
-  @@index([contactId])
-  @@index([type])
-  @@index([createdAt])
 }
 
 enum InteractionType {
@@ -1601,31 +1807,6 @@ enum InteractionType {
   TICKET
 }
 
-// ══════════════════════════════════════════════════════
-// PAYMENT / TRANSACTION
-// ══════════════════════════════════════════════════════
-
-model PaymentTransaction {
-  id                String          @id @default(cuid())
-  transactionId     String          @unique // external ref
-  contactId         String?
-  amount            Float
-  currency          String          @default("IDR")
-  status            PaymentStatus   @default(PENDING)
-  method            String?         // bank_transfer, qris, ewallet
-  description       String?
-  invoiceNumber     String?
-  paidAt            DateTime?
-  metadata          Json            @default("{}")
-  createdBy         String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([status])
-  @@index([contactId])
-  @@index([createdAt])
-}
-
 enum PaymentStatus {
   PENDING
   PAID
@@ -1634,112 +1815,14 @@ enum PaymentStatus {
   CANCELLED
 }
 
-// ══════════════════════════════════════════════════════
-// UNIFIED INBOX
-// ══════════════════════════════════════════════════════
-
-model InboxMessage {
-  id                String          @id @default(cuid())
-  platform          Platform
-  fromUserId        String?
-  fromName          String
-  fromNumber        String?
-  groupId           String?
-  groupName         String?
-  content           String
-  mediaUrl          String?
-  mediaType         String?         // image, video, audio, document
-  isRead            Boolean         @default(false)
-  isStarred         Boolean         @default(false)
-  isArchived        Boolean         @default(false)
-  replyTo           String?
-  sentiment         SentimentType?
-  tags              Json            @default("[]")
-  assignedTo        String?
-  metadata          Json            @default("{}")
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([platform])
-  @@index([fromUserId])
-  @@index([isRead])
-  @@index([isStarred])
-  @@index([isArchived])
-  @@index([createdAt])
-}
-
-// ══════════════════════════════════════════════════════
-// AUTO-MODERATION CONFIG
-// ══════════════════════════════════════════════════════
-
-model AutoModConfig {
-  id                String          @id @default(cuid())
-  feature           AutoModFeature
-  isEnabled         Boolean         @default(true)
-  config            Json            @default("{}") // threshold, cooldown, etc.
-  action            ModerationAction @default(WARN)
-  message           String?         // custom response
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@unique([feature])
-}
-
 enum AutoModFeature {
-  SPAM_DETECTION       // duplicate/flood messages
-  PROFANITY_FILTER     // bad words
-  LINK_FILTER          // suspicious URLs
-  CAPS_DETECTION       // excessive caps
-  INVITE_FILTER        // group invite links
-  MEDIA_FILTER         // restrict media types
-  NEW_MEMBER_RESTRICT  // restrict new members
-}
-
-// ══════════════════════════════════════════════════════
-// FAQ SYSTEM
-// ══════════════════════════════════════════════════════
-
-model FAQEntry {
-  id                String          @id @default(cuid())
-  question          String
-  answer            String
-  category          String?
-  keywords          Json            @default("[]")
-  aliases           Json            @default("[]") // alternative phrasings
-  priority          Int             @default(0)
-  matchCount        Int             @default(0)
-  isActive          Boolean         @default(true)
-  createdBy         String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-
-  @@index([category])
-  @@index([isActive])
-  @@index([matchCount])
-}
-
-// ═══════════════════════════════════════════════════════
-// MESSAGE TEMPLATE MANAGER
-// ═══════════════════════════════════════════════════════
-
-model MessageTemplate {
-  id              String            @id @default(cuid())
-  name            String
-  category        TemplateCategory
-  platform        String            @default("ALL")
-  language        String            @default("id")
-  subject         String?
-  body            String
-  variables       Json              @default("[]")
-  isActive        Boolean           @default(true)
-  usageCount      Int               @default(0)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([category])
-  @@index([platform])
-  @@index([isActive])
+  SPAM_DETECTION
+  PROFANITY_FILTER
+  LINK_FILTER
+  CAPS_DETECTION
+  INVITE_FILTER
+  MEDIA_FILTER
+  NEW_MEMBER_RESTRICT
 }
 
 enum TemplateCategory {
@@ -1751,75 +1834,6 @@ enum TemplateCategory {
   CLOSING
   PROMOTION
   CUSTOM
-}
-
-// ═══════════════════════════════════════════════════════
-// CHATBOT BUILDER (Flow Nodes)
-// ═══════════════════════════════════════════════════════
-
-model ChatbotFlow {
-  id              String            @id @default(cuid())
-  name            String
-  description     String?
-  triggerKeyword  String?
-  nodes           Json              @default("[]")
-  edges           Json              @default("[]")
-  isActive        Boolean           @default(true)
-  version         Int               @default(1)
-  executionCount  Int               @default(0)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([isActive])
-  @@index([triggerKeyword])
-}
-
-// ═══════════════════════════════════════════════════════
-// CSAT SURVEY
-// ═══════════════════════════════════════════════════════
-
-model CSATSurvey {
-  id              String            @id @default(cuid())
-  ticketId        String?
-  contactId       String?
-  platform        String
-  rating          Int
-  comment         String?
-  agentId         String?
-  respondedAt     DateTime          @default(now())
-  createdAt       DateTime          @default(now())
-
-  @@index([ticketId])
-  @@index([agentId])
-  @@index([rating])
-  @@index([respondedAt])
-}
-
-// ═══════════════════════════════════════════════════════
-// AGENT MANAGEMENT
-// ═══════════════════════════════════════════════════════
-
-model Agent {
-  id              String            @id @default(cuid())
-  name            String
-  email           String?           @unique
-  avatar          String?
-  role            AgentRole         @default(AGENT)
-  status          AgentStatus       @default(OFFLINE)
-  department      String?
-  maxConcurrent   Int               @default(5)
-  activeTickets   Int               @default(0)
-  totalResolved   Int               @default(0)
-  avgResponseTime Int?
-  rating          Float?
-  lastActiveAt    DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([status])
-  @@index([department])
-  @@index([role])
 }
 
 enum AgentRole {
@@ -1837,53 +1851,6 @@ enum AgentStatus {
   ON_BREAK
 }
 
-// ═══════════════════════════════════════════════════════
-// TAGS & LABELS
-// ═══════════════════════════════════════════════════════
-
-model Tag {
-  id              String            @id @default(cuid())
-  name            String            @unique
-  color           String            @default("#6366f1")
-  description     String?
-  category        String?
-  usageCount      Int               @default(0)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([category])
-  @@index([usageCount])
-}
-
-// ═══════════════════════════════════════════════════════
-// CRM PIPELINE (Deal/Lead Management)
-// ═══════════════════════════════════════════════════════
-
-model CRMDeal {
-  id              String            @id @default(cuid())
-  title           String
-  contactId       String?
-  contactName     String?
-  value           Float             @default(0)
-  currency        String            @default("IDR")
-  stage           DealStage         @default(LEAD)
-  probability     Int               @default(0)
-  expectedClose   DateTime?
-  assignedTo      String?
-  notes           String?
-  tags            Json              @default("[]")
-  lostReason      String?
-  wonAt           DateTime?
-  lostAt          DateTime?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([stage])
-  @@index([assignedTo])
-  @@index([contactId])
-}
-
 enum DealStage {
   LEAD
   QUALIFIED
@@ -1893,133 +1860,11 @@ enum DealStage {
   LOST
 }
 
-// ═══════════════════════════════════════════════════════
-// FILE MANAGER
-// ═══════════════════════════════════════════════════════
-
-model ManagedFile {
-  id              String            @id @default(cuid())
-  filename        String
-  originalName    String
-  mimeType        String
-  size            Int
-  path            String
-  url             String?
-  category        String?
-  uploadedBy      String?
-  platform        String?
-  messageId       String?
-  metadata        Json              @default("{}")
-  maintenanceScheduleId String?
-  maintenanceSchedule   MaintenanceSchedule? @relation(fields: [maintenanceScheduleId], references: [id], onDelete: SetNull)
-  thumbnailUrl    String?
-  isPublic        Boolean           @default(false)
-  downloads       Int               @default(0)
-  createdAt       DateTime          @default(now())
-
-  @@index([category])
-  @@index([mimeType])
-  @@index([uploadedBy])
-  @@index([maintenanceScheduleId])
-}
-
-// ═══════════════════════════════════════════════════════
-// API KEYS
-// ═══════════════════════════════════════════════════════
-
-model ApiKey {
-  id              String            @id @default(cuid())
-  name            String
-  keyHash         String            @unique
-  prefix          String
-  permissions     Json              @default("[]")
-  rateLimit       Int               @default(1000)
-  expiresAt       DateTime?
-  lastUsedAt      DateTime?
-  usageCount      Int               @default(0)
-  isActive        Boolean           @default(true)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-
-  @@index([prefix])
-  @@index([isActive])
-}
-
-// ═══════════════════════════════════════════════════════
-// CANNED RESPONSES
-// ═══════════════════════════════════════════════════════
-
-model CannedResponse {
-  id              String            @id @default(cuid())
-  shortcut        String            @unique
-  title           String
-  content         String
-  category        String?
-  tags            Json              @default("[]")
-  usageCount      Int               @default(0)
-  isActive        Boolean           @default(true)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([shortcut])
-  @@index([category])
-  @@index([isActive])
-}
-
-// ═══════════════════════════════════════════════════════
-// WEBHOOK LOGS
-// ═══════════════════════════════════════════════════════
-
-model WebhookLog {
-  id              String            @id @default(cuid())
-  webhookId       String
-  url             String
-  method          String            @default("POST")
-  requestHeaders  Json?
-  requestBody     Json?
-  responseStatus  Int?
-  responseBody    String?
-  duration        Int?
-  status          WebhookLogStatus  @default(PENDING)
-  retryCount      Int               @default(0)
-  error           String?
-  createdAt       DateTime          @default(now())
-
-  @@index([webhookId])
-  @@index([status])
-  @@index([createdAt])
-}
-
 enum WebhookLogStatus {
   PENDING
   SUCCESS
   FAILED
   RETRYING
-}
-
-// ═══════════════════════════════════════════════════════
-// EXPORT CENTER
-// ═══════════════════════════════════════════════════════
-
-model ExportJob {
-  id              String            @id @default(cuid())
-  module          String
-  format          ExportFormat
-  filters         Json              @default("{}")
-  status          ExportStatus      @default(PENDING)
-  fileName        String?
-  fileUrl         String?
-  fileSize        Int?
-  totalRows       Int?
-  error           String?
-  requestedBy     String?
-  completedAt     DateTime?
-  createdAt       DateTime          @default(now())
-
-  @@index([module])
-  @@index([status])
-  @@index([requestedBy])
 }
 
 enum ExportFormat {
@@ -2034,62 +1879,4 @@ enum ExportStatus {
   PROCESSING
   COMPLETED
   FAILED
-}
-
-// ═══════════════════════════════════════════════════════
-// NOTIFICATION RULES
-// ═══════════════════════════════════════════════════════
-
-model NotificationRule {
-  id              String            @id @default(cuid())
-  name            String
-  description     String?
-  triggerEvent    String
-  conditions      Json              @default("[]")
-  actions         Json              @default("[]")
-  channels        Json              @default("[]")
-  isActive        Boolean           @default(true)
-  lastTriggered   DateTime?
-  triggerCount    Int               @default(0)
-  createdBy       String?
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([triggerEvent])
-  @@index([isActive])
-}
-
-// ═══════════════════════════════════════════════════════
-// USER PREFERENCES (Dark Mode, i18n, etc.)
-// ═══════════════════════════════════════════════════════
-
-model UserPreference {
-  id              String            @id @default(cuid())
-  userId          String            @unique
-  theme           String            @default("light")
-  language        String            @default("id")
-  timezone        String            @default("Asia/Jakarta")
-  notifications   Json              @default("{}")
-  dashboardLayout Json              @default("{}")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-
-  @@index([userId])
-}
-
-// ═══════════════════════════════════════════════════════
-// ANALYTICS SNAPSHOTS (pre-computed)
-// ═══════════════════════════════════════════════════════
-
-model AnalyticsSnapshot {
-  id              String            @id @default(cuid())
-  period          String
-  date            DateTime
-  metrics         Json
-  breakdown       Json              @default("{}")
-  createdAt       DateTime          @default(now())
-
-  @@unique([period, date])
-  @@index([period])
-  @@index([date])
 }
