@@ -8,7 +8,7 @@ export class ReportService {
   ) {}
 
   /** Generate daily summary report using neucentrix format */
-  async generateDailyReport(): Promise<string> {
+  async generateDailyReport(): Promise<{ text: string; reportId: string; healthScore: number; }> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today.getTime() + 86_400_000);
@@ -16,14 +16,13 @@ export class ReportService {
     const where = { createdAt: { gte: today, lt: tomorrow } };
 
     // 1. Fetch data in parallel for complete summary
-    const [tickets, slaData, alerts, uptimeTargets] = await Promise.all([
+    const [tickets, slaData, uptimeTargets] = await Promise.all([
       this.db.ticket.findMany({ 
         where, 
         orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
         include: { createdBy: true, slaTracking: true }
       }),
       this.db.sLATracking.findMany({ where }),
-      this.db.alert.findMany({ where }),
       this.db.uptimeTarget.findMany({ where: { isActive: true } }).catch(() => []) as Promise<any[]>,
     ]);
 
