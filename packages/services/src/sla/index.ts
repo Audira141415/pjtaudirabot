@@ -389,9 +389,9 @@ export class SLAService {
       }
     }
 
-    // Find un-resolved tickets
+    // Find un-resolved tickets (exclude already-breached to prevent repeat notifications every minute)
     const unresolved = await this.db.sLATracking.findMany({
-      where: { resolvedAt: null, isPaused: false },
+      where: { resolvedAt: null, isPaused: false, resolutionBreached: false },
       include: { ticket: true },
     });
 
