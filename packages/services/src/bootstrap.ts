@@ -337,7 +337,7 @@ export async function createBotServices(
     minClusterSize: parseInt(process.env.CLUSTERING_MIN_SIZE ?? '2', 10),
   });
   const ticketService = new TicketService(db, redis, logger, clusteringService, sheetsService);
-  const slaService = new SLAService(db, redis, logger);
+  const slaService = new SLAService(db, redis, logger, sheetsService);
 
   const intentDetector = new IntentDetector(
     taskManager, 
@@ -464,9 +464,9 @@ export function registerTicketCommands(
   logger: ILogger,
   broadcasts: TicketBroadcasts,
 ): void {
-  const { registry, ticketService, slaService, sheetsService, crmService } = services;
+  const { registry, ticketService, slaService, sheetsService, crmService, dataExtractionService } = services;
 
-  registry.register(new TicketCreateCommand(logger, ticketService, slaService, crmService, sheetsService, broadcasts.onNewTicket));
+  registry.register(new TicketCreateCommand(logger, ticketService, slaService, dataExtractionService, crmService, sheetsService, broadcasts.onNewTicket));
   registry.register(new TicketStatusCommand(logger, ticketService));
   registry.register(new TicketListCommand(logger, ticketService));
   registry.register(new TicketAssignCommand(logger, ticketService, slaService, sheetsService));

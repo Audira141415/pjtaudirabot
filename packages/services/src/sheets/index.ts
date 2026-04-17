@@ -16,6 +16,7 @@ const SHEET_SCHEMAS: Record<string, string[]> = {
   handover: ['ID', 'Shift', 'Date', 'Open Tickets', 'SLA Due Soon', 'SLA Breached', 'Critical Alerts', 'Active Incidents', 'Generated At'],
   maintenance_schedules: ['ID', 'Judul PM', 'Deskripsi', 'Lokasi Perangkat', 'Interval', 'Jatuh Tempo Berikutnya', 'Terakhir Dijalankan', 'No. Tiket Terakhir', 'Penanggung Jawab', 'Status', 'Dibuat Pada'],
   crm_assets: ['ID', 'Contact ID', 'Customer Name', 'Type', 'Identifier', 'Service Type', 'Description', 'Created At'],
+  management_reports: ['Timestamp', 'Shift', 'Report ID', 'Health Score', 'Content'],
 };
 
 export interface SheetsConfig {
@@ -425,7 +426,7 @@ export class SheetsService {
 
   private isSheetAllowed(sheetName: string): boolean {
     if (!this.ticketsOnly) return true;
-    return sheetName === 'tickets' || sheetName === 'dashboard' || sheetName === 'maintenance_schedules' || sheetName === 'crm_assets';
+    return sheetName === 'tickets' || sheetName === 'dashboard' || sheetName === 'maintenance_schedules' || sheetName === 'crm_assets' || sheetName === 'management_reports';
   }
 
   private initClient(credentials: string): void {
@@ -1302,6 +1303,22 @@ export class SheetsService {
       'Resolution Breached': sla.resolutionBreached ? 'YES' : 'NO',
       Status: sla.status,
       'Created At': sla.createdAt.toISOString(),
+    });
+  }
+
+  async syncManagementReport(report: {
+    timestamp: Date;
+    shift: string;
+    reportId: string;
+    healthScore: number;
+    content: string;
+  }): Promise<void> {
+    await this.appendToSheet('management_reports', {
+      Timestamp: report.timestamp.toISOString(),
+      Shift: report.shift,
+      'Report ID': report.reportId,
+      'Health Score': report.healthScore,
+      Content: report.content,
     });
   }
 

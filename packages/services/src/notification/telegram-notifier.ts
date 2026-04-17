@@ -114,7 +114,7 @@ export class TelegramNotifier {
       `────────────────────`,
       customer ? `🏢 <b>Nama:</b> ${this.esc(customer)}` : `🏢 <b>Customer:</b> Unknown`,
       params.customerServices?.length 
-        ? `🛠️ <b>Layanan Terdaftar:</b>\n${params.customerServices.map(s => `  • ${this.esc(s).replace(/ — \[(.*?)\]/, ' — [<b>$1</b>]')}`).join('\n')}` 
+        ? `🛠️ <b>Layanan & Aset Terdaftar:</b>\n${params.customerServices.map(s => `  • ${this.esc(s).replace(/ — \[(.*?)\]/, ' — [<b>$1</b>]')}`).join('\n')}` 
         : `🛠️ <b>Layanan:</b> <i>Tidak ada aset terdaftar</i>`,
       ``,
       `<b>📍 DETAIL TEKNIS</b>`,
@@ -124,10 +124,10 @@ export class TelegramNotifier {
       technical.port ? `🔌 <b>Port:</b> <code>${this.esc(technical.port)}</code>` : null,
       vlan ? `🌐 <b>VLAN ID:</b> <code>${this.esc(vlan)}</code>` : null,
       mode ? `🧭 <b>Mode:</b> ${this.esc(mode)}` : null,
-      problemText ? `📝 <b>Catatan:</b> ${this.esc(problemText)}` : null,
+      problemText ? `📝 <b>Catatan Masalah:</b> ${this.esc(problemText)}` : null,
       ``,
       `━━━━━━━━━━━━━━━━━━━━`,
-      `👉 <b>AMBIL TIKET:</b>`,
+      `👉 <b>SIAP EKSEKUSI?</b>`,
       `  Telegram: <code>!take ${this.esc(params.ticketNumber)}</code>`,
       `  WhatsApp: <code>!take ${this.esc(params.ticketNumber)}</code>`,
     ].filter(Boolean).join('\n');
@@ -294,11 +294,19 @@ export class TelegramNotifier {
   async sendReportText(text: string): Promise<void> {
     if (!this.isConfigured()) return;
 
+    // Convert common Markdown to HTML for more robust Telegram delivery
+    // Note: We escape FIRST, then replace our specific markers with HTML tags
+    const htmlText = this.esc(text)
+      .replace(/\*(.*?)\*/g, '<b>$1</b>')
+      .replace(/_(.*?)_/g, '<i>$1</i>')
+      .replace(/━━━━━━━━━━━━━━━━━━━━━━━/g, '───────────────────────')
+      .replace(/━━━━━━━━━━━━━━━━━━━━━━━━━━/g, '──────────────────────────');
+
     const url = `${this.apiBase}/sendMessage`;
     const body = JSON.stringify({
       chat_id: this.chatId,
-      text,
-      parse_mode: 'Markdown',
+      text: htmlText,
+      parse_mode: 'HTML',
     });
 
     try {
@@ -308,11 +316,14 @@ export class TelegramNotifier {
         body,
       });
       if (!resp.ok) {
-        // Fallback: retry without parse_mode if Markdown fails
+        const errText = await resp.text();
+        this.logger.error(`Telegram report send failed: ${resp.status} ${errText}`);
+        // Fallback: retry without parse_mode
         const bodyPlain = JSON.stringify({ chat_id: this.chatId, text });
         await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: bodyPlain });
+      } else {
+        this.logger.info('Telegram report sent');
       }
-      this.logger.info('Telegram report sent');
     } catch (err) {
       this.logger.error('Failed to send Telegram report', err as Error);
     }

@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma, TicketPriority, TicketCategory } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
+import { SheetsService } from '../sheets';
 
 const AUTO_UNASSIGNED_ENABLED = (process.env.SLA_AUTO_UNASSIGNED_ENABLED ?? 'true').toLowerCase() === 'true';
 const parsePositiveInt = (value: string | undefined, fallback: number): number => {
@@ -131,6 +132,7 @@ export class SLAService {
     private db: PrismaClient,
     _redis: RedisClientType,
     logger: ILogger,
+    private sheetsService: SheetsService | null = null,
   ) {
     this.logger = logger.child({ service: 'sla' });
   }
@@ -181,12 +183,15 @@ export class SLAService {
       },
     });
 
-    this.logger.info('SLA tracking started', {
-      ticketId,
-      responseMin: targets.responseMin,
-      resolutionMin: targets.resolutionMin,
-      slaLevel: targets.slaLevel,
+    const result = await this.db.sLATracking.findUnique({
+      where: { id: tracking.id },
+      include: { ticket: true }
     });
+
+    if (this.sheetsService?.isAvailable() && result) {
+      this.syncSLAData(result);
+    }
+
     return tracking;
   }
 
@@ -203,7 +208,12 @@ export class SLAService {
     const updated = await this.db.sLATracking.update({
       where: { ticketId },
       data: { respondedAt: now, responseTimeMin, responseBreached: breached },
+      include: { ticket: true },
     });
+
+    if (this.sheetsService?.isAvailable()) {
+      this.syncSLAData(updated);
+    }
 
     if (breached) {
       this.logger.warn('SLA response breached', { ticketId, responseTimeMin });
@@ -227,7 +237,12 @@ export class SLAService {
     const updated = await this.db.sLATracking.update({
       where: { ticketId },
       data: { resolvedAt: now, resolutionTimeMin, resolutionBreached: breached },
+      include: { ticket: true },
     });
+
+    if (this.sheetsService?.isAvailable()) {
+      this.syncSLAData(updated);
+    }
 
     if (breached) {
       this.logger.warn('SLA resolution breached', { ticketId, resolutionTimeMin });
@@ -259,6 +274,8 @@ export class SLAService {
       });
 
       for (const t of toReopen) {
+
+
         await this.db.ticket.update({
           where: { id: t.ticket.id },
           data: {
@@ -300,7 +317,7 @@ export class SLAService {
 
     // Find un-responded tickets
     const unresponded = await this.db.sLATracking.findMany({
-      where: { respondedAt: null, responseBreached: false, isPaused: false },
+      where: { respondedAt: null, isPaused: false },
       include: { ticket: true },
     });
 
@@ -338,7 +355,7 @@ export class SLAService {
             },
           });
 
-          await this.db.sLATracking.update({
+          const updatedSLA = await this.db.sLATracking.update({
             where: { id: t.id },
             data: {
               responseBreached: true,
@@ -346,10 +363,15 @@ export class SLAService {
               resolutionBreached: false,
               resolutionTimeMin: Math.round(((now.getTime() - t.createdAt.getTime()) / 60_000) * 10) / 10,
             },
+            include: { ticket: true }
           });
 
+          if (this.sheetsService?.isAvailable()) {
+            this.syncSLAData(updatedSLA);
+          }
+
           breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ auto-resolved sistem (akan dimunculkan lagi ${AUTO_UNASSIGNED_REOPEN_MIN}m).`);
-      } else if (remaining <= 0) {
+      } else if (remaining <= 0 && !t.responseBreached) {
         // Breach only (no auto-resolve)
         await this.db.sLATracking.update({
           where: { id: t.id },
@@ -369,7 +391,7 @@ export class SLAService {
 
     // Find un-resolved tickets
     const unresolved = await this.db.sLATracking.findMany({
-      where: { resolvedAt: null, resolutionBreached: false, isPaused: false },
+      where: { resolvedAt: null, isPaused: false },
       include: { ticket: true },
     });
 
@@ -412,14 +434,19 @@ export class SLAService {
         }
 
         // Mark SLA tracking as breached and resolved
-        await this.db.sLATracking.update({
+        const updatedSLA = await this.db.sLATracking.update({
           where: { id: t.id },
           data: {
             resolutionBreached: true,
             resolvedAt: isAlreadyFinished ? undefined : now,
             resolutionTimeMin: isAlreadyFinished ? undefined : Math.round(resolutionTimeMin * 10) / 10,
           },
+          include: { ticket: true }
         });
+
+        if (this.sheetsService?.isAvailable()) {
+          this.syncSLAData(updatedSLA);
+        }
 
         if (isAlreadyFinished) {
           breaches.push(`🚨 Resolution SLA BREACHED: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — sudah ${t.ticket.status}`);
@@ -626,5 +653,24 @@ export class SLAService {
       breakdown,
       period: `${year}-${String(month + 1).padStart(2, '0')}`,
     };
+  }
+
+  /** Internal helper to sync SLA data to sheets */
+  private syncSLAData(tracking: any) {
+    if (!this.sheetsService || !tracking.ticket) return;
+    
+    this.sheetsService.syncSLA({
+      id: tracking.id,
+      ticketNumber: tracking.ticket.ticketNumber,
+      priority: tracking.ticket.priority,
+      category: tracking.ticket.category,
+      responseTargetMin: tracking.responseTargetMin,
+      responseTimeMin: tracking.responseTimeMin,
+      responseBreached: tracking.responseBreached,
+      resolutionTargetMin: tracking.resolutionTargetMin,
+      resolutionBreached: tracking.resolutionBreached,
+      status: tracking.ticket.status,
+      createdAt: tracking.createdAt,
+    }).catch((err) => this.logger.error('Failed to sync SLA to GSheet', err));
   }
 }

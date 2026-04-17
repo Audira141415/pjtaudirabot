@@ -25,8 +25,18 @@ export async function adminRoutes(
   const insightService = new InsightService(ctx.db, ctx.redis, ctx.logger);
 
   const botHealthHosts: Record<string, string[]> = {
-    TELEGRAM: [process.env.TELEGRAM_HEALTH_HOST || 'telegram', '127.0.0.1'],
-    WHATSAPP: [process.env.WHATSAPP_HEALTH_HOST || 'whatsapp', '127.0.0.1'],
+    TELEGRAM: [
+      process.env.TELEGRAM_HEALTH_HOST,
+      process.env.TELEGRAM_HEALTH_URL ? new URL(process.env.TELEGRAM_HEALTH_URL).hostname : null,
+      'telegram',
+      '127.0.0.1',
+    ].filter((h): h is string => !!h),
+    WHATSAPP: [
+      process.env.WHATSAPP_HEALTH_HOST,
+      process.env.WHATSAPP_HEALTH_URL ? new URL(process.env.WHATSAPP_HEALTH_URL).hostname : null,
+      'whatsapp',
+      '127.0.0.1',
+    ].filter((h): h is string => !!h),
   };
 
   async function probeBotHealth(platform: 'TELEGRAM' | 'WHATSAPP', port: number) {

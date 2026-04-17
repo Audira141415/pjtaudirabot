@@ -114,25 +114,22 @@ echo  [6/6] Pushing to GitHub...
 echo.
 
 echo  → git add -A
-git add -A
-if errorlevel 1 (
-    echo  [ERROR] git add failed!
-    pause
-    exit /b 1
-)
+git add -A 2>nul
 
 echo  → checking staged file sizes
 set HAS_BIG_FILE=0
-for /f "usebackq delims=" %%f in (`powershell -NoProfile -Command "git diff --cached --name-only | foreach { if(Test-Path $_ -PathType Leaf){ $len = (Get-Item $_).Length; if($len -gt 95MB){ write-output ($_ + ' (' + [math]::Round($len/1MB,2) + ' MB)') } } }; if($LASTEXITCODE -ne 0){ exit 2 }"`) do (
+git diff --cached --name-only > bigfiles_list.tmp
+powershell -NoProfile -Command "Get-Content bigfiles_list.tmp | ForEach-Object { if (Test-Path $_) { if ((Get-Item $_).Length -gt 95MB) { $_ } } }" > bigfiles_check.tmp
+for /f "usebackq delims=" %%f in ("bigfiles_check.tmp") do (
     echo  [BLOCKED] Large staged file: %%f
     set HAS_BIG_FILE=1
 )
+if exist bigfiles_list.tmp del bigfiles_list.tmp
+if exist bigfiles_check.tmp del bigfiles_check.tmp
 
 if "%HAS_BIG_FILE%"=="1" (
     echo.
     echo  [ERROR] Push will be rejected by GitHub file-size limit.
-    echo  Please remove large artifacts from staging/history (e.g. *.tar, tmp/*).
-    echo  Tip: git reset HEAD -- ^<file^>
     pause
     exit /b 1
 )

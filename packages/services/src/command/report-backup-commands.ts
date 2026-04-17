@@ -15,7 +15,7 @@ export class DailyReportCommand extends BaseCommandHandler {
   async execute(_context: CommandContext): Promise<CommandResult> {
     try {
       const report = await this.reportService.generateDailyReport();
-      return this.createResult(true, report);
+      return this.createResult(true, report.text);
     } catch (error) {
       this.logger.error('Daily report failed', error as Error);
       return this.createErrorResult('Failed to generate daily report');

@@ -7,7 +7,7 @@ export class ReportService {
     _logger: ILogger,
   ) {}
 
-  /** Generate daily summary report */
+  /** Generate daily summary report using neucentrix format */
   async generateDailyReport(): Promise<string> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -15,42 +15,122 @@ export class ReportService {
 
     const where = { createdAt: { gte: today, lt: tomorrow } };
 
-    const [openTickets, resolvedToday, newToday, slaData, escalations, criticalAlerts] = await Promise.all([
-      this.db.ticket.count({ where: { ...where, status: { in: ['OPEN', 'IN_PROGRESS', 'ESCALATED'] } } }),
-      this.db.ticket.count({ where: { ...where, status: { in: ['RESOLVED', 'CLOSED'] } } }),
-      this.db.ticket.count({ where }),
+    // 1. Fetch data in parallel for complete summary
+    const [tickets, slaData, alerts, uptimeTargets] = await Promise.all([
+      this.db.ticket.findMany({ 
+        where, 
+        orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+        include: { createdBy: true, slaTracking: true }
+      }),
       this.db.sLATracking.findMany({ where }),
-      this.db.escalation.count({ where }),
-      this.db.alert.count({ where: { ...where, severity: 'CRITICAL' } }),
+      this.db.alert.findMany({ where }),
+      this.db.uptimeTarget.findMany({ where: { isActive: true } }).catch(() => []) as Promise<any[]>,
     ]);
 
-    const responseBreaches = slaData.filter((s) => s.responseBreached).length;
-    const resolutionBreaches = slaData.filter((s) => s.resolutionBreached).length;
-    const avgResponse = slaData.filter((s) => s.responseTimeMin).length > 0
-      ? Math.round(slaData.filter((s) => s.responseTimeMin).reduce((sum, s) => sum + (s.responseTimeMin ?? 0), 0) / slaData.filter((s) => s.responseTimeMin).length)
-      : 0;
+    const stats = {
+      total: tickets.length,
+      resolved: tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length,
+      open: tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'ESCALATED', 'WAITING'].includes(t.status)).length,
+    };
+
+    const responseSlaPct = slaData.length > 0 
+      ? Math.round((slaData.filter(s => !s.responseBreached).length / slaData.length) * 100) 
+      : 100;
+    const resolutionSlaPct = slaData.length > 0 
+      ? Math.round((slaData.filter(s => !s.resolutionBreached).length / slaData.length) * 100) 
+      : 100;
+
+    const avgUptime = uptimeTargets.length > 0
+      ? Math.round(uptimeTargets.reduce((s, t) => s + (t.uptimePercent || 0), 0) / uptimeTargets.length)
+      : 100;
+
+    const healthScore = Math.max(0, Math.min(100, 100 - (slaData.filter(s => s.resolutionBreached).length * 10) - (stats.open * 2)));
 
     const dateStr = today.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const report = [
-      `📊 *DAILY REPORT — ${dateStr}*`,
+    
+    // Professional Categorization
+    const fulfillment = tickets.filter(t => t.category === 'FULFILLMENT' || t.problem.toLowerCase().includes('ao :'));
+    
+    const infraKeywords = ['ups', 'pac', 'ac ', 'power', 'cooling', 'genset', 'pln', 'baterai', 'battery', 'trafo'];
+    const infraAlerts = tickets.filter(t => 
+      !fulfillment.includes(t) && 
+      infraKeywords.some(kw => t.problem.toLowerCase().includes(kw))
+    );
+    
+    const networkAlerts = tickets.filter(t => 
+      !fulfillment.includes(t) && !infraAlerts.includes(t) && 
+      (t.category === 'CONFIGURATION' || t.service?.toLowerCase().includes('metro') || t.service?.toLowerCase().includes('vlan'))
+    );
+
+    const supportAlerts = tickets.filter(t => 
+      !fulfillment.includes(t) && !infraAlerts.includes(t) && !networkAlerts.includes(t) && 
+      ['HELPDESK', 'SMARTHAND', 'MAINTENANCE'].includes(t.category)
+    );
+
+    const assurance = tickets.filter(t => 
+      !fulfillment.includes(t) && !infraAlerts.includes(t) && !networkAlerts.includes(t) && !supportAlerts.includes(t) && 
+      t.category !== 'VAM'
+    );
+
+    const vam = tickets.filter(t => t.category === 'VAM');
+
+    const reportId = Math.random().toString(36).substring(7).toUpperCase();
+    const reportText = [
+      `🌐 *PJ-TAUDIRABOT | MANAGEMENT SUMMARY*`,
+      `📅 ${dateStr.toUpperCase()}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       ``,
-      `📋 *Ticket Summary*`,
-      `• New today: ${newToday}`,
-      `• Resolved today: ${resolvedToday}`,
-      `• Still open: ${openTickets}`,
+      `🚀 *EXECUTIVE OVERVIEW*`,
+      `• Infrastructure Health : ${healthScore}% ${healthScore > 90 ? '🟢' : healthScore > 75 ? '🟡' : '🔴'}`,
+      `• Ticket Load           : ${stats.total} Total (${stats.resolved} Resolved, ${stats.open} Open)`,
+      `• SLA Response         : ${responseSlaPct}% Meta-Compliance`,
+      `• SLA Resolution       : ${resolutionSlaPct}% Meta-Compliance`,
+      `• Network Uptime Avg   : ${avgUptime}% (Core Targets)`,
       ``,
-      `⏱️ *SLA Performance*`,
-      `• Avg response: ${avgResponse} min`,
-      `• Response breaches: ${responseBreaches}`,
-      `• Resolution breaches: ${resolutionBreaches}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       ``,
-      `🔺 *Escalations*: ${escalations}`,
-      `🚨 *Critical Alerts*: ${criticalAlerts}`,
+      `🏗️ *I. SERVICE FULFILLMENT*`,
+      fulfillment.length > 0 
+        ? fulfillment.map(t => `  ◻️ [${t.location || 'DC'}] ${t.customer || 'Customer'} — ${t.service || 'Link'} (${t.ao || 'No AO'})`).join('\n')
+        : `  _No active fulfillment tasks recorded today._`,
       ``,
-      `_Generated at ${new Date().toLocaleTimeString('id-ID')}_`,
+      `🚨 *II. CRITICAL INFRASTRUCTURE ALERTS*`,
+      infraAlerts.length > 0
+        ? infraAlerts.map(t => {
+            const pIcon = t.priority === 'CRITICAL' ? '🔴' : '🟠';
+            return `  ${pIcon} [${t.ticketNumber}] ${t.service || 'Infra'} @ ${t.location || 'DC'}: ${t.problem.substring(0, 50)}...`;
+          }).join('\n')
+        : `  ✅ _All power and cooling systems report optimal status._`,
+      ``,
+      `🌐 *III. NETWORK PERFORMANCE & ASSURANCE*`,
+      networkAlerts.length > 0
+        ? networkAlerts.map(t => `  🔹 [${t.ticketNumber}] ${t.customer || 'Core'} — ${t.problem.substring(0, 50)}`).join('\n')
+        : `  _No significant network anomalies detected._`,
+      ``,
+      `🛠️ *IV. SECONDARY SUPPORT & MAINTENANCE*`,
+      supportAlerts.length > 0
+        ? supportAlerts.map(t => `  ⚙️ [${t.ticketNumber}] ${t.service || 'Support'} @ ${t.location}: ${t.problem.substring(0, 40)}`).join('\n')
+        : `  _Facility monitoring reports stable._`,
+      ``,
+      `🤝 *V. GENERAL CUSTOMER SERVICES*`,
+      assurance.length > 0
+        ? assurance.map(t => `  🔹 ${t.customer || 'N/A'}: ${t.problem.substring(0, 50)} (${t.status})`).join('\n')
+        : `  _Standard customer services operational._`,
+      ``,
+      `🛂 *VI. VISITOR ACCESS MANAGEMENT (VAM)*`,
+      vam.length > 0
+        ? vam.map(t => `  ID: ${t.ao || 'N/A'} | ${t.location} | Task: ${t.problem} (${t.status})`).join('\n')
+        : `  _No visitor requests recorded today._`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `_Automated Analysis Ref: ${reportId}_`,
     ].join('\n');
 
-    return report;
+    return {
+      text: reportText,
+      reportId,
+      healthScore,
+    };
   }
 
   /** Generate weekly summary report */

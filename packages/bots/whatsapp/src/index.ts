@@ -266,7 +266,7 @@ async function main(): Promise<void> {
       if (new Date().getHours() !== 7) return;
       try {
         const report = await reportService.generateDailyReport();
-        await telegramNotifier.sendReportText(report);
+        await telegramNotifier.sendReportText(report.text);
       } catch (err) {
         logger.error('Scheduled daily report failed', err as Error);
       }
@@ -368,6 +368,55 @@ async function main(): Promise<void> {
         }
       } catch (err) {
         logger.error('Shift handover auto-broadcast failed', err as Error);
+      }
+    },
+  });
+
+  // ── Automated Management Report (Setelah Pergantian Shift) — check every 5 minutes ──
+  scheduler.register({
+    name: 'automated-management-report',
+    intervalMs: 5 * 60 * 1000,
+    runOnStart: false,
+    handler: async () => {
+      try {
+        const now = new Date();
+        const h = now.getHours();
+        const m = now.getMinutes();
+
+        // Target: Minutes 00-10 of shift start (07, 15, 23)
+        const isShiftStart = (h === 7 || h === 15 || h === 23) && m < 10;
+        if (!isShiftStart) return;
+
+        // Deduplicate: One report per shift transition window
+        const windowKey = `report:management:sent:${h}:${now.toISOString().split('T')[0]}`;
+        const alreadySent = await redis.set(windowKey, '1', { NX: true, EX: 3600 });
+        if (!alreadySent) return;
+
+        logger.info(`Generating automated management report for shift transition at ${h}:00...`);
+        const report = await reportService.generateDailyReport();
+        
+        // 1. WhatsApp Broadcast
+        if (notifier.isConfigured()) {
+          await notifier.broadcast(report.text);
+        }
+
+        // 2. Telegram Broadcast (Cross-platform forwarding)
+        if (telegramNotifier.isConfigured()) {
+          await telegramNotifier.sendReportText(report.text);
+        }
+
+        // Sync to Google Sheets for archival
+        if (sheetsService?.isAvailable()) {
+          await (sheetsService as any).syncManagementReport({
+            timestamp: now,
+            shift: h === 7 || h === 8 ? 'PAGI' : h === 15 || h === 16 ? 'SIANG' : 'MALAM',
+            reportId: report.reportId,
+            healthScore: report.healthScore,
+            content: report.text,
+          }).catch((err: any) => logger.error('Failed to sync management report to sheets', err));
+        }
+      } catch (err) {
+        logger.error('Automated management report failed', err as Error);
       }
     },
   });
@@ -547,10 +596,10 @@ async function main(): Promise<void> {
     },
   });
 
-  // Unassigned ticket reminder — every 5 minutes
+  // Unassigned ticket reminder — periodically checks for tickets without a handler
   scheduler.register({
     name: 'unassigned-ticket-reminder',
-    intervalMs: 5 * 60_000,
+    intervalMs: 15 * 60_000, 
     runOnStart: false,
     handler: async () => {
       if (!notifier.isConfigured()) return;
@@ -573,7 +622,9 @@ async function main(): Promise<void> {
         const alreadyReminded = await redis.get(dedupKey);
         if (alreadyReminded) continue;
 
-        await redis.set(dedupKey, '1', { EX: threshold * 60 * 2 });
+        // Long expiry to avoid continuous "re-appearing" notifications while ticket is open
+        // as per user's "tidak mau tiket muncul terus menerus"
+        await redis.set(dedupKey, '1', { EX: 86400 * 7 }); 
         toRemind.push({ ticketNumber: t.ticketNumber, title: t.title, priority: t.priority, minutesOpen });
       }
 
@@ -582,6 +633,8 @@ async function main(): Promise<void> {
       }
     },
   });
+
+
 
   // ── Health-check HTTP server ──
   const healthServer = http.createServer((_req, res) => {

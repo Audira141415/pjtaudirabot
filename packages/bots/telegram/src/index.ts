@@ -19,6 +19,7 @@ import {
   createBotServices,
   registerTicketCommands,
   setupMaintenanceScheduler,
+  ReportService,
   TelegramNotifier,
 } from '@pjtaudirabot/services';
 import { TelegramConnection } from './bot';
@@ -155,20 +156,60 @@ async function main(): Promise<void> {
     }
   }, 2 * 60_000);
 
+  const reportService = new ReportService(db, logger);
+
   // Shift handover auto-push — every 5 minutes
   setInterval(async () => {
     try {
       if (!shiftHandoverService.isHandoverTime()) return;
       if (!telegramNotifier.isConfigured()) return;
       const currentShift = shiftHandoverService.getCurrentShift();
-      const dedupeKey = `handover:auto:${currentShift.label}:${new Date().toDateString()}`;
+      const dedupeKey = `handover:auto:tg:${currentShift.label}:${new Date().toDateString()}`;
       const locked = await redis.set(dedupeKey, '1', { NX: true, EX: 3600 });
       if (!locked) return;
       const handover = await shiftHandoverService.generateHandover();
       telegramNotifier.sendReportText(handover.formattedText).catch((err) => logger.error('Handover auto-push failed', err as Error));
-      logger.info('Handover auto-push sent', { shift: currentShift.label });
+      logger.info('Handover auto-push (TG) sent', { shift: currentShift.label });
     } catch (err) {
       logger.error('Handover auto-push error', err as Error);
+    }
+  }, 5 * 60_000);
+
+  // Automated Management Report (Setelah Pergantian Shift) — every 5 minutes
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const h = now.getHours();
+      const m = now.getMinutes();
+
+      // Target: Minutes 00-10 of shift start (07, 15, 23)
+      const isShiftStart = (h === 7 || h === 15 || h === 23) && m < 10;
+      if (!isShiftStart) return;
+
+      if (!telegramNotifier.isConfigured()) return;
+
+      // Deduplicate: One report per shift transition window
+      const windowKey = `report:management:tg:sent:${h}:${now.toISOString().split('T')[0]}`;
+      const alreadySent = await redis.set(windowKey, '1', { NX: true, EX: 3600 });
+      if (!alreadySent) return;
+
+      logger.info(`Generating automated management report for TG shift transition at ${h}:00...`);
+      const report = await reportService.generateDailyReport();
+      await telegramNotifier.sendReportText(report.text);
+
+      // Sync to Google Sheets for archival
+      const sheets = (services as any).sheetsService;
+      if (sheets?.isAvailable() && typeof sheets.syncManagementReport === 'function') {
+        await (sheets as any).syncManagementReport({
+          timestamp: now,
+          shift: h === 7 || h === 8 ? 'PAGI' : h === 15 || h === 16 ? 'SIANG' : 'MALAM',
+          reportId: report.reportId,
+          healthScore: report.healthScore,
+          content: report.text,
+        }).catch((err: any) => logger.error('Failed to sync management report from TG to sheets', err));
+      }
+    } catch (err) {
+      logger.error('Automated management report (TG) failed', err as Error);
     }
   }, 5 * 60_000);
 

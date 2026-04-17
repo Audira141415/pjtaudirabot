@@ -14,6 +14,8 @@ export interface NewTicketBroadcast {
   category: string;
   problem?: string;
   alokasi?: string;
+  vlanId?: string;
+  customer?: string;
   createdByName: string;
   groupId?: string | null;
   technicalDetails?: string;
@@ -39,11 +41,14 @@ export interface TicketResolvedBroadcast {
   solution: string;
 }
 
+import { DataExtractionService } from '../data-extraction';
+
 export class TicketCreateCommand extends BaseCommandHandler {
   constructor(
     logger: ILogger,
     private ticketService: TicketService,
     private slaService: SLAService,
+    private dataExtractionService: DataExtractionService,
     private crmService?: CRMService | null,
     private sheetsService?: GoogleSheetsService | null,
     private onCreated?: (params: NewTicketBroadcast) => Promise<void>,
@@ -65,6 +70,14 @@ export class TicketCreateCommand extends BaseCommandHandler {
     const title = parts[0];
     const problem = parts[1] ?? parts[0];
 
+    // Auto-extract technical details from the input text
+    const extraction = this.dataExtractionService.extract(args);
+    const { 
+      location, customer: extractedCustomer, ao, sid, service, 
+      vlanId, vlanType, vlanName, hostnameSwitch, port, 
+      ipAddress, gateway, subnet, mode 
+    } = extraction.data;
+
     try {
       const ticket = await this.ticketService.create({
         createdById: context.user.id,
@@ -74,6 +87,11 @@ export class TicketCreateCommand extends BaseCommandHandler {
         source: context.platform === 'whatsapp' ? 'WHATSAPP' : 'TELEGRAM',
         groupId: context.groupId,
         sourceMessage: context.input,
+        // Enriched technical details
+        location,
+        customer: extractedCustomer || undefined,
+        ao, sid, service, vlanId, vlanType, vlanName,
+        hostnameSwitch, port, ipAddress, gateway, subnet, mode
       });
 
       // Start SLA tracking
@@ -81,9 +99,10 @@ export class TicketCreateCommand extends BaseCommandHandler {
 
       // Enrich with CRM Assets if possible
       let customerServices: string[] | undefined;
-      if (this.crmService && ticket.customer) {
+      const finalCustomer = ticket.customer || extractedCustomer;
+      if (this.crmService && finalCustomer) {
         try {
-          const contact = await this.crmService.findContactWithAssets(ticket.customer);
+          const contact = await this.crmService.findContactWithAssets(finalCustomer);
           if (contact && contact.assets.length > 0) {
             customerServices = contact.assets.map(a => {
               const type = a.type || 'VLAN';
@@ -108,10 +127,12 @@ export class TicketCreateCommand extends BaseCommandHandler {
           createdByName: context.user.displayName ?? context.user.phoneNumber ?? 'Unknown',
           groupId: ticket.groupId,
           customerServices,
-        }).catch(() => {});
+          customer: finalCustomer || undefined,
+          technicalDetails: args, // Provide the full context for formatting
+          alokasi: ticket.hostnameSwitch && ticket.port ? `${ticket.hostnameSwitch} / ${ticket.port}` : undefined,
+          vlanId: ticket.vlanId || undefined,
+        });
       }
-
-      // Sync to Google Sheets
       if (this.sheetsService?.isAvailable()) {
         this.sheetsService.syncTicket({
           id: ticket.id,
