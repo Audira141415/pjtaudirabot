@@ -91,6 +91,7 @@ export class WhatsAppConnection {
         this.logger.warn('WhatsApp connection closed', {
           statusCode,
           shouldReconnect,
+          error: lastDisconnect?.error,
         });
 
         if (shouldReconnect && this.reconnectCount < this.config.reconnectAttempts) {
