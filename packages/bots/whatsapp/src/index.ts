@@ -2,6 +2,10 @@ import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
 import dotenv from 'dotenv';
 import path from 'node:path';
+import dns from 'node:dns';
+
+// Force absolute IPv4 prioritization to permanently resolve Node 20 undici 'fetch failed' errors on Docker Bridge
+dns.setDefaultResultOrder('ipv4first');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
