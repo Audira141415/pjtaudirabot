@@ -1,9 +1,9 @@
 # Multi-stage build for WhatsApp bot
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 ARG NPM_REGISTRY=https://registry.npmjs.org
 
 WORKDIR /build
-RUN apk add --no-cache git openssl
+RUN apt-get update && apt-get install -y --no-install-recommends git openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
@@ -32,12 +32,12 @@ RUN pnpm --prefer-offline --filter @pjtaudirabot/bots-whatsapp deploy --prod /pr
 RUN SRC=$(find /build/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && DST=$(find /prod/whatsapp/node_modules/.pnpm -maxdepth 1 -type d -name '@prisma+client@*' | head -n 1) && cp -R "$SRC/node_modules/.prisma" "$DST/node_modules/"
 
 # Runtime stage
-FROM node:20-alpine
+FROM node:20-slim
 
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init openssl
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Copy production-ready deployment package
 COPY --from=builder /prod/whatsapp ./
