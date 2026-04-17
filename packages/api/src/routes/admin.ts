@@ -3038,7 +3038,7 @@ export async function adminRoutes(
     ctx.logger.warn('ADMIN ACTION: Hard System Reset (Redis FlushAll) initiated');
     try {
       await ctx.redis.flushAll();
-      auditLog(ctx.db, request, { action: 'system_reset', resource: 'cache', status: 'SUCCESS' });
+      auditLog(ctx.db, request, { action: 'system_reset', resource: 'cache' });
       return reply.send({ success: true, message: 'System cache cleared successfully. Services may need a few moments to warm up.' });
     } catch (err) {
       ctx.logger.error('Failed to reset system cache', err as Error);
@@ -3073,16 +3073,16 @@ export async function adminRoutes(
         ticketSync = await ticketService.syncStuckTickets();
       } catch (e) { ctx.logger.error('Ticket sync failed during global sync', e as Error); }
 
-      let maintenanceSync = { total: 0 };
+      let maintenanceSync = 0;
       try {
-        maintenanceSync = await maintenanceScheduleService.syncMaintenanceToSheets();
+        maintenanceSync = await maintenanceScheduleService.syncAllToSheets();
       } catch (e) { ctx.logger.error('Maintenance sync failed during global sync', e as Error); }
 
       auditLog(ctx.db, request, { action: 'global_sync', resource: 'sheets' });
       return reply.send({ 
         success: true, 
         message: 'Global synchronization completed.',
-        details: `Tickets: ${ticketSync.total}, Maintenance: ${maintenanceSync.total}`
+        details: `Tickets: ${ticketSync.total}, Maintenance: ${maintenanceSync}`
       });
     } catch (err) {
       ctx.logger.error('Global sync failed', err as Error);
