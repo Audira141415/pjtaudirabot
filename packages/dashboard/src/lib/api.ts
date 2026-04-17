@@ -709,4 +709,8 @@ export const api = {
   // ─── Manual Control Hub ──────────────────────────────────
   manualSync: () => request<{ success: boolean; message: string }>('/sync/all', { method: 'POST' }),
   cleanupInvalidSchedules: () => request<{ success: boolean; message: string }>('/maintenance/cleanup', { method: 'POST' }),
+  hardResetSystem: () => request<{ success: boolean; message: string }>('/system/reset', { method: 'POST' }),
+  flushSessions: () => request<{ success: boolean; message: string }>('/sessions/flush', { method: 'POST' }),
+  getClusterStats: () => request<{ date: string; metrics: any }>('/cluster/stats/daily', undefined, '/api/tickets'),
+  getNetworkMap: () => request<{ data: any[] }>('/map-status', undefined, '/api/network'),
 };

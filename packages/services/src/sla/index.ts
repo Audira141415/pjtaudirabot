@@ -315,9 +315,9 @@ export class SLAService {
       }
     }
 
-    // Find un-responded tickets
+    // Find un-responded tickets (exclude already-resolved or already-breached to avoid repeat notifications)
     const unresponded = await this.db.sLATracking.findMany({
-      where: { respondedAt: null, isPaused: false },
+      where: { respondedAt: null, resolvedAt: null, responseBreached: false, isPaused: false },
       include: { ticket: true },
     });
 
@@ -330,6 +330,7 @@ export class SLAService {
       const canAutoResolveUnassigned =
         AUTO_UNASSIGNED_ENABLED
         && t.ticket.assignedToId === null
+        && !t.responseBreached // Ensure we only auto-resolve once
         && this.isAutoUnassignedCategoryAllowed(t.ticket.category)
         && elapsedMin >= AUTO_UNASSIGNED_RESPONSE_MIN;
 

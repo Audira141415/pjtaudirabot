@@ -2772,6 +2772,21 @@ export async function adminRoutes(
             await ticketService.purgeAllTickets();
             results.push('Tickets (includes SLA & History)');
             break;
+          case 'users':
+            // Wipe all platform users except those with ADMIN role to avoid locking out the current session
+            await ctx.db.user.deleteMany({
+              where: { role: { not: 'ADMIN' } }
+            });
+            results.push('Users (excluding Admins)');
+            break;
+          case 'agents':
+            // Clear AI agent context and memory
+            await ctx.db.userMemory.deleteMany({});
+            await ctx.db.memoryEmbedding.deleteMany({});
+            await ctx.db.chatLog.deleteMany({});
+            await ctx.db.conversationSummary.deleteMany({});
+            results.push('AI Agent Context & Memories');
+            break;
           case 'maintenance':
             await ctx.db.managedFile.deleteMany({ where: { category: 'maintenance' } });
             await ctx.db.maintenanceSchedule.deleteMany({});
@@ -2795,8 +2810,10 @@ export async function adminRoutes(
             break;
           case 'logs':
             await ctx.db.auditLog.deleteMany({});
+            await ctx.db.serverLog.deleteMany({});
+            await ctx.db.moderationLog.deleteMany({});
             if (sheetsService) await (sheetsService as any).clearGenericSheet('logs');
-            results.push('Audit Logs');
+            results.push('System Logs (Audit, Server, Moderation)');
             break;
           case 'reminders':
             await ctx.db.reminder.deleteMany({});
@@ -3013,6 +3030,64 @@ export async function adminRoutes(
   app.get('/insights', async (_request: FastifyRequest, reply: FastifyReply) => {
     const data = await insightService.getPredictiveForecast();
     return reply.send({ data });
+  });
+
+  // ─── Emergency & Support Protocols ──────────────────────────
+
+  app.post('/system/reset', async (request: FastifyRequest, reply: FastifyReply) => {
+    ctx.logger.warn('ADMIN ACTION: Hard System Reset (Redis FlushAll) initiated');
+    try {
+      await ctx.redis.flushAll();
+      auditLog(ctx.db, request, { action: 'system_reset', resource: 'cache', status: 'SUCCESS' });
+      return reply.send({ success: true, message: 'System cache cleared successfully. Services may need a few moments to warm up.' });
+    } catch (err) {
+      ctx.logger.error('Failed to reset system cache', err as Error);
+      return reply.status(500).send({ error: 'Failed to clear system cache' });
+    }
+  });
+
+  app.post('/sessions/flush', async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const count = await ctx.db.session.deleteMany({
+        where: {
+          OR: [
+            { isActive: false },
+            { expiresAt: { lt: new Date() } }
+          ]
+        }
+      });
+      auditLog(ctx.db, request, { action: 'flush_sessions', resource: 'sessions', changes: { deletedCount: count.count } });
+      return reply.send({ success: true, message: `Successfully flushed ${count.count} redundant sessions.` });
+    } catch (err) {
+      ctx.logger.error('Failed to flush sessions', err as Error);
+      return reply.status(500).send({ error: 'Failed to flush sessions' });
+    }
+  });
+
+  app.post('/sync/all', async (request: FastifyRequest, reply: FastifyReply) => {
+    ctx.logger.info('ADMIN ACTION: Manual Global Sync initiated');
+    try {
+      // Trigger sync for tickets and maintenance schedules
+      let ticketSync = { total: 0 };
+      try {
+        ticketSync = await ticketService.syncStuckTickets();
+      } catch (e) { ctx.logger.error('Ticket sync failed during global sync', e as Error); }
+
+      let maintenanceSync = { total: 0 };
+      try {
+        maintenanceSync = await maintenanceScheduleService.syncMaintenanceToSheets();
+      } catch (e) { ctx.logger.error('Maintenance sync failed during global sync', e as Error); }
+
+      auditLog(ctx.db, request, { action: 'global_sync', resource: 'sheets' });
+      return reply.send({ 
+        success: true, 
+        message: 'Global synchronization completed.',
+        details: `Tickets: ${ticketSync.total}, Maintenance: ${maintenanceSync.total}`
+      });
+    } catch (err) {
+      ctx.logger.error('Global sync failed', err as Error);
+      return reply.status(500).send({ error: 'Global synchronization failed' });
+    }
   });
 
 }
