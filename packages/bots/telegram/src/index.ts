@@ -202,7 +202,7 @@ async function main(): Promise<void> {
       if (sheets?.isAvailable() && typeof sheets.syncManagementReport === 'function') {
         await (sheets as any).syncManagementReport({
           timestamp: now,
-          shift: h === 7 || h === 8 ? 'PAGI' : h === 15 || h === 16 ? 'SIANG' : 'MALAM',
+          shift: h === 7 ? 'PAGI' : h === 15 ? 'SIANG' : 'MALAM',
           reportId: report.reportId,
           healthScore: report.healthScore,
           content: report.text,

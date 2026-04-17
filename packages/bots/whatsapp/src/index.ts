@@ -409,7 +409,7 @@ async function main(): Promise<void> {
         if (sheetsService?.isAvailable()) {
           await (sheetsService as any).syncManagementReport({
             timestamp: now,
-            shift: h === 7 || h === 8 ? 'PAGI' : h === 15 || h === 16 ? 'SIANG' : 'MALAM',
+            shift: h === 7 ? 'PAGI' : h === 15 ? 'SIANG' : 'MALAM',
             reportId: report.reportId,
             healthScore: report.healthScore,
             content: report.text,
