@@ -241,7 +241,16 @@ export default function DashboardPage() {
              </div>
              <span className="text-indigo-600 dark:text-indigo-400 text-[12px] font-black uppercase tracking-[0.6em] font-mono italic underline decoration-indigo-500/20 underline-offset-8">CMD_GW: v3.0_ULTRA</span>
            </div>
-           <h1 className="text-8xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic mb-2 scale-y-110 origin-left">Master Intelligence</h1>
+           <h1 className="text-8xl font-black text-slate-950 dark:text-white tracking-tighter uppercase italic mb-2 scale-y-110 origin-left flex items-center gap-6">
+             Master Intelligence
+             <span className="inline-flex items-center gap-2 px-6 py-2 bg-amber-500 text-white rounded-full text-[14px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-amber-500/40 animate-bounce">
+               <span className="relative flex h-3 w-3">
+                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                 <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
+               </span>
+               NEW_DEPLOYMENT
+             </span>
+           </h1>
            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg mt-8 max-w-2xl leading-relaxed border-l-4 border-indigo-600 pl-8">Accessing real-time telemetry interception, neural command diagnostics, and high-fidelity predictive health matrices across distributed N-Nodes.</p>
          </div>
 

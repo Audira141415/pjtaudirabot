@@ -47,9 +47,9 @@ const sections = [
     title: 'Core System',
     items: [
       { to: '/', icon: LayoutDashboard, label: 'Control Deck' },
-      { to: '/terminal', icon: Terminal, label: 'Live Terminal' },
+      { to: '/terminal', icon: Terminal, label: 'Live Terminal', isNew: true },
       { to: '/users', icon: Users, label: 'Identity Pulse' },
-      { to: '/admin', icon: ShieldCheck, label: 'Admin Terminal' },
+      { to: '/admin', icon: ShieldCheck, label: 'Admin Terminal', isNew: true },
     ],
   },
   {
@@ -57,7 +57,7 @@ const sections = [
     items: [
       { to: '/tickets', icon: Ticket, label: 'Signal Overrides' },
       { to: '/sla', icon: Timer, label: 'Compliance Grid' },
-      { to: '/sla-matrix', icon: Scale, label: 'SLA Performance Matrix' },
+      { to: '/sla-matrix', icon: Scale, label: 'SLA Performance Matrix', isNew: true },
       { to: '/alerts', icon: Bell, label: 'Active Signals' },
       { to: '/maintenance', icon: Wrench, label: 'Temporal Cycles' },
       { to: '/tasks', icon: ListTodo, label: 'Operation Logs' },
@@ -77,8 +77,8 @@ const sections = [
     title: 'Telemetry & Intel',
     items: [
       { to: '/server', icon: Server, label: 'Compute Power' },
-      { to: '/network', icon: Network, label: 'Network Fabric' },
-      { to: '/incidents', icon: BrainCircuit, label: 'AI Predictor' },
+      { to: '/network', icon: Network, label: 'Network Fabric', isNew: true },
+      { to: '/incidents', icon: BrainCircuit, label: 'AI Predictor', isNew: true },
       { to: '/analytics', icon: BarChart3, label: 'Data Visualizer' },
       { to: '/reports', icon: FileBarChart, label: 'Audit Genesis' },
     ],
@@ -178,7 +178,7 @@ export default function Layout() {
                        to={item.to}
                        end={item.to === '/'}
                        className={({ isActive }) =>
-                         `group flex items-center gap-4 px-6 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 border-2 ${
+                         `group flex items-center gap-4 px-6 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 border-2 relative ${
                            isActive
                              ? 'bg-indigo-600 border-indigo-400 text-white shadow-2xl shadow-indigo-600/30 scale-105 z-10'
                              : 'text-slate-500 border-transparent hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-2'
@@ -189,6 +189,12 @@ export default function Layout() {
                          <>
                            <item.icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'rotate-12 scale-110' : 'group-hover:rotate-6'}`} />
                            <span className="italic">{item.label}</span>
+                           {(item as any).isNew && (
+                             <span className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[7px] font-black animate-pulse ${isActive ? 'bg-white text-indigo-600' : 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'}`}>
+                               <span className="w-1 h-1 rounded-full bg-current" />
+                               NEW
+                             </span>
+                           )}
                          </>
                        )}
                      </NavLink>
