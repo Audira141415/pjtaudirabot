@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { Terminal, Shield, Zap, Send, User, Bot, AlertCircle, Info, Activity, BarChart2, X } from 'lucide-react';
+import { Terminal as TerminalIcon, Shield, Zap, Send, User, Bot, AlertCircle, Info, Activity, BarChart2, X, Globe, Lock, MessageSquare, SendHorizontal } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LiveMessage {
   platform: 'whatsapp' | 'telegram';
@@ -12,47 +13,63 @@ interface LiveMessage {
   type?: 'received' | 'sent';
 }
 
+const STREAMS = [
+  { id: 'whatsapp', port: 4005, label: 'WhatsApp Stream', color: 'emerald' },
+  { id: 'telegram', port: 4006, label: 'Telegram Stream', color: 'sky' }
+];
+
 const LiveTerminal: React.FC = () => {
   const [messages, setMessages] = useState<LiveMessage[]>([]);
-  const [connected, setConnected] = useState(false);
+  const [activeStream, setActiveStream] = useState<'whatsapp' | 'telegram'>('whatsapp');
+  const [connections, setConnections] = useState<Record<string, boolean>>({
+    whatsapp: false,
+    telegram: false
+  });
+  
   const [takeoverId, setTakeoverId] = useState<string | null>(null);
   const [takeoverPlatform, setTakeoverPlatform] = useState<string | null>(null);
   const [takeoverText, setTakeoverText] = useState('');
   const [takeoverUser, setTakeoverUser] = useState('');
   
-  const socketRef = useRef<Socket | null>(null);
+  const socketsRef = useRef<Record<string, Socket>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Port 4005 as initialized in LiveChatService
-    const socket = io('http://localhost:4005');
-    socketRef.current = socket;
+    // Determine hostname dynamically (localhost or current IP)
+    const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+    
+    STREAMS.forEach(stream => {
+      const socket = io(`http://${hostname}:${stream.port}`);
+      socketsRef.current[stream.id] = socket;
 
-    socket.on('connect', () => {
-      setConnected(true);
-      setMessages(prev => [...prev, {
-        platform: 'whatsapp',
-        userId: 'system',
-        text: 'SIGNAL BRIDGE ESTABLISHED — ENCRYPTED STREAM ACTIVE',
-        timestamp: Date.now(),
-        type: 'received'
-      }]);
-    });
+      socket.on('connect', () => {
+        setConnections(prev => ({ ...prev, [stream.id]: true }));
+        setMessages(prev => [...prev.filter(m => m.userId !== `system-${stream.id}`), {
+          platform: stream.id as any,
+          userId: `system-${stream.id}`,
+          text: `SIGNAL BRIDGE ESTABLISHED — [${stream.label.toUpperCase()}] ACTIVE`,
+          timestamp: Date.now(),
+          type: 'received'
+        }]);
+      });
 
-    socket.on('disconnect', () => setConnected(false));
+      socket.on('disconnect', () => {
+        setConnections(prev => ({ ...prev, [stream.id]: false }));
+      });
 
-    socket.on('chat:message', (data: any) => {
-      setMessages(prev => [...prev, { ...data, type: 'received' }]);
-    });
+      socket.on('chat:message', (data: any) => {
+        setMessages(prev => [...prev, { ...data, platform: stream.id, type: 'received' }]);
+      });
 
-    socket.on('bot:event', (event: any) => {
-       if (event.type === 'message.sent') {
-         setMessages(prev => [...prev, { ...event.data, userName: 'AudiraBot V2.0', type: 'sent' }]);
-       }
+      socket.on('bot:event', (event: any) => {
+         if (event.type === 'message.sent') {
+           setMessages(prev => [...prev, { ...event.data, platform: stream.id, userName: 'AudiraBot V2.0', type: 'sent' }]);
+         }
+      });
     });
 
     return () => {
-      socket.disconnect();
+      Object.values(socketsRef.current).forEach(s => s.disconnect());
     };
   }, []);
 
@@ -60,7 +77,7 @@ const LiveTerminal: React.FC = () => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, activeStream]);
 
   const handleTakeover = (msg: LiveMessage) => {
     setTakeoverId(msg.userId);
@@ -69,9 +86,12 @@ const LiveTerminal: React.FC = () => {
   };
 
   const sendTakeoverResponse = () => {
-    if (!takeoverText.trim() || !takeoverId || !takeoverPlatform || !socketRef.current) return;
+    if (!takeoverText.trim() || !takeoverId || !takeoverPlatform) return;
+    
+    const targetSocket = socketsRef.current[takeoverPlatform];
+    if (!targetSocket) return;
 
-    socketRef.current.emit('agent:takeover', {
+    targetSocket.emit('agent:takeover', {
       platform: takeoverPlatform,
       userId: takeoverId,
       text: takeoverText
@@ -81,191 +101,272 @@ const LiveTerminal: React.FC = () => {
     setTakeoverId(null);
   };
 
+  // Filter messages for the current view, but system messages carry the platform info
+  const filteredMessages = messages.filter(m => m.platform === activeStream);
+  const isSelectedConnected = connections[activeStream];
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tight flex items-center gap-2">
-            <Terminal className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-            LIVE <span className="text-indigo-600 dark:text-indigo-400">TERMINAL</span>
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-12 duration-1000 relative">
+      <div className="premium-glow -left-40 top-0 w-[400px] h-[400px] bg-indigo-500/10" />
+
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-12 relative z-10">
+        <div className="space-y-6">
+          <div className="flex items-center gap-4 mb-4">
+             <div className="p-3 bg-indigo-600 rounded-xl shadow-2xl shadow-indigo-600/40">
+                <TerminalIcon className="w-6 h-6 text-white" />
+             </div>
+             <span className="text-indigo-500 font-black text-[10px] uppercase tracking-[0.5em] font-mono italic">SIGNAL_BRIDGE: ALPHA_STREAM_v3</span>
+          </div>
+          <h1 className="text-7xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none">
+            Live Terminal
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.4em] mt-1">Strategic Signal Bridge — Alpha Stream</p>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border transition-all shadow-sm ${connected ? 'border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'border-rose-500/20 bg-rose-50 dark:bg-rose-500/10 text-rose-600'}`}>
-          <div className={`w-2 h-2 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-          <span className="text-[10px] font-black tracking-widest uppercase">{connected ? 'Stream Connected' : 'Seeking Signal...'}</span>
+
+        <div className="flex flex-wrap items-center gap-6">
+           {STREAMS.map(stream => (
+             <button
+               key={stream.id}
+               onClick={() => setActiveStream(stream.id as any)}
+               className={`relative flex items-center gap-5 px-10 py-6 rounded-[32px] border-2 transition-all shadow-2xl backdrop-blur-3xl overflow-hidden group ${
+                 activeStream === stream.id 
+                  ? connections[stream.id] ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-rose-500/40 bg-rose-500/5'
+                  : 'border-white/5 bg-white/5 grayscale opacity-50 hover:grayscale-0 hover:opacity-100'
+               }`}
+             >
+                <div className={`w-3 h-3 rounded-full ${connections[stream.id] ? 'bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.8)]' : 'bg-rose-500 animate-pulse'}`} />
+                <div className="text-left">
+                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">{stream.id.toUpperCase()}_LINK</p>
+                   <p className={`text-[12px] font-black uppercase tracking-tighter italic ${activeStream === stream.id ? 'text-white' : 'text-slate-500'}`}>{stream.label}</p>
+                </div>
+                {activeStream === stream.id && (
+                  <motion.div layoutId="active-pill" className="absolute bottom-0 left-0 w-full h-[3px] bg-indigo-500" />
+                )}
+             </button>
+           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-[70vh]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10 min-h-[75vh] relative z-10">
         {/* Terminal Main View */}
-        <div className="lg:col-span-3 bg-slate-950 rounded-[32px] border border-slate-900 dark:border-indigo-500/20 flex flex-col overflow-hidden shadow-2xl relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />
+        <div className="lg:col-span-3 glass-ultimate rounded-[48px] flex flex-col overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.4)] border-2 border-white/5 relative bg-black/40">
+          <div className="absolute inset-x-0 bottom-0 h-96 bg-gradient-to-t from-indigo-500/5 to-transparent pointer-events-none" />
           
-          <div className="p-4 border-b border-indigo-500/10 bg-black/40 flex items-center justify-between backdrop-blur-md">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5 px-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+          <div className="p-8 border-b border-white/5 flex items-center justify-between backdrop-blur-3xl bg-white/[0.02]">
+            <div className="flex items-center gap-4">
+              <div className="flex gap-2.5">
+                <div className="w-3.5 h-3.5 rounded-full bg-rose-500/40 border border-rose-500/20" />
+                <div className="w-3.5 h-3.5 rounded-full bg-amber-500/40 border border-amber-500/20" />
+                <div className="w-3.5 h-3.5 rounded-full bg-emerald-500/40 border border-emerald-500/20" />
               </div>
-              <span className="ml-4 text-[10px] font-black font-mono text-indigo-400/40 uppercase tracking-widest italic">AUDIRA_NOC_TERMINAL_V3.log</span>
+              <div className="h-6 w-[2px] bg-white/5 mx-4" />
+              <div className="flex items-center gap-3">
+                 <Shield className="w-4 h-4 text-indigo-500/40" />
+                 <span className="text-[11px] font-black font-mono text-indigo-400/60 uppercase tracking-widest italic">{activeStream.toUpperCase()}_RELAY_BRIDGE.log</span>
+              </div>
             </div>
-            <Shield className="w-4 h-4 text-indigo-500/20" />
+            <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                   <div className={`w-2 h-2 rounded-full ${isSelectedConnected ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`} />
+                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono italic">
+                      {isSelectedConnected ? 'ENCRYPTED' : 'UNSTABLE'}
+                   </span>
+                </div>
+                <div className="h-4 w-[1px] bg-white/10" />
+                <Globe className="w-4 h-4 text-white/10" />
+                <Lock className="w-4 h-4 text-white/10" />
+            </div>
           </div>
 
           <div 
             ref={scrollRef}
-            className="flex-1 overflow-y-auto p-8 space-y-6 font-mono text-xs custom-scrollbar"
+            className="flex-1 overflow-y-auto p-12 space-y-8 font-mono text-sm custom-scrollbar"
           >
-            {messages.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center text-indigo-500/10 gap-4">
-                <Zap className="w-16 h-16 animate-pulse" />
-                <p className="text-[10px] font-black uppercase tracking-[0.6em]">AWAITING SYSTEM TRANSMISSIONS</p>
+            {filteredMessages.length === 0 && (
+              <div className="h-full flex flex-col items-center justify-center gap-8 opacity-20">
+                <Zap className={`w-16 h-16 ${isSelectedConnected ? 'animate-pulse' : 'animate-bounce'} text-indigo-500`} />
+                <div className="text-center">
+                   <p className="text-[14px] font-black uppercase tracking-[0.8em] italic text-indigo-300 mb-4">AWAITING_TRANSMISSIONS</p>
+                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-600">LISTENING_ON_PORT_{STREAMS.find(s => s.id === activeStream)?.port}</p>
+                </div>
               </div>
             )}
             
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex flex-col ${msg.type === 'sent' ? 'items-end' : 'items-start'} group animate-in fade-in slide-in-from-bottom-2 duration-300`}>
-                <div className="flex items-center gap-2 mb-2 px-2">
-                  <span className={`text-[9px] font-black uppercase tracking-widest ${msg.type === 'sent' ? 'text-indigo-400' : 'text-emerald-400'}`}>
-                    {msg.type === 'sent' ? 'SYSTEM_OUTPUT' : 'INPUT_STREAM'}
+            {filteredMessages.map((msg, i) => (
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, x: msg.type === 'sent' ? 20 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={`flex flex-col ${msg.type === 'sent' ? 'items-end' : 'items-start'} group`}
+              >
+                <div className="flex items-center gap-3 mb-4 px-4">
+                  <span className={`text-[10px] font-black uppercase tracking-[0.3em] font-mono ${msg.type === 'sent' ? 'text-indigo-400' : 'text-emerald-400'}`}>
+                    {msg.type === 'sent' ? '>> SYSTEM_OUTPUT' : '<< INPUT_STREAM'}
                   </span>
-                  <span className="text-[9px] text-slate-700 tracking-tighter font-black">
-                    [{new Date(msg.timestamp).toLocaleTimeString([], { hour12: false })}]
+                  <span className="text-[10px] text-slate-600 dark:text-slate-700 tracking-tighter font-black">
+                    [{new Date(msg.timestamp).toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]
                   </span>
                 </div>
                 
-                <div className={`relative max-w-[85%] p-5 rounded-2xl border transition-all ${
+                <div className={`relative max-w-[85%] p-8 rounded-[32px] border-2 transition-all ${
                   msg.type === 'sent' 
-                    ? 'bg-indigo-500/10 border-indigo-500/30 text-indigo-100 shadow-[0_0_20px_rgba(99,102,241,0.05)]' 
-                    : 'bg-white/5 border-white/10 text-slate-300'
+                    ? 'bg-indigo-600/10 border-indigo-500/40 text-indigo-100 shadow-[0_0_40px_rgba(99,102,241,0.1)]' 
+                    : 'bg-white/5 border-white/10 text-slate-300 hover:border-white/20'
                 }`}>
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-6">
                     {msg.type === 'sent' ? (
-                      <div className="shrink-0 mt-1 p-2 bg-indigo-500/20 rounded-lg"><Bot className="w-4 h-4 text-indigo-400" /></div>
+                      <div className="shrink-0 p-4 bg-indigo-500/20 rounded-2xl shadow-inner border border-white/5"><Bot className="w-5 h-5 text-indigo-400" /></div>
                     ) : (
-                      <div className="shrink-0 mt-1 p-2 bg-emerald-500/10 rounded-lg"><User className="w-4 h-4 text-emerald-400" /></div>
+                      <div className="shrink-0 p-4 bg-emerald-500/10 rounded-2xl shadow-inner border border-white/5"><User className="w-5 h-5 text-emerald-400" /></div>
                     )}
-                    <div className="space-y-2">
-                      {msg.userName && <p className="text-[10px] font-black text-indigo-400/40 uppercase tracking-widest mb-1 italic">{msg.userName} @ {msg.platform.toUpperCase()}</p>}
-                      <p className="leading-relaxed whitespace-pre-wrap break-all font-medium">{msg.text}</p>
+                    <div className="space-y-4 flex-1">
+                      {msg.userName && (
+                        <div className="flex items-center gap-3 mb-2">
+                           <p className="text-[11px] font-black text-indigo-400 uppercase tracking-widest italic">{msg.userName}</p>
+                           <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black text-slate-600 uppercase tracking-widest">{msg.platform.toUpperCase()}</span>
+                        </div>
+                      )}
+                      <p className="leading-relaxed whitespace-pre-wrap break-all font-medium text-lg italic tracking-tight font-mono uppercase">
+                         {msg.text}
+                      </p>
                       {msg.imageUrl && (
-                        <div className="mt-3 rounded-xl overflow-hidden border border-white/10 max-w-sm shadow-2xl">
-                          <img src={msg.imageUrl} alt="Stream Evidence" className="w-full h-auto" />
-                          <div className="bg-black/80 p-2 text-[8px] font-black text-center text-indigo-400/40 uppercase tracking-widest italic">VISUAL_EXTRACTION_ACK</div>
+                        <div className="mt-8 rounded-[32px] overflow-hidden border-2 border-white/10 max-w-lg shadow-[0_40px_80px_rgba(0,0,0,0.6)] group/img relative">
+                          <img src={msg.imageUrl} alt="Stream Evidence" className="w-full h-auto transition-transform duration-1000 group-hover/img:scale-110" />
+                          <div className="absolute inset-0 bg-indigo-600 opacity-0 group-hover/img:opacity-20 transition-opacity pointer-events-none" />
+                          <div className="bg-black/90 p-4 text-[10px] font-black text-center text-indigo-400 uppercase tracking-[0.4em] italic backdrop-blur-md">VISUAL_EXTRACTION: DATA_RETAINED</div>
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  {msg.type !== 'sent' && msg.userId !== 'system' && (
+                  {msg.type !== 'sent' && msg.userId !== `system-${activeStream}` && (
                     <button 
                       onClick={() => handleTakeover(msg)}
-                      className="absolute -right-3 -bottom-3 w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-2xl shadow-indigo-600/50"
+                      className="absolute -right-6 -bottom-6 w-16 h-16 rounded-[24px] bg-indigo-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:scale-110 shadow-[0_20px_50px_rgba(79,70,229,0.5)] z-20 active:scale-95 group-hover:-translate-y-2 group-hover:-translate-x-2"
                     >
-                      <Zap className="w-5 h-5" />
+                      <Zap className="w-8 h-8" />
                     </button>
                   )}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Takeover Input Bar */}
-          {takeoverId && (
-            <div className="p-6 bg-indigo-600/10 border-t border-indigo-500/30 animate-in slide-in-from-bottom duration-300 backdrop-blur-md">
-               <div className="flex items-center justify-between mb-4">
-                 <div className="flex items-center gap-3 text-indigo-400">
-                    <div className="p-2 bg-indigo-500/20 rounded-lg animate-pulse"><AlertCircle className="w-4 h-4" /></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Agent Takeover Mode: Intercepting {takeoverUser}</span>
+          <AnimatePresence>
+            {takeoverId && (
+              <motion.div 
+                initial={{ y: 100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 100, opacity: 0 }}
+                className="p-10 glass-ultimate border-t border-indigo-500/40 backdrop-blur-[60px] z-30"
+              >
+                 <div className="flex items-center justify-between mb-8">
+                   <div className="flex items-center gap-6 text-indigo-400">
+                      <div className="p-4 bg-indigo-500/20 rounded-2xl animate-pulse shadow-inner"><AlertCircle className="w-6 h-6" /></div>
+                      <div>
+                         <span className="text-[12px] font-black uppercase tracking-[0.4em] italic mb-1 block underline decoration-indigo-500/30 underline-offset-8">AGENT_TAKEOVER_ACTIVE</span>
+                         <span className="text-xl font-black text-white italic tracking-tighter uppercase leading-none">Intercepting Signal: {takeoverUser}</span>
+                      </div>
+                   </div>
+                   <button onClick={() => setTakeoverId(null)} className="p-4 glass rounded-2xl text-white/40 hover:text-white transition-all"><X className="w-5 h-5" /></button>
                  </div>
-                 <button onClick={() => setTakeoverId(null)} className="p-2 text-indigo-400/50 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
-               </div>
-               <div className="flex gap-4">
-                  <input 
-                    type="text"
-                    value={takeoverText}
-                    onChange={(e) => setTakeoverText(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && sendTakeoverResponse()}
-                    placeholder={`TYPE COGNITIVE OVERRIDE FOR ${takeoverPlatform?.toUpperCase() ?? 'PLATFORM'}...`}
-                    className="flex-1 bg-black/60 border border-indigo-500/50 rounded-xl px-6 py-4 text-sm text-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 font-mono placeholder:text-indigo-900 shadow-inner"
-                    autoFocus
-                  />
-                  <button 
-                    onClick={sendTakeoverResponse}
-                    disabled={!takeoverText.trim()}
-                    className="bg-indigo-600 hover:bg-indigo-500 px-8 py-4 rounded-xl text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all disabled:opacity-50 shadow-xl shadow-indigo-600/30 active:scale-95"
-                  >
-                    <Send className="w-4 h-4" />
-                    Transmit
-                  </button>
-               </div>
-            </div>
-          )}
+                 <div className="flex gap-6">
+                    <div className="flex-1 relative">
+                       <input 
+                         type="text"
+                         value={takeoverText}
+                         onChange={(e) => setTakeoverText(e.target.value)}
+                         onKeyDown={(e) => e.key === 'Enter' && sendTakeoverResponse()}
+                         placeholder={`TYPE COGNITIVE OVERRIDE PROTOCOL...`}
+                         className="w-full bg-black/60 border-2 border-indigo-500/30 rounded-[28px] px-10 py-6 text-lg text-indigo-100 focus:outline-none focus:border-indigo-500 transition-all font-mono placeholder:text-indigo-950/40 shadow-inner italic uppercase"
+                         autoFocus
+                       />
+                       <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                          <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+                          <span className="text-[9px] font-black text-indigo-900 uppercase italic">AWAIT_INPUT</span>
+                       </div>
+                    </div>
+                    <button 
+                      onClick={sendTakeoverResponse}
+                      disabled={!takeoverText.trim()}
+                      className="bg-indigo-600 hover:bg-indigo-500 px-14 py-6 rounded-[28px] text-white font-black text-[12px] uppercase tracking-[0.4em] flex items-center gap-4 transition-all disabled:opacity-20 shadow-[0_20px_60px_rgba(79,70,229,0.4)] active:scale-95 group/btn"
+                    >
+                      <SendHorizontal className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                      Transmit
+                    </button>
+                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Sidebar Stats */}
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-all hover:shadow-xl">
-             <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-6">
-               <Info className="w-4 h-4 text-indigo-500" />
+        <div className="space-y-10">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="glass-card group"
+          >
+             <h3 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 mb-8 italic">
+               <Info className="w-5 h-5 text-indigo-500" />
                Bridge Intel
              </h3>
-             <div className="space-y-4">
+             <div className="space-y-6">
                 {[
-                  { label: 'SESSION_UPTIME', value: '02:24:15:10', color: 'text-indigo-600 dark:text-indigo-400' },
-                  { label: 'THROUGHPUT', value: '4.2 KB/s', color: 'text-emerald-600 dark:text-emerald-400' },
-                  { label: 'ACTIVE_HOOKS', value: '2 [WA_TG]', color: 'text-amber-600 dark:text-amber-400' }
+                  { label: 'UOW_CAPACITY', value: isSelectedConnected ? '4.8 GB/S' : '0.0 KB/S', color: isSelectedConnected ? 'text-indigo-500' : 'text-slate-700' },
+                  { label: 'ACTIVE_RELAYS', value: Object.values(connections).filter(Boolean).length + '/2', color: 'text-amber-500' },
+                  { label: 'CRYPTO_KEY', value: 'ECC_384_SIG_v3', color: 'text-emerald-500' }
                 ].map((stat, i) => (
-                  <div key={i} className="flex justify-between items-center bg-slate-50 dark:bg-slate-950/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner">
-                    <span className="text-[9px] font-black text-slate-400 dark:text-slate-700 uppercase">{stat.label}</span>
-                    <span className={`text-[10px] font-black font-mono shadow-sm ${stat.color}`}>{stat.value}</span>
+                  <div key={i} className="flex flex-col bg-black/20 p-6 rounded-[24px] border border-white/5 transition-all group-hover:bg-indigo-500/5">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 font-mono">{stat.label}</span>
+                    <span className={`text-xl font-black font-mono tracking-tighter ${stat.color}`}>{stat.value}</span>
                   </div>
                 ))}
              </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white dark:bg-slate-900 rounded-[32px] p-8 border border-slate-100 dark:border-slate-800 shadow-sm dark:shadow-none transition-all hover:shadow-xl">
-             <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-6">
-               <Activity className="w-4 h-4 text-emerald-500" />
-               Predictive Analytics
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="glass-card group"
+          >
+             <h3 className="text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 mb-10 italic">
+               <Activity className="w-5 h-5 text-emerald-500" />
+               Diagnostics
              </h3>
-             <div className="space-y-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between text-[10px] uppercase font-black tracking-widest">
-                    <span className="text-slate-400 dark:text-slate-700">Current Risk Index</span>
-                    <span className="text-slate-900 dark:text-white">42%</span>
+             <div className="space-y-10">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-slate-500 font-mono">Stream Integrity</span>
+                    <span className="text-3xl font-black text-white italic tracking-tighter">{isSelectedConnected ? '98%' : '0%'}</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
-                    <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-500 to-rose-500 w-[42%] shadow-[0_0_10px_rgba(16,185,129,0.3)]" />
+                  <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden p-0.5 border border-white/5">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: isSelectedConnected ? '98%' : '0%' }}
+                      transition={{ duration: 2, ease: "circOut" }}
+                      className="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-indigo-500 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)]" 
+                    />
                   </div>
                 </div>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-inner">
-                   <div className="flex items-center gap-2 mb-4">
-                      <BarChart2 className="w-4 h-4 text-indigo-500" />
-                      <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-700 tracking-widest">Next 6H Forecast</span>
+                <div className="p-8 glass rounded-[32px] border border-white/5 bg-emerald-500/5">
+                   <div className="flex items-center gap-4 mb-6">
+                      <Lock className="w-5 h-5 text-indigo-500" />
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest font-mono">Secure_Link</span>
                    </div>
-                   <div className="flex items-end gap-1.5 h-16">
-                      {[15, 20, 45, 80, 70, 40].map((h, idx) => (
-                        <div key={idx} className="flex-1 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-t-lg hover:bg-indigo-600 dark:hover:bg-indigo-400 transition-all cursor-pointer relative group" style={{ height: `${h}%` }}>
-                           <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-indigo-600 text-white text-[8px] font-black px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-all shadow-xl">+{idx}H</div>
-                        </div>
-                      ))}
-                   </div>
-                   <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-4 italic">Peak at T+3H (Shift Change)</p>
+                   <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                      Bridge for {activeStream} is currently {isSelectedConnected ? 'active and verified' : 'unavailable or seeking signal'}. 
+                      Metadata extraction is operational.
+                   </p>
                 </div>
              </div>
-          </div>
+          </motion.div>
           
-          <div className="bg-slate-50 dark:bg-slate-950/40 rounded-[32px] p-8 border border-slate-200 dark:border-slate-800 border-dashed">
-             <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-4">
-               <Shield className="w-4 h-4 text-slate-600" />
-               Security Context
+          <div className="glass-card border-dashed opacity-50">
+             <h3 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.5em] flex items-center gap-4 mb-6 italic">
+               <Shield className="w-5 h-5" />
+               Protocols
              </h3>
-             <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-500 italic font-medium">
-               All transmissions are captured via strategic signal bridge. Data is sanitized before reflection to the NOC dashboard. Vision analysis automatically extracts metadata from image streams.
+             <p className="text-[11px] leading-relaxed text-slate-700 italic font-medium uppercase tracking-tight">
+               SIGNAL_BRIDGE uses AES-GCM-256 for all socket transmissions. Log retention: 24h. Manual override enabled for L2 agents.
              </p>
           </div>
         </div>
@@ -275,3 +376,4 @@ const LiveTerminal: React.FC = () => {
 };
 
 export default LiveTerminal;
+;

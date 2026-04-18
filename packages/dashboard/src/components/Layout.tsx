@@ -38,9 +38,11 @@ import {
   User,
   Power,
   Terminal,
-  Scale
+  Scale,
+  Orbit as OrbitIcon
 } from 'lucide-react';
 import { useTheme } from '../lib/ThemeProvider';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const sections = [
   {
@@ -142,22 +144,28 @@ export default function Layout() {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-indigo-500/30 font-mono`}>
+    <div className={`flex h-screen overflow-hidden ${theme === 'dark' ? 'bg-[#020617] text-slate-100' : 'bg-slate-50 text-slate-900'} selection:bg-indigo-500/30 font-mono transition-colors duration-700`}>
       {/* Ultimate Scanline Overlay (Global) */}
       <div className="scanline-overlay" />
 
       {/* Sidebar - Ultimate Aesthetic */}
-      <aside className="w-80 bg-white dark:bg-slate-950 border-r-2 border-slate-200 dark:border-white/5 flex flex-col shrink-0 relative z-50 overflow-hidden shadow-2xl">
+      <aside className="w-80 glass-ultimate border-r-2 border-slate-200 dark:border-white/5 flex flex-col shrink-0 relative z-50 overflow-hidden">
         {/* Decorative Glow */}
-        <div className="absolute -left-20 -top-20 w-64 h-64 bg-indigo-600/10 blur-[100px] pointer-events-none" />
+        <div className="absolute -left-20 -top-20 w-64 h-64 bg-indigo-600/10 blur-[100px] pointer-events-none group-hover:opacity-30 transition-opacity" />
         
         {/* Logo Section */}
-        <div className="relative px-8 py-10 flex items-center gap-4 border-b-2 border-slate-200 dark:border-white/5 bg-white/40 dark:bg-slate-950/40 backdrop-blur-xl">
-           <div className="p-3 bg-indigo-600 rounded-[20px] shadow-2xl shadow-indigo-600/40 group cursor-pointer hover:scale-110 transition-transform">
-              <Brain className="w-6 h-6 text-white group-hover:animate-pulse" />
-           </div>
+        <div className="relative px-8 py-10 flex items-center gap-4 border-b-2 border-slate-200 dark:border-white/5 backdrop-blur-3xl">
+           <motion.div 
+             whileHover={{ scale: 1.1, rotate: 180 }}
+             transition={{ duration: 0.8, ease: "anticipate" }}
+             className="p-3 bg-indigo-600 rounded-[20px] shadow-2xl shadow-indigo-600/40 group cursor-pointer"
+           >
+              <Brain className="w-6 h-6 text-white" />
+           </motion.div>
            <div>
-              <h1 className="text-2xl font-black italic tracking-tighter uppercase text-slate-950 dark:text-white leading-none">Audira<span className="text-indigo-500 underline decoration-4 underline-offset-8 decoration-indigo-400">OS</span></h1>
+              <h1 className="text-2xl font-black italic tracking-tighter uppercase text-slate-950 dark:text-white leading-none">
+                Audira<span className="text-indigo-500 underline decoration-4 underline-offset-8 decoration-indigo-400">OS</span>
+              </h1>
               <p className="text-[9px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-[0.5em] mt-3 italic">Core Neural Link</p>
            </div>
         </div>
@@ -178,19 +186,25 @@ export default function Layout() {
                        to={item.to}
                        end={item.to === '/'}
                        className={({ isActive }) =>
-                         `group flex items-center gap-4 px-6 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 border-2 relative ${
+                         `group flex items-center gap-4 px-6 py-4 rounded-[22px] text-[11px] font-black uppercase tracking-[0.2em] transition-all duration-300 border-2 relative overflow-hidden ${
                            isActive
                              ? 'bg-indigo-600 border-indigo-400 text-white shadow-2xl shadow-indigo-600/30 scale-105 z-10'
-                             : 'text-slate-500 border-transparent hover:text-slate-950 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 hover:translate-x-2'
+                             : 'text-slate-500 border-transparent hover:text-slate-950 dark:hover:text-white hover:bg-white/5 hover:translate-x-2'
                          }`
                        }
                      >
                        {({ isActive }) => (
                          <>
+                           {isActive && (
+                             <motion.div 
+                               layoutId="nav-bg"
+                               className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-20"
+                             />
+                           )}
                            <item.icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'rotate-12 scale-110' : 'group-hover:rotate-6'}`} />
-                           <span className="italic">{item.label}</span>
+                           <span className="italic relative z-10">{item.label}</span>
                            {(item as any).isNew && (
-                             <span className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[7px] font-black animate-pulse ${isActive ? 'bg-white text-indigo-600' : 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'}`}>
+                             <span className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[7px] font-black animate-pulse relative z-10 ${isActive ? 'bg-white text-indigo-600' : 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'}`}>
                                <span className="w-1 h-1 rounded-full bg-current" />
                                NEW
                              </span>
@@ -205,7 +219,7 @@ export default function Layout() {
         </nav>
 
         {/* User Footer Context */}
-        <div className="px-6 py-8 border-t-2 border-slate-200 dark:border-white/5 relative bg-white/80 dark:bg-slate-950/80 backdrop-blur-3xl">
+        <div className="px-6 py-8 border-t-2 border-slate-200 dark:border-white/5 relative bg-white/40 dark:bg-slate-950/40 backdrop-blur-3xl">
            <div className="flex items-center justify-between p-5 bg-slate-100 dark:bg-slate-900/40 rounded-[28px] border-2 border-slate-200 dark:border-white/5 group hover:border-indigo-500/40 transition-all shadow-inner">
               <div className="flex items-center gap-4">
                  <div className="w-11 h-11 bg-indigo-500/10 border-2 border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
@@ -235,7 +249,7 @@ export default function Layout() {
         <div className="absolute -right-40 -bottom-40 w-[800px] h-[800px] bg-indigo-600/5 blur-[180px] pointer-events-none" />
         
         {/* Top Intelligence Bar */}
-        <header className="h-24 bg-white/20 dark:bg-slate-950/20 backdrop-blur-3xl border-b-2 border-slate-200 dark:border-white/5 flex items-center justify-between px-12 shrink-0 relative z-40">
+        <header className="h-24 glass-ultimate border-b-2 border-slate-200 dark:border-white/5 flex items-center justify-between px-12 shrink-0 relative z-40 backdrop-blur-3xl">
            <div className="flex items-center gap-8">
               <div className="flex items-center gap-4 px-6 py-3 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border-2 border-slate-200 dark:border-white/5 shadow-inner">
                  <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
@@ -259,7 +273,7 @@ export default function Layout() {
               <div ref={bellRef} className="relative">
                 <button
                   onClick={() => setBellOpen((p) => !p)}
-                  className={`p-4 rounded-2xl border-2 transition-all active:scale-90 hover:scale-105 ${unreadCount > 0 ? 'bg-indigo-600 border-indigo-400 shadow-2xl shadow-indigo-600/40' : 'bg-slate-900/40 border-white/5 hover:bg-slate-800'}`}
+                  className={`p-4 rounded-2xl border-2 transition-all active:scale-90 hover:scale-105 ${unreadCount > 0 ? 'bg-indigo-600 border-indigo-400 shadow-2xl shadow-indigo-600/40' : 'bg-white/10 dark:bg-slate-900/40 border-slate-200 dark:border-white/5 hover:bg-white/20 dark:hover:bg-slate-800'}`}
                 >
                   <Bell className={`w-5 h-5 ${unreadCount > 0 ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'}`} />
                   {unreadCount > 0 && (
@@ -270,75 +284,82 @@ export default function Layout() {
                 </button>
 
                 {/* Ultimate Notification Dropdown */}
-                {bellOpen && (
-                  <div className="absolute right-0 top-20 w-[480px] bg-slate-950 border-2 border-white/10 rounded-[48px] shadow-[0_40px_100px_rgba(0,0,0,0.9)] z-[60] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500 perspective-1000">
-                    <div className="p-10 border-b-2 border-white/5 flex items-center justify-between bg-white/[0.03] backdrop-blur-3xl">
-                       <div className="flex items-center gap-4">
-                          <div className="p-3 bg-indigo-600 rounded-xl">
-                            <BellRing className="w-5 h-5 text-white animate-pulse" />
-                          </div>
-                          <h3 className="text-base font-black text-white italic uppercase tracking-[0.3em] font-mono">Telemetry Signals</h3>
-                       </div>
-                       <div className="flex gap-6">
-                          {unreadCount > 0 && (
-                            <button onClick={() => notificationStore.markAllRead()} className="text-[10px] font-black text-indigo-400 hover:text-white transition-colors uppercase tracking-[0.3em] underline decoration-indigo-400/50 underline-offset-8 italic">SYNCHRONIZE_ALL</button>
-                          )}
-                          <button onClick={() => notificationStore.clear()} className="p-3 bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-all rounded-xl border border-white/5"><Trash2 className="w-5 h-5" /></button>
-                       </div>
-                    </div>
+                <AnimatePresence>
+                  {bellOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                      className="absolute right-0 top-20 w-[480px] bg-slate-950 border-2 border-white/10 rounded-[48px] shadow-[0_40px_100px_rgba(0,0,0,0.9)] z-[60] overflow-hidden flex flex-col perspective-1000"
+                    >
+                      <div className="p-10 border-b-2 border-white/5 flex items-center justify-between bg-white/[0.03] backdrop-blur-3xl">
+                         <div className="flex items-center gap-4">
+                            <div className="p-3 bg-indigo-600 rounded-xl text-white">
+                              <BellRing className="w-5 h-5 animate-pulse" />
+                            </div>
+                            <h3 className="text-base font-black text-white italic uppercase tracking-[0.3em] font-mono">Telemetry Signals</h3>
+                         </div>
+                         <div className="flex gap-6">
+                            {unreadCount > 0 && (
+                              <button onClick={() => notificationStore.markAllRead()} className="text-[10px] font-black text-indigo-400 hover:text-white transition-colors uppercase tracking-[0.3em] underline decoration-indigo-400/50 underline-offset-8 italic">SYNCHRONIZE_ALL</button>
+                            )}
+                            <button onClick={() => notificationStore.clear()} className="p-3 bg-white/5 hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 transition-all rounded-xl border border-white/5"><Trash2 className="w-5 h-5" /></button>
+                         </div>
+                      </div>
 
-                    <div className="max-h-[36rem] overflow-y-auto scrollbar-hide">
-                      {notifs.length === 0 ? (
-                        <div className="py-32 text-center opacity-10 flex flex-col items-center grayscale">
-                           <Inbox className="w-20 h-20 mb-6" />
-                           <p className="text-[11px] font-black uppercase tracking-[0.5em] italic">Vacuum state: No signal anomalies</p>
-                        </div>
-                      ) : (
-                        notifs.map((n) => {
-                          const NIcon = NOTIF_ICON[n.type] ?? Info;
-                          const color = NOTIF_COLOR[n.type] ?? 'text-slate-500';
-                          return (
-                            <div
-                              key={n.id}
-                              onClick={() => notificationStore.markRead(n.id)}
-                              className={`p-10 border-b-2 border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all relative group ${!n.read ? 'bg-indigo-600/[0.03]' : ''}`}
-                            >
-                              {!n.read && <div className="absolute left-0 top-10 bottom-10 w-1.5 bg-indigo-600 rounded-r-full shadow-[0_0_15px_rgba(79,70,229,0.8)]" />}
-                              <div className="flex items-start gap-8">
-                                <div className={`p-5 rounded-2xl bg-slate-900 border-2 border-white/5 group-hover:scale-110 group-hover:rotate-6 transition-all ${color.replace('text-', 'bg-opacity-10 ')}`}>
-                                   <NIcon className={`w-6 h-6 ${color}`} />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between mb-3">
-                                    <h4 className="text-[12px] font-black text-white uppercase tracking-tighter group-hover:text-indigo-400 transition-colors">{n.title}</h4>
-                                    <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest font-mono italic">{new Date(n.timestamp).toLocaleTimeString()}</span>
+                      <div className="max-h-[36rem] overflow-y-auto scrollbar-hide">
+                        {notifs.length === 0 ? (
+                          <div className="py-32 text-center opacity-10 flex flex-col items-center grayscale">
+                             <Inbox className="w-20 h-20 mb-6" />
+                             <p className="text-[11px] font-black uppercase tracking-[0.5em] italic">Vacuum state: No signal anomalies</p>
+                          </div>
+                        ) : (
+                          notifs.map((n) => {
+                            const NIcon = NOTIF_ICON[n.type] ?? Info;
+                            const color = NOTIF_COLOR[n.type] ?? 'text-slate-500';
+                            return (
+                              <div
+                                key={n.id}
+                                onClick={() => notificationStore.markRead(n.id)}
+                                className={`p-10 border-b-2 border-white/5 hover:bg-white/[0.04] cursor-pointer transition-all relative group ${!n.read ? 'bg-indigo-600/[0.03]' : ''}`}
+                              >
+                                {!n.read && <div className="absolute left-0 top-10 bottom-10 w-1.5 bg-indigo-600 rounded-r-full shadow-[0_0_15px_rgba(79,70,229,0.8)]" />}
+                                <div className="flex items-start gap-8">
+                                  <div className={`p-5 rounded-2xl bg-slate-900 border-2 border-white/5 group-hover:scale-110 group-hover:rotate-6 transition-all ${color.replace('text-', 'bg-opacity-10 ')}`}>
+                                     <NIcon className={`w-6 h-6 ${color}`} />
                                   </div>
-                                  <p className="text-sm text-slate-400 font-medium leading-relaxed mb-6 italic group-hover:text-slate-200 transition-colors">"{n.message}"</p>
-                                  
-                                  {n.solution && (
-                                    <div className="bg-amber-600/5 border-2 border-amber-600/10 rounded-2xl p-5 flex items-start gap-4 shadow-inner">
-                                       <Wrench className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
-                                       <div className="space-y-1">
-                                          <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest italic opacity-60">Master Solution Protocol</p>
-                                          <p className="text-[11px] text-amber-400 font-bold uppercase tracking-tight leading-relaxed">{n.solution}</p>
-                                       </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-3">
+                                      <h4 className="text-[12px] font-black text-white uppercase tracking-tighter group-hover:text-indigo-400 transition-colors">{n.title}</h4>
+                                      <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest font-mono italic">{new Date(n.timestamp).toLocaleTimeString()}</span>
                                     </div>
-                                  )}
+                                    <p className="text-sm text-slate-400 font-medium leading-relaxed mb-6 italic group-hover:text-slate-200 transition-colors">"{n.message}"</p>
+                                    
+                                    {n.solution && (
+                                      <div className="bg-amber-600/5 border-2 border-amber-600/10 rounded-2xl p-5 flex items-start gap-4 shadow-inner">
+                                         <Wrench className="w-4 h-4 mt-0.5 text-amber-500 shrink-0" />
+                                         <div className="space-y-1">
+                                            <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest italic opacity-60">Master Solution Protocol</p>
+                                            <p className="text-[11px] text-amber-400 font-bold uppercase tracking-tight leading-relaxed">{n.solution}</p>
+                                         </div>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
+                            );
+                          })
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
            </div>
         </header>
 
         {/* Neural Outlet - Content Terminal */}
-        <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-slate-950' : 'bg-white'} relative perspective-2000`}>
+        <main className={`flex-1 overflow-y-auto ${theme === 'dark' ? 'bg-[#020617]' : 'bg-white'} relative perspective-2000 transition-colors duration-700`}>
            {/* Terminal Vignette Effect */}
            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_200px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_300px_rgba(0,0,0,0.4)] z-30" />
            
@@ -350,3 +371,4 @@ export default function Layout() {
     </div>
   );
 }
+

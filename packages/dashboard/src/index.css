@@ -2,19 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-50 text-slate-900;
-  margin: 0;
-  font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.03) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.03) 0px, transparent 50%);
-  background-attachment: fixed;
-  overflow-x: hidden;
+@layer base {
+  :root {
+    --accent-primary: 99, 102, 241; /* Indigo 500 */
+    --accent-secondary: 168, 85, 247; /* Purple 500 */
+    --accent-cyan: 6, 182, 212; /* Cyan 500 */
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 transition-colors duration-500;
+    margin: 0;
+    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(129, 140, 248, 0.08) 0px, transparent 50%);
+    background-attachment: fixed;
+    overflow-x: hidden;
+  }
+
+  .dark body {
+    @apply bg-[#020617] text-slate-100;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.1) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+  }
 }
 
-/* --- ULTIMATE UI 2.0 CORE ANIMATIONS --- */
+/* --- PREMIUM ANIMATIONS --- */
 
 @keyframes orbit {
   from { transform: rotate(0deg) translateX(100%) rotate(0deg); }
@@ -27,66 +43,121 @@ body {
 }
 
 @keyframes pulse-glow {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.3)); }
-  50% { filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.6)); }
+  0%, 100% { opacity: 0.5; filter: blur(40px); }
+  50% { opacity: 0.8; filter: blur(60px); }
 }
 
-/* --- ULTIMATE DESIGN SYSTEM --- */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* --- ADVANCED DESIGN COMPONENTS --- */
 
 @layer components {
   .glass {
-    @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.05)];
+    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/40 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.05)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)];
   }
   
   .glass-ultimate {
-    @apply bg-white/40 dark:bg-slate-950/40 backdrop-blur-3xl border border-white/20 dark:border-white/5 
-           shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_80px_rgba(0,0,0,0.4)]
-           ring-1 ring-white/20 dark:ring-white/5;
+    @apply bg-white/40 dark:bg-slate-950/60 backdrop-blur-[40px] border border-white/20 dark:border-white/5 
+           shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_40px_100px_rgba(0,0,0,0.5)]
+           ring-1 ring-white/20 dark:ring-white/5 transition-all duration-500;
+  }
+
+  .glass-card {
+    @apply glass-ultimate rounded-[40px] p-8 hover:ring-indigo-500/30 hover:shadow-indigo-500/10 transition-all duration-500;
   }
 
   .scanline-overlay {
-    @apply pointer-events-none fixed inset-0 z-[9999] opacity-[0.02] dark:opacity-[0.03];
-    background: linear-gradient(to bottom, transparent 50%, #000 50%);
+    @apply pointer-events-none fixed inset-0 z-[9999] opacity-[0.03] dark:opacity-[0.05];
+    background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.5) 50%);
     background-size: 100% 4px;
-    animation: scanline 20s linear infinite;
+    animation: scanline 12s linear infinite;
   }
 
-  /* Border Beam Effect */
+  .premium-glow {
+    @apply absolute -z-10 blur-[100px] opacity-10 dark:opacity-20 animate-pulse-glow;
+  }
+
+  /* Ultimate Border Beam Effect */
   .border-beam {
-    @apply absolute inset-[-2px] rounded-[inherit] pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-700;
+    @apply absolute inset-[-2px] rounded-[inherit] pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-1000;
   }
   
   .border-beam::after {
     content: '';
-    @apply absolute w-[150%] h-[150%] left-[-25%] top-[-25%];
-    background: conic-gradient(from 0deg, transparent 20%, theme('colors.indigo.500') 50%, transparent 80%);
-    animation: orbit 4s linear infinite;
+    @apply absolute w-[200%] h-[200%] left-[-50%] top-[-50%];
+    background: conic-gradient(from 0deg, 
+      transparent 0%, 
+      rgba(99, 102, 241, 0.5) 25%, 
+      transparent 50%, 
+      rgba(168, 85, 247, 0.5) 75%, 
+      transparent 100%);
+    animation: orbit 3s linear infinite;
   }
 
   .text-ultimate-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-950 via-indigo-600 to-slate-950 dark:from-white dark:via-indigo-400 dark:to-white;
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-600 dark:from-white dark:via-indigo-400 dark:to-white;
+    background-size: 200% auto;
+    animation: text-shine 5s linear infinite;
   }
 }
 
-/* Selection aesthetics */
+@keyframes text-shine {
+  to { background-position: 200% center; }
+}
+
+/* --- SCROLLBAR & SELECTION --- */
+
 ::selection {
   @apply bg-indigo-500/30 text-indigo-900 dark:text-white;
 }
 
-/* Scrollbar Refinement (Ultimate) */
-::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { @apply bg-transparent; }
 ::-webkit-scrollbar-thumb { 
-  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-2 border-transparent bg-clip-content; 
+  @apply bg-slate-200 dark:bg-slate-800 rounded-full border-2 border-transparent bg-clip-content hover:bg-indigo-500/50 transition-colors; 
 }
-::-webkit-scrollbar-thumb:hover { @apply bg-indigo-500/50; }
 
-/* Dark mode overrides */
-@layer base {
-  .dark body {
-    @apply bg-slate-950 text-slate-100;
-    background-image: 
-      radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(2, 132, 199, 0.05) 0px, transparent 50%);
-  }
+/* --- UTILITIES --- */
+
+.animate-spin-slow {
+  animation: spin-slow 12s linear infinite;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.perspective-2000 {
+  perspective: 2000px;
+}
+
+.glass-border-beam {
+  @apply relative overflow-hidden;
+}
+
+.glass-border-beam::after {
+  content: '';
+  @apply absolute bottom-0 left-[-100%] w-full h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent;
+  animation: beam-flow 3s linear infinite;
+}
+
+@keyframes beam-flow {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+.stream-pill-emerald {
+  @apply border-emerald-500/20 bg-emerald-500/5 text-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.1)];
+}
+
+.stream-pill-sky {
+  @apply border-sky-500/20 bg-sky-500/5 text-sky-500 shadow-[0_0_20px_rgba(14,165,233,0.1)];
 }

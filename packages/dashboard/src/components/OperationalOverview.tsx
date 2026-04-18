@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap } from 'lucide-react';
+import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap, Activity, Target } from 'lucide-react';
 import { PriorityBadge } from '../lib/badge-colors';
 import type { SystemHealthData, TicketOverviewData } from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SlaTrackingItem {
   id: string;
@@ -98,17 +99,21 @@ function severityClass(severity?: string): string {
     case 'WARNING':
       return 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
     default:
-      return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-400 border border-slate-200 dark:border-slate-700';
+      return 'bg-slate-100 dark:bg-slate-900/60 text-slate-700 dark:text-slate-500 border border-slate-200 dark:border-white/10';
   }
 }
 
 
-function Metric({ label, value, tone }: { label: string; value: string | number; tone: string }) {
+function Metric({ label, value, tone, icon: Icon }: { label: string; value: string | number; tone: string; icon?: any }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${tone} dark:bg-slate-900/40 dark:border-white/5`}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 dark:text-white">{value}</p>
-    </div>
+    <motion.div 
+      whileHover={{ y: -5 }}
+      className={`rounded-[32px] border-2 p-6 shadow-inner ${tone} dark:bg-black/20 dark:border-white/5 relative overflow-hidden group`}
+    >
+       {Icon && <Icon className="absolute right-[-10px] bottom-[-10px] w-20 h-20 opacity-[0.03] group-hover:opacity-10 transition-opacity" />}
+       <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-600 mb-2 font-mono italic">{label}</p>
+       <p className="text-4xl font-black tracking-tighter text-slate-950 dark:text-white italic leading-none">{value}</p>
+    </motion.div>
   );
 }
 
@@ -135,80 +140,92 @@ export default function OperationalOverview({
     .slice(0, 3);
 
   return (
-    <section className="mt-8 space-y-6">
-      <div className="flex flex-col gap-4 border-b border-slate-200 dark:border-white/5 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="flex items-center gap-3 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            <ShieldCheck className="w-7 h-7 text-indigo-600" />
-            Operational Command
-          </h2>
-          <p className="mt-1 text-slate-500">Real-time oversight of SLA, incident pressure, and system readiness.</p>
+    <section className="space-y-12 relative z-10">
+      <div className="flex flex-col gap-6 border-b-8 border-dotted border-slate-200 dark:border-white/5 pb-10 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-center gap-8">
+           <div className="p-8 glass-ultimate rounded-[40px] text-indigo-500 shadow-2xl relative">
+              <div className="absolute inset-0 animate-ping bg-indigo-500 rounded-[40px] opacity-10" />
+              <ShieldCheck className="w-12 h-12" />
+           </div>
+           <div>
+              <h2 className="text-6xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter leading-none mb-4">
+                Operations Center
+              </h2>
+              <div className="flex items-center gap-6 text-[11px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-[0.5em] font-mono italic">
+                 <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                 STRATEGIC_COMMAND_OVERRIDE_ACTIVE
+              </div>
+           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {['SLA Monitor', 'Alerts', 'Incidents'].map((label) => (
+        <div className="flex flex-wrap gap-4">
+          {['SLA', 'ALERTS', 'INCIDENTS'].map((label) => (
             <Link 
               key={label}
-              to={`/${label.toLowerCase().split(' ')[0]}`} 
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/40 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-slate-300 dark:hover:border-white/20 hover:-translate-y-0.5"
+              to={`/${label.toLowerCase()}`} 
+              className="px-8 py-4 glass rounded-2xl text-[11px] font-black uppercase tracking-[0.4em] font-mono italic hover:bg-indigo-600 hover:text-white transition-all shadow-xl active:scale-95"
             >
-              <ArrowUpRight className="w-4 h-4 text-slate-400" /> {label}
+              RUN {label}_INTERROGATE
             </Link>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
         {/* Left Column: SLA & Backlog (Large Bento) */}
-        <article className="lg:col-span-7 flex flex-col rounded-[32px] border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-950/40 p-7 shadow-sm dark:shadow-none">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                <ShieldAlert className="w-5 h-5" />
+        <article className="lg:col-span-7 glass-card p-10 overflow-hidden relative">
+          <div className="absolute right-[-50px] top-[-50px] opacity-[0.02] rotate-12">
+             <ShieldAlert className="w-[300px] h-[300px]" />
+          </div>
+          
+          <div className="flex items-start justify-between relative z-10">
+            <div className="flex items-center gap-6">
+              <div className="p-6 rounded-[24px] bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-inner">
+                <ShieldAlert className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">SLA & Backlog Pressure</h3>
-                <p className="text-sm text-slate-500">Managing {ticketOverview?.openTickets ?? 0} active tickets</p>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">SLA Precision Tracking</h3>
+                <p className="text-sm font-black text-slate-400 dark:text-slate-700 uppercase tracking-widest mt-1 font-mono italic">Managing {ticketOverview?.openTickets ?? 0} active signals</p>
               </div>
             </div>
             <div className="flex flex-col items-end">
-              <span className={`px-3 py-1 rounded-full text-xs font-bold ring-1 ${
-                (sla?.complianceRate ?? 0) > 90 ? 'bg-emerald-50 text-emerald-700 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-amber-100'
+              <span className={`px-6 py-3 rounded-full text-[11px] font-black uppercase tracking-widest italic border-2 ${
+                (sla?.complianceRate ?? 0) > 90 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
               }`}>
-                {sla?.complianceRate ?? 100}% Compliance
+                {sla?.complianceRate ?? 100}% Compliance_Rating
               </span>
             </div>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Metric label="Open Tickets" value={ticketOverview?.openTickets ?? 0} tone="bg-slate-50/50 border-slate-100" />
-            <Metric label="Response" value={sla?.responseBreaches ?? 0} tone="bg-amber-50/30 border-amber-100/50" />
-            <Metric label="Resolution" value={sla?.resolutionBreaches ?? 0} tone="bg-rose-50/30 border-rose-100/50" />
-            <Metric label="Tracked" value={sla?.totalTracked ?? 0} tone="bg-slate-50/50 border-slate-100" />
+          <div className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-4 relative z-10">
+            <Metric label="OPEN_SIGNAL" value={ticketOverview?.openTickets ?? 0} tone="text-indigo-500" icon={Activity} />
+            <Metric label="RESP_BREACH" value={sla?.responseBreaches ?? 0} tone="text-amber-500" icon={AlertCircle} />
+            <Metric label="RESL_BREACH" value={sla?.resolutionBreaches ?? 0} tone="text-rose-500" icon={ShieldAlert} />
+            <Metric label="TOTAL_WATCH" value={sla?.totalTracked ?? 0} tone="text-indigo-500" icon={Target} />
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <Zap className="w-3.5 h-3.5" /> Priority Mix
+          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 relative z-10">
+            <div className="space-y-6">
+              <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 dark:text-slate-700 flex items-center gap-4 italic font-mono">
+                <div className="h-0.5 w-6 bg-indigo-500" /> Priority Mix
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {topPriorities.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-5 rounded-[24px] bg-black/10 dark:bg-slate-950/60 border border-white/5 transition-all hover:bg-indigo-600/10 hover:border-indigo-500/20">
+                    <span className="text-xs font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest font-mono italic">{item.name}</span>
+                    <span className="text-lg font-black text-slate-900 dark:text-white font-mono italic">{item.value}</span>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="space-y-4 text-sm font-semibold text-slate-700">
-               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                <Ticket className="w-3.5 h-3.5" /> Category Mix
+            <div className="space-y-6">
+               <h4 className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 dark:text-slate-700 flex items-center gap-4 italic font-mono">
+                <div className="h-0.5 w-6 bg-indigo-500" /> Category Breakdown
               </h4>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {topCategories.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-900 border border-slate-100 dark:border-white/5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <span className="text-sm font-medium text-slate-600 dark:text-slate-400 truncate">{item.name}</span>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">{item.value}</span>
+                  <div key={item.name} className="flex items-center justify-between p-5 rounded-[24px] bg-black/10 dark:bg-slate-950/60 border border-white/5 transition-all hover:bg-indigo-600/10 hover:border-indigo-500/20">
+                    <span className="text-xs font-black text-slate-500 dark:text-slate-600 uppercase tracking-widest font-mono italic truncate max-w-[120px]">{item.name}</span>
+                    <span className="text-lg font-black text-slate-900 dark:text-white font-mono italic">{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -216,146 +233,182 @@ export default function OperationalOverview({
           </div>
 
           {/* Urgent SLA Items */}
-          <div className="mt-8 pt-7 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-4 text-xs font-bold uppercase tracking-widest text-slate-400">
-              <span className="flex items-center gap-2">
-                <Clock3 className="w-3.5 h-3.5" /> Fast Track (SLA Near Breach)
+          <div className="mt-12 pt-10 border-t-4 border-dotted border-white/5 relative z-10">
+            <div className="flex items-center justify-between mb-8">
+              <span className="text-[11px] font-black uppercase tracking-[0.5em] text-slate-500 dark:text-slate-700 flex items-center gap-4 italic font-mono">
+                <Clock3 className="w-5 h-5 text-indigo-500" /> Critical_SLA_Dungeons
               </span>
               <button 
                 onClick={() => setSlaItemsExpanded(!slaItemsExpanded)}
-                className="text-indigo-600 hover:text-indigo-700"
+                className="px-6 py-2 glass rounded-xl text-[10px] font-black uppercase tracking-widest italic"
               >
-                {slaItemsExpanded ? 'Hide' : 'Show'}
+                {slaItemsExpanded ? 'FOLD_PROTOCOL' : 'EXPAND_VIEW'}
               </button>
             </div>
-            {slaItemsExpanded && (
-              <div className="grid grid-cols-1 gap-3">
-                {urgentSla.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-900/40 shadow-sm transition-all hover:shadow-md hover:border-slate-200 dark:hover:border-white/10">
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col">
-                        <span className="font-mono text-[11px] font-bold text-indigo-600 dark:text-indigo-400 underline decoration-indigo-200 dark:decoration-indigo-900">{item.ticket?.ticketNumber ?? '-'}</span>
-                        <span className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-0.5">{item.ticket?.customer ?? 'N/A'}</span>
+            
+            <AnimatePresence>
+              {slaItemsExpanded && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="grid grid-cols-1 gap-4 overflow-hidden"
+                >
+                  {urgentSla.map((item) => (
+                    <motion.div 
+                      key={item.id} 
+                      whileHover={{ x: 5 }}
+                      className="flex items-center justify-between p-6 rounded-[32px] border-2 border-white/5 bg-black/20 backdrop-blur-3xl transition-all hover:bg-indigo-600/5 hover:border-indigo-500/20 group"
+                    >
+                      <div className="flex items-center gap-8">
+                        <div className="flex flex-col">
+                          <span className="font-mono text-lg font-black text-indigo-500 italic tracking-tighter uppercase">{item.ticket?.ticketNumber ?? '-'}</span>
+                          <span className="text-sm font-black text-slate-600 dark:text-slate-400 mt-1 uppercase tracking-widest font-mono italic">{item.ticket?.customer ?? 'UNIDENTIFIED_ENTITY'}</span>
+                        </div>
+                        <PriorityBadge priority={item.ticket?.priority ?? 'MEDIUM'} />
                       </div>
-                      <PriorityBadge priority={item.ticket?.priority ?? 'MEDIUM'} />
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${item.responseBreached || item.resolutionBreached ? 'text-rose-600 dark:text-rose-500' : 'text-emerald-600 dark:text-emerald-500'}`}>
-                        {formatHoursLeft(item.resolutionDeadline)}
-                      </p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium">{formatDate(item.resolutionDeadline)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                      <div className="text-right">
+                        <p className={`text-2xl font-black italic tracking-tighter leading-none ${item.responseBreached || item.resolutionBreached ? 'text-rose-500' : 'text-emerald-500 px-4 py-2 bg-emerald-500/10 rounded-xl'}`}>
+                          {formatHoursLeft(item.resolutionDeadline).toUpperCase()}
+                        </p>
+                        <p className="text-[10px] text-slate-600 dark:text-slate-700 mt-3 font-black uppercase tracking-widest font-mono italic">{formatDate(item.resolutionDeadline)}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </article>
 
         {/* Right Column: Alerts & Response (Incidents/Escalations) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
-          <article className="flex flex-col rounded-[32px] border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-950 p-7 text-slate-900 dark:text-white shadow-sm dark:shadow-none">
-             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 ring-1 ring-rose-100 dark:ring-rose-500/30 shadow-sm dark:shadow-none">
-                  <Bell className="w-5 h-5" />
+        <div className="lg:col-span-5 flex flex-col gap-10">
+          <article className="glass-card p-10 relative overflow-hidden">
+             <div className="premium-glow -right-20 top-0 w-64 h-64 bg-rose-600/10" />
+             <div className="flex items-start justify-between relative z-10">
+              <div className="flex items-center gap-6">
+                <div className="p-6 rounded-[24px] bg-rose-500/10 text-rose-500 border border-rose-500/20 shadow-[0_0_30px_rgba(225,29,72,0.2)] relative">
+                  <div className="absolute inset-0 animate-ping bg-rose-500 rounded-[24px] opacity-10" />
+                  <Bell className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Signal Response</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{activeAlerts.length} Attention Required</p>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Anomaly Response</h3>
+                  <p className="text-sm font-black text-slate-400 dark:text-slate-700 uppercase tracking-widest mt-1 font-mono italic">{activeAlerts.length} Neural Disruptions</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-4">
-              <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-4 transition-colors hover:bg-slate-100 dark:hover:bg-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Incidents</p>
-                <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{openIncidents.length}</p>
+            <div className="mt-12 grid grid-cols-2 gap-6 relative z-10">
+              <div className="rounded-[28px] glass p-6 border-2 border-white/5 transition-all hover:border-rose-500/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-600 mb-2 font-mono italic">ACTIVE_INCIDENTS</p>
+                <p className="text-5xl font-black text-slate-900 dark:text-white italic tracking-tighter leading-none">{openIncidents.length}</p>
               </div>
-              <div className="rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-4 transition-colors hover:bg-slate-100 dark:hover:bg-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Escalations</p>
-                <p className="mt-2 text-3xl font-bold text-rose-600 dark:text-rose-500">{openEscalations.length}</p>
+              <div className="rounded-[28px] glass p-6 border-2 border-white/5 transition-all hover:border-rose-500/20">
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 dark:text-slate-600 mb-2 font-mono italic">ESCALATIONS</p>
+                <p className="text-5xl font-black text-rose-500 italic tracking-tighter leading-none">{openEscalations.length}</p>
               </div>
             </div>
 
             {/* Signal Feed (Incidents & Alerts Combined) */}
-            <div className="mt-6 space-y-3">
+            <div className="mt-10 space-y-4 relative z-10">
                {openIncidents.slice(0, 1).map((incident) => (
-                  <div key={incident.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 relative overflow-hidden group transition-all hover:bg-slate-100 dark:hover:bg-white/10">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded ${severityClass(incident.severity)}`}>
-                         INCIDENT: {incident.severity}
+                  <motion.div 
+                    key={incident.id} 
+                    whileHover={{ scale: 1.02 }}
+                    className="p-8 rounded-[36px] bg-rose-600/10 border-4 border-rose-500/20 relative overflow-hidden group transition-all"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                       <ShieldAlert className="w-20 h-20 text-rose-500" />
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                       <span className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full ring-2 ring-rose-500/30 ${severityClass(incident.severity)}`}>
+                         ANOMALY: {incident.severity}
                        </span>
                     </div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{incident.title}</p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{incident.description ?? 'Active incident tracking'}</p>
-                  </div>
+                    <p className="text-xl font-black text-slate-900 dark:text-white italic tracking-tighter leading-tight mb-2 uppercase">{incident.title}</p>
+                    <p className="text-[11px] font-black text-rose-500/70 uppercase tracking-widest font-mono italic">{incident.description ?? 'ACTIVE_INCIDENT_INTERROGATION_REQUIRED'}</p>
+                  </motion.div>
                ))}
                {activeAlerts.slice(0, 1).map((alert) => (
-                  <div key={alert.id} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 relative overflow-hidden transition-all hover:bg-slate-100 dark:hover:bg-white/10">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
-                    <div className="flex items-center justify-between mb-2">
-                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400`}>
-                         ALERT: {alert.severity}
+                  <motion.div 
+                    key={alert.id} 
+                    whileHover={{ scale: 1.02 }}
+                    className="p-8 rounded-[36px] bg-amber-600/10 border-4 border-amber-500/20 relative overflow-hidden transition-all group"
+                  >
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                       <Bell className="w-20 h-20 text-amber-500" />
+                    </div>
+                    <div className="flex items-center justify-between mb-4">
+                       <span className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full ring-2 ring-amber-500/30 bg-amber-500/20 text-amber-500`}>
+                         THREAT_SYNC: {alert.severity}
                        </span>
                     </div>
-                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{alert.title}</p>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{alert.message ?? alert.rule?.name}</p>
-                  </div>
+                    <p className="text-xl font-black text-slate-900 dark:text-white italic tracking-tighter leading-tight mb-2 uppercase">{alert.title}</p>
+                    <p className="text-[11px] font-black text-amber-500/70 uppercase tracking-widest font-mono italic font-mono">{alert.message ?? alert.rule?.name}</p>
+                  </motion.div>
                ))}
             </div>
-            <button className="mt-6 w-full py-3 rounded-2xl bg-indigo-600 font-bold text-sm tracking-wide transition-all hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/30">
-              Open Signal Matrix
+            <button className="mt-10 w-full py-6 rounded-[28px] bg-indigo-600 text-white font-black text-[12px] uppercase tracking-[0.5em] italic transition-all hover:bg-indigo-500 shadow-2xl shadow-indigo-600/40 active:scale-95">
+              INITIATE_SIGNAL_MATRIX_DIVE
             </button>
           </article>
 
           {/* Bot Connectivity detail (Compact) */}
-          <article className="flex-1 rounded-[32px] border border-slate-200 dark:border-white/5 bg-white dark:bg-slate-950/40 p-7 shadow-sm dark:shadow-none">
-             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                    <Bot className="w-5 h-5" />
+          <article className="glass-card p-10">
+             <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center gap-6">
+                  <div className="p-6 rounded-[24px] bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                    <Bot className="w-8 h-8" />
                   </div>
-                  <h3 className="font-bold text-slate-900 dark:text-white tracking-tight">Bot Connectivity</h3>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">Nodal Pulse</h3>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-700 uppercase tracking-widest mt-1 font-mono italic">Distributed Neural Entities</p>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-full">
-                  {readyBots}/{botComponents.length} Active
+                <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 border-2 border-emerald-500/20 px-6 py-3 rounded-full uppercase tracking-widest italic shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                  {readyBots}/{botComponents.length} SYNCED
                 </span>
              </div>
 
-             <div className="space-y-4 text-sm font-semibold text-slate-700">
+             <div className="grid grid-cols-1 gap-6">
                 {botComponents.map((component) => (
-                  <div key={component.name} className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 transition-all hover:bg-white hover:shadow-md">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-bold text-slate-800">{component.name}</span>
-                      <div className="flex items-center gap-2">
-                         <div className={`w-2 h-2 rounded-full ${component.status === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                         <span className="text-[10px] font-black uppercase text-slate-400">{component.status}</span>
+                  <motion.div 
+                    key={component.name} 
+                    whileHover={{ x: 5 }}
+                    className="p-6 rounded-[32px] glass-ultimate border-2 border-white/5 transition-all hover:border-indigo-500/20 group"
+                  >
+                    <div className="flex items-center justify-between mb-6">
+                      <span className="text-lg font-black text-slate-900 dark:text-white italic tracking-tighter uppercase">{component.name}</span>
+                      <div className="flex items-center gap-4">
+                         <div className={`w-3 h-3 rounded-full ${component.status === 'online' ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.8)] animate-pulse' : 'bg-rose-500 shadow-[0_0_15px_rgba(225,29,72,0.8)]'}`} />
+                         <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-700 tracking-widest font-mono italic">{component.status}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-6">
-                       <div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400">Latency</p>
-                         <p className="font-bold text-slate-700">{component.latency ?? '-'}ms</p>
+                    <div className="flex items-center gap-10">
+                       <div className="flex flex-col">
+                         <p className="text-[9px] uppercase font-black text-slate-500 dark:text-slate-700 tracking-widest mb-1 italic">LATENCY</p>
+                         <p className="text-xl font-black text-slate-900 dark:text-white font-mono italic leading-none">{component.latency ?? '-'}MS</p>
                        </div>
-                       <div>
-                         <p className="text-[10px] uppercase font-bold text-slate-400">Status</p>
-                         <p className={`font-bold ${component.meta?.ready ? 'text-emerald-600' : 'text-rose-500'}`}>
-                           {component.meta?.ready ? 'Ready' : 'Issues'}
+                       <div className="flex flex-col">
+                         <p className="text-[9px] uppercase font-black text-slate-500 dark:text-slate-700 tracking-widest mb-1 italic">READY_STATE</p>
+                         <p className={`text-xl font-black italic leading-none ${component.meta?.ready ? 'text-emerald-500' : 'text-rose-500'}`}>
+                           {component.meta?.ready ? 'CONNECTED' : 'STALLED'}
                          </p>
                        </div>
-                       <Link to="/status" className="ml-auto p-1.5 rounded-lg bg-slate-200/50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 transition-colors">
-                          <ArrowUpRight className="w-4 h-4" />
+                       <Link to="/status" className="ml-auto p-4 rounded-2xl glass hover:text-indigo-500 transition-all active:scale-95">
+                          <ArrowUpRight className="w-5 h-5" />
                        </Link>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
              </div>
           </article>
         </div>
       </div>
     </section>
+
+  );
+}
 
   );
 }
