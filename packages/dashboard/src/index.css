@@ -82,7 +82,8 @@
   }
 
   .premium-glow {
-    @apply absolute -z-10 blur-[100px] opacity-10 dark:opacity-20 animate-pulse-glow;
+    @apply absolute -z-10 blur-[100px] opacity-10 dark:opacity-20;
+    animation: pulse-glow 4s ease-in-out infinite;
   }
 
   /* Ultimate Border Beam Effect */
