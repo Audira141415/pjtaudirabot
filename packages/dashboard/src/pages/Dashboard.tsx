@@ -408,7 +408,7 @@ export default function DashboardPage() {
                       border: '1px solid rgba(255,255,255,0.1)', 
                       borderRadius: '24px', 
                       padding: '20px',
-                      backdropBlur: '12px'
+                      backdropFilter: 'blur(12px)'
                     }} 
                   />
                   <Bar dataKey="totalCommands" fill="#a855f7" radius={[12, 12, 0, 0]} animationDuration={2000} />

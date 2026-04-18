@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap, Activity, Target } from 'lucide-react';
+import { ArrowUpRight, Bell, Bot, Clock3, ShieldAlert, ShieldCheck, Ticket, Zap, Activity, Target, AlertCircle } from 'lucide-react';
 import { PriorityBadge } from '../lib/badge-colors';
 import type { SystemHealthData, TicketOverviewData } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
