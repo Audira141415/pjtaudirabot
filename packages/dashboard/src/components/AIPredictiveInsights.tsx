@@ -114,7 +114,3 @@ const AIPredictiveInsights: React.FC = () => {
 };
 
 export default AIPredictiveInsights;
-  );
-};
-
-export default AIPredictiveInsights;

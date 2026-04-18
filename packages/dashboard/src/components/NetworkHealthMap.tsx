@@ -240,7 +240,3 @@ const NetworkHealthMap: React.FC = () => {
 };
 
 export default NetworkHealthMap;
-  );
-};
-
-export default NetworkHealthMap;

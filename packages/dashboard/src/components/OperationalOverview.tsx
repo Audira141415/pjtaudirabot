@@ -409,6 +409,3 @@ export default function OperationalOverview({
 
   );
 }
-
-  );
-}
