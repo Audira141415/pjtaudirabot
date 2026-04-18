@@ -358,7 +358,7 @@ export default function DashboardPage() {
                       border: '1px solid rgba(255,255,255,0.1)', 
                       borderRadius: '24px', 
                       padding: '20px', 
-                      backdropBlur: '12px',
+                      backdropFilter: 'blur(12px)',
                       boxShadow: '0 30px 60px rgba(0,0,0,0.6)' 
                     }} 
                   />
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                         border: '1px solid rgba(255,255,255,0.1)', 
                         borderRadius: '24px', 
                         padding: '20px',
-                        backdropBlur: '12px'
+                        backdropFilter: 'blur(12px)'
                       }} 
                     />
                     <Line type="monotone" dataKey="created" stroke="#6366f1" strokeWidth={8} dot={false} animationDuration={3000} strokeLinecap="round" />
