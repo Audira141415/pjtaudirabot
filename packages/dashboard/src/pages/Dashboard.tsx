@@ -1,3 +1,12 @@
+/**
+ * @file Dashboard.tsx
+ * @purpose Master Intelligence Dashboard untuk visualisasi real-time telemetry dan stats bot.
+ * @caller Dashboard UI (/)
+ * @dependencies api.ts (Backend Bridge), framer-motion, lucide-react, recharts
+ * @functions loadData, loadHealth, checkHealthChanges, sendBrowserNotification
+ * @side_effects Real-time telemetry monitoring, browser push notifications, health alerts.
+ */
+
 import { useEffect, useState, useRef } from 'react';
 import { api, TicketOverviewData, SystemHealthData } from '../lib/api';
 import { toast } from '../components/Toast';

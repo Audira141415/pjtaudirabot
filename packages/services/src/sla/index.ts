@@ -1,3 +1,12 @@
+/**
+ * @file sla/index.ts
+ * @purpose Service untuk manajemen Service Level Agreement (SLA) tiket support.
+ * @caller TicketController, SLA Cron Job
+ * @dependencies PrismaClient, SheetsService, Redis (for dedupe), ILogger
+ * @functions startTracking, markResponded, markResolved, checkAll, checkCountdown
+ * @side_effects Database read/write (SLA tracking, history), GSheets sync, Redis I/O.
+ */
+
 import { PrismaClient, Prisma, TicketPriority, TicketCategory } from '@prisma/client';
 import { RedisClientType } from 'redis';
 import { ILogger } from '@pjtaudirabot/core';
@@ -273,45 +282,47 @@ export class SLAService {
         include: { ticket: true },
       });
 
-      for (const t of toReopen) {
+      if (toReopen.length > 0) {
+        await this.db.$transaction(async (tx) => {
+          for (const t of toReopen) {
+            await tx.ticket.update({
+              where: { id: t.ticket.id },
+              data: {
+                status: 'OPEN',
+                solution: `Dibuka kembali otomatis oleh sistem setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena tiket belum diambil.`,
+                resolvedAt: null,
+              },
+            });
 
+            await tx.ticketHistory.create({
+              data: {
+                ticketId: t.ticket.id,
+                action: 'auto_reopened_unassigned_timeout',
+                field: 'status',
+                oldValue: 'RESOLVED',
+                newValue: 'OPEN',
+                note: `♻️ Ticket dimunculkan kembali otomatis setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena masih belum ada yang mengambil tiket.`,
+              },
+            });
 
-        await this.db.ticket.update({
-          where: { id: t.ticket.id },
-          data: {
-            status: 'OPEN',
-            solution: `Dibuka kembali otomatis oleh sistem setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena tiket belum diambil.`,
-            resolvedAt: null,
-          },
+            await tx.sLATracking.update({
+              where: { id: t.id },
+              data: {
+                responseTargetMin: AUTO_UNASSIGNED_RESPONSE_MIN,
+                responseBreached: false,
+                responseWarned: false,
+                responseDeadline: new Date(now.getTime() + AUTO_UNASSIGNED_RESPONSE_MIN * 60_000),
+                resolutionBreached: false,
+                resolutionWarned: false,
+                resolutionDeadline: new Date(now.getTime() + t.resolutionTargetMin * 60_000),
+                resolvedAt: null,
+                resolutionTimeMin: null,
+              },
+            });
+
+            warnings.push(`♻️ Ticket ${t.ticket.ticketNumber} dimunculkan kembali otomatis karena belum ada yang mengambil.`);
+          }
         });
-
-        await this.db.ticketHistory.create({
-          data: {
-            ticketId: t.ticket.id,
-            action: 'auto_reopened_unassigned_timeout',
-            field: 'status',
-            oldValue: 'RESOLVED',
-            newValue: 'OPEN',
-            note: `♻️ Ticket dimunculkan kembali otomatis setelah ${AUTO_UNASSIGNED_REOPEN_MIN} menit karena masih belum ada yang mengambil tiket.`,
-          },
-        });
-
-        await this.db.sLATracking.update({
-          where: { id: t.id },
-          data: {
-            responseTargetMin: AUTO_UNASSIGNED_RESPONSE_MIN,
-            responseBreached: false,
-            responseWarned: false,
-            responseDeadline: new Date(now.getTime() + AUTO_UNASSIGNED_RESPONSE_MIN * 60_000),
-            resolutionBreached: false,
-            resolutionWarned: false,
-            resolutionDeadline: new Date(now.getTime() + t.resolutionTargetMin * 60_000),
-            resolvedAt: null,
-            resolutionTimeMin: null,
-          },
-        });
-
-        warnings.push(`♻️ Ticket ${t.ticket.ticketNumber} dimunculkan kembali otomatis karena belum ada yang mengambil.`);
       }
     }
 
@@ -335,7 +346,8 @@ export class SLAService {
         && elapsedMin >= AUTO_UNASSIGNED_RESPONSE_MIN;
 
       if (canAutoResolveUnassigned) {
-          await this.db.ticket.update({
+        await this.db.$transaction(async (tx) => {
+          await tx.ticket.update({
             where: { id: t.ticket.id },
             data: {
               status: 'RESOLVED',
@@ -345,7 +357,7 @@ export class SLAService {
             },
           });
 
-          await this.db.ticketHistory.create({
+          await tx.ticketHistory.create({
             data: {
               ticketId: t.ticket.id,
               action: 'auto_resolved_unassigned_timeout',
@@ -356,7 +368,7 @@ export class SLAService {
             },
           });
 
-          const updatedSLA = await this.db.sLATracking.update({
+          const updatedSLA = await tx.sLATracking.update({
             where: { id: t.id },
             data: {
               responseBreached: true,
@@ -370,8 +382,9 @@ export class SLAService {
           if (this.sheetsService?.isAvailable()) {
             this.syncSLAData(updatedSLA);
           }
+        });
 
-          breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ auto-resolved sistem (akan dimunculkan lagi ${AUTO_UNASSIGNED_REOPEN_MIN}m).`);
+        breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ auto-resolved sistem (akan dimunculkan lagi ${AUTO_UNASSIGNED_REOPEN_MIN}m).`);
       } else if (remaining <= 0 && !t.responseBreached) {
         // Breach only (no auto-resolve)
         await this.db.sLATracking.update({
@@ -406,25 +419,42 @@ export class SLAService {
         const isAlreadyFinished = ['RESOLVED', 'CLOSED', 'CANCELLED'].includes(t.ticket.status);
 
         if (!isAlreadyFinished) {
-          // Auto-resolve ticket with SLA breach note
-          await this.db.ticket.update({
-            where: { id: t.ticket.id },
-            data: {
-              status: 'RESOLVED',
-              rootCause: 'SLA resolution deadline terlampaui',
-              solution: `Ticket di-resolve otomatis oleh sistem. SLA target: ${t.resolutionTargetMin} menit, aktual: ${Math.ceil(resolutionTimeMin)} menit (terlambat ${overdueMin} menit).`,
-              resolvedAt: now,
-            },
-          });
-          await this.db.ticketHistory.create({
-            data: {
-              ticketId: t.ticket.id,
-              action: 'auto_resolved',
-              field: 'status',
-              oldValue: t.ticket.status,
-              newValue: 'RESOLVED',
-              note: `⚠️ Auto-resolved oleh sistem: SLA melebihi batas waktu ${t.resolutionTargetMin} menit (terlambat ${overdueMin} menit)`,
-            },
+          await this.db.$transaction(async (tx) => {
+            // Auto-resolve ticket with SLA breach note
+            await tx.ticket.update({
+              where: { id: t.ticket.id },
+              data: {
+                status: 'RESOLVED',
+                rootCause: 'SLA resolution deadline terlampaui',
+                solution: `Ticket di-resolve otomatis oleh sistem. SLA target: ${t.resolutionTargetMin} menit, aktual: ${Math.ceil(resolutionTimeMin)} menit (terlambat ${overdueMin} menit).`,
+                resolvedAt: now,
+              },
+            });
+            await tx.ticketHistory.create({
+              data: {
+                ticketId: t.ticket.id,
+                action: 'auto_resolved',
+                field: 'status',
+                oldValue: t.ticket.status,
+                newValue: 'RESOLVED',
+                note: `⚠️ Auto-resolved oleh sistem: SLA melebihi batas waktu ${t.resolutionTargetMin} menit (terlambat ${overdueMin} menit)`,
+              },
+            });
+
+            // Mark SLA tracking as breached and resolved
+            const updatedSLA = await tx.sLATracking.update({
+              where: { id: t.id },
+              data: {
+                resolutionBreached: true,
+                resolvedAt: now,
+                resolutionTimeMin: Math.round(resolutionTimeMin * 10) / 10,
+              },
+              include: { ticket: true }
+            });
+
+            if (this.sheetsService?.isAvailable()) {
+              this.syncSLAData(updatedSLA);
+            }
           });
 
           this.logger.warn('Ticket auto-resolved due to SLA breach', {
@@ -432,21 +462,19 @@ export class SLAService {
             ticketNumber: t.ticket.ticketNumber,
             overdueMin,
           });
-        }
+        } else {
+          // Mark SLA tracking as breached and resolved even if already finished
+          const updatedSLA = await this.db.sLATracking.update({
+            where: { id: t.id },
+            data: {
+              resolutionBreached: true,
+            },
+            include: { ticket: true }
+          });
 
-        // Mark SLA tracking as breached and resolved
-        const updatedSLA = await this.db.sLATracking.update({
-          where: { id: t.id },
-          data: {
-            resolutionBreached: true,
-            resolvedAt: isAlreadyFinished ? undefined : now,
-            resolutionTimeMin: isAlreadyFinished ? undefined : Math.round(resolutionTimeMin * 10) / 10,
-          },
-          include: { ticket: true }
-        });
-
-        if (this.sheetsService?.isAvailable()) {
-          this.syncSLAData(updatedSLA);
+          if (this.sheetsService?.isAvailable()) {
+            this.syncSLAData(updatedSLA);
+          }
         }
 
         if (isAlreadyFinished) {

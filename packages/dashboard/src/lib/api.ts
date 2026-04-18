@@ -1,3 +1,12 @@
+/**
+ * @file api.ts
+ * @purpose Centralized API Service Bridge untuk komunikasi antara Dashboard UI dan Backend.
+ * @caller All Dashboard Components/Pages
+ * @dependencies window.fetch, localStorage (Token Auth)
+ * @functions login, getStatsToday, getTicketOverview, bulkResolveTickets, syncMaintenanceToSheets
+ * @side_effects Extensive HTTP calls to /api/admin, authentication management in localStorage.
+ */
+
 const API_BASE = '/api/admin';
 
 export interface SystemHealthComponent {

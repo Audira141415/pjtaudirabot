@@ -1,3 +1,12 @@
+/**
+ * @file AdminHub.tsx
+ * @purpose Master Control Hub untuk monitoring kesehatan sistem dan manajemen bot.
+ * @caller Dashboard UI (/admin)
+ * @dependencies api.ts (Backend Bridge), lucide-react, qrcode.react
+ * @functions fetchHealth, handleManualSync, handleModularPurge, handleHardReset, handleFlushSessions
+ * @side_effects Telemetry sync, data purging, global Redis cache reset, WhatsApp bot QR binding.
+ */
+
 import { useEffect, useState } from 'react';
 import { api, SystemHealthData } from '../lib/api';
 import { 
