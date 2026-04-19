@@ -58,29 +58,26 @@ export class SentimentService {
   /**
    * Stores the analyzed sentiment for a message in the database for dashboard visualization.
    */
-  async recordSentiment(messageId: string, content: string) {
+  async recordSentiment(logId: string, content: string) {
     const { sentiment, score } = await this.analyze(content);
     
     try {
-      // Assuming a MessageSentiment model exists or we attach it to Metadata
-      await this.db.message.update({
-        where: { id: messageId },
+      await this.db.chatLog.update({
+        where: { id: logId },
         data: {
-          metadata: {
-            upsert: {
-              sentiment,
-              sentimentScore: score,
-              analyzedAt: new Date().toISOString()
-            }
+          extractedData: {
+            sentiment,
+            sentimentScore: score,
+            analyzedAt: new Date().toISOString()
           }
         }
       });
       
       if (sentiment === 'URGENT') {
-        this.logger.warn(`URGENT SIGNAL DETECTED: [Msg ${messageId}]`);
+        this.logger.warn(`URGENT SIGNAL DETECTED: [ChatLog ${logId}]`);
       }
     } catch (err) {
-      this.logger.error('Failed to record message sentiment', err);
+      this.logger.error('Failed to record chat sentiment', err);
     }
   }
 }
