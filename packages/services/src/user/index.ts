@@ -16,7 +16,7 @@ export class UserService {
     platformUserId: string,
     displayName: string,
     extra?: { phoneNumber?: string; username?: string }
-  ): Promise<User> {
+  ): Promise<User & { linkedAccounts?: string[] }> {
     const cacheKey = `user:${platform}:${platformUserId}`;
 
     // Check cache
@@ -73,6 +73,20 @@ export class UserService {
       lastActivityAt: record.lastActivityAt ?? undefined,
     };
 
+    // Unified Identity Linking Logic
+    if (record.phoneNumber) {
+      const linked = await this.db.user.findMany({
+        where: { 
+          phoneNumber: record.phoneNumber,
+          id: { not: record.id }
+        },
+        select: { platform: true }
+      });
+      if (linked.length > 0) {
+        (user as any).linkedAccounts = linked.map(l => l.platform);
+      }
+    }
+
     // Cache for 5 minutes
     try {
       await this.redis.set(cacheKey, JSON.stringify(user), { EX: 300 });
@@ -112,5 +126,26 @@ export class UserService {
   async hasAdmin(): Promise<boolean> {
     const count = await this.db.user.count({ where: { role: 'ADMIN' } });
     return count > 0;
+  }
+
+  /**
+   * Fetches the unified identity across platforms for a specific user.
+   */
+  async getUnifiedProfile(userId: string) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user || !user.phoneNumber) return { user, linked: [] };
+
+    const linked = await this.db.user.findMany({
+      where: { 
+        phoneNumber: user.phoneNumber,
+        id: { not: userId }
+      }
+    });
+
+    return {
+      primary: user,
+      linked,
+      identityScore: linked.length > 0 ? 1.0 : 0.5
+    };
   }
 }

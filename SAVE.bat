@@ -144,13 +144,17 @@ if errorlevel 1 (
 
 echo  → git push
 for /f "delims=" %%b in ('git branch --show-current') do set BRANCH=%%b
+
+echo  → git pull --rebase origin %BRANCH%
+git pull --rebase origin %BRANCH%
+
 git push -u origin %BRANCH%
 if errorlevel 1 (
     echo.
     echo  [ERROR] Push failed! Possible causes:
     echo    - No internet connection
     echo    - Authentication required (run: gh auth login)
-    echo    - Remote has newer commits (run: git pull --rebase first)
+    echo    - Still has conflicts after pull (resolve manually)
     pause
     exit /b 1
 )

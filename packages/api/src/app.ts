@@ -14,6 +14,7 @@ import { adminRoutes } from './routes/admin';
 import { clusteringRoutes } from './routes/clustering';
 import networkRoutes from './routes/network';
 import insightsRoutes from './routes/insights';
+import { SelfHealingService, SentimentService } from '@pjtaudirabot/services';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -24,6 +25,7 @@ export interface AppContext {
   db: PrismaClient;
   redis: any;
   logger: ILogger;
+  sentiment: SentimentService;
 }
 
 export async function createApp() {
@@ -59,11 +61,15 @@ export async function createApp() {
     url: redisConfig.url,
     password: redisConfig.password,
     socket: {
-      reconnectStrategy: (retries: number) => Math.min(retries * 50, 500)
-    }
-  });
-
   await redis.connect();
+
+  // Initialize Intelligent Services
+  const isProduction = serverConfig.env === 'production';
+  const selfHealing = new SelfHealingService(db, logger, isProduction);
+  const sentiment = new SentimentService(db, logger, process.env.OPENAI_API_KEY);
+
+  // Start Self-Healing loop
+  selfHealing.start(isProduction ? 5 * 60 * 1000 : 60 * 1000); // 5m production, 1m dev
 
   // Create Fastify instance
   const app = Fastify({
@@ -123,6 +129,7 @@ export async function createApp() {
   app.decorate('db', db);
   app.decorate('redis', redis);
   app.decorate('appLogger', logger);
+  app.decorate('sentiment', sentiment);
 
   // Health check route
   app.get('/health', async (_request, reply) => {
@@ -135,7 +142,11 @@ export async function createApp() {
         timestamp: new Date().toISOString(),
         version: serverConfig.appVersion,
         environment: serverConfig.env,
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        intelligence: {
+          sentiment: !!process.env.OPENAI_API_KEY,
+          selfHealing: true
+        }
       });
     } catch (error) {
       return reply.status(503).send({
@@ -197,7 +208,7 @@ export async function createApp() {
 
   // Admin API routes (prefix: /api/admin)
   await app.register(
-    async (instance) => adminRoutes(instance, { db, redis, logger }),
+    async (instance) => adminRoutes(instance, { db, redis, logger, sentiment }),
     { prefix: '/api/admin' }
   );
 

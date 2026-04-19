@@ -34,39 +34,46 @@ const LiveTerminal: React.FC = () => {
   const socketsRef = useRef<Record<string, Socket>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    // Determine hostname dynamically (localhost or current IP)
+  const connectStream = (streamId: string) => {
+    const stream = STREAMS.find(s => s.id === streamId);
+    if (!stream) return;
+
+    if (socketsRef.current[streamId]) {
+      socketsRef.current[streamId].disconnect();
+    }
+
     const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
-    
-    STREAMS.forEach(stream => {
-      const socket = io(`http://${hostname}:${stream.port}`);
-      socketsRef.current[stream.id] = socket;
+    const socket = io(`http://${hostname}:${stream.port}`);
+    socketsRef.current[streamId] = socket;
 
-      socket.on('connect', () => {
-        setConnections(prev => ({ ...prev, [stream.id]: true }));
-        setMessages(prev => [...prev.filter(m => m.userId !== `system-${stream.id}`), {
-          platform: stream.id as any,
-          userId: `system-${stream.id}`,
-          text: `SIGNAL BRIDGE ESTABLISHED — [${stream.label.toUpperCase()}] ACTIVE`,
-          timestamp: Date.now(),
-          type: 'received'
-        }]);
-      });
-
-      socket.on('disconnect', () => {
-        setConnections(prev => ({ ...prev, [stream.id]: false }));
-      });
-
-      socket.on('chat:message', (data: any) => {
-        setMessages(prev => [...prev, { ...data, platform: stream.id, type: 'received' }]);
-      });
-
-      socket.on('bot:event', (event: any) => {
-         if (event.type === 'message.sent') {
-           setMessages(prev => [...prev, { ...event.data, platform: stream.id, userName: 'AudiraBot V2.0', type: 'sent' }]);
-         }
-      });
+    socket.on('connect', () => {
+      setConnections(prev => ({ ...prev, [streamId]: true }));
+      setMessages(prev => [...prev.filter(m => m.userId !== `system-${streamId}`), {
+        platform: streamId as any,
+        userId: `system-${streamId}`,
+        text: `SIGNAL BRIDGE ESTABLISHED — [${stream.label.toUpperCase()}] ACTIVE`,
+        timestamp: Date.now(),
+        type: 'received'
+      }]);
     });
+
+    socket.on('disconnect', () => {
+      setConnections(prev => ({ ...prev, [streamId]: false }));
+    });
+
+    socket.on('chat:message', (data: any) => {
+      setMessages(prev => [...prev, { ...data, platform: streamId, type: 'received' }]);
+    });
+
+    socket.on('bot:event', (event: any) => {
+       if (event.type === 'message.sent') {
+         setMessages(prev => [...prev, { ...event.data, platform: streamId, userName: 'AudiraBot V2.0', type: 'sent' }]);
+       }
+    });
+  };
+
+  useEffect(() => {
+    STREAMS.forEach(stream => connectStream(stream.id));
 
     return () => {
       Object.values(socketsRef.current).forEach(s => s.disconnect());
@@ -91,7 +98,16 @@ const LiveTerminal: React.FC = () => {
     const targetSocket = socketsRef.current[takeoverPlatform];
     if (!targetSocket) return;
 
-    targetSocket.emit('agent:takeover', {
+    setTakeoverId(null);
+  };
+
+  const sendShadowOverride = () => {
+    if (!takeoverText.trim() || !takeoverId || !takeoverPlatform) return;
+    
+    const targetSocket = socketsRef.current[takeoverPlatform];
+    if (!targetSocket) return;
+
+    targetSocket.emit('agent:whisper', {
       platform: takeoverPlatform,
       userId: takeoverId,
       text: takeoverText
@@ -143,6 +159,14 @@ const LiveTerminal: React.FC = () => {
                 )}
              </button>
            ))}
+
+           <button 
+             onClick={() => connectStream(activeStream)}
+             className="p-5 glass rounded-2xl hover:text-indigo-500 hover:rotate-180 transition-all duration-700 active:scale-95 group"
+             title="RE-INIT_BRIDGE"
+           >
+              <Activity className="w-6 h-6 border-indigo-500" />
+           </button>
         </div>
       </div>
 
@@ -166,9 +190,9 @@ const LiveTerminal: React.FC = () => {
             </div>
             <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
-                   <div className={`w-2 h-2 rounded-full ${isSelectedConnected ? 'bg-emerald-500' : 'bg-rose-500 animate-pulse'}`} />
-                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono italic">
-                      {isSelectedConnected ? 'ENCRYPTED' : 'UNSTABLE'}
+                   <div className={`w-2 h-2 rounded-full ${isSelectedConnected ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]' : 'bg-rose-500 animate-pulse'}`} />
+                   <span className={`text-[10px] font-black uppercase tracking-widest font-mono italic ${isSelectedConnected ? 'text-emerald-500' : 'text-rose-500 cyber-glitch'}`}>
+                      {isSelectedConnected ? 'ENCRYPTED' : 'UNSTABLE_SIGNAL'}
                    </span>
                 </div>
                 <div className="h-4 w-[1px] bg-white/10" />
@@ -222,10 +246,14 @@ const LiveTerminal: React.FC = () => {
                       {msg.userName && (
                         <div className="flex items-center gap-3 mb-2">
                            <p className="text-[11px] font-black text-indigo-400 uppercase tracking-widest italic">{msg.userName}</p>
-                           <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black text-slate-600 uppercase tracking-widest">{msg.platform.toUpperCase()}</span>
+                           <span className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black text-slate-600 uppercase tracking-widest font-mono">{msg.platform.toUpperCase()}</span>
+                           {/* Simplified Unified Identity check — in real app would come from msg metadata */}
+                           {(msg as any).linkedAccounts?.length > 0 && (
+                             <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-[9px] font-black text-amber-500 uppercase tracking-widest border border-amber-500/20">LINKED_IDENTITY</span>
+                           )}
                         </div>
                       )}
-                      <p className="leading-relaxed whitespace-pre-wrap break-all font-medium text-lg italic tracking-tight font-mono uppercase">
+                      <p className="leading-relaxed whitespace-pre-wrap break-all font-medium text-lg italic tracking-tight font-mono uppercase terminal-text">
                          {msg.text}
                       </p>
                       {msg.imageUrl && (
@@ -285,14 +313,24 @@ const LiveTerminal: React.FC = () => {
                           <span className="text-[9px] font-black text-indigo-900 uppercase italic">AWAIT_INPUT</span>
                        </div>
                     </div>
-                    <button 
-                      onClick={sendTakeoverResponse}
-                      disabled={!takeoverText.trim()}
-                      className="bg-indigo-600 hover:bg-indigo-500 px-14 py-6 rounded-[28px] text-white font-black text-[12px] uppercase tracking-[0.4em] flex items-center gap-4 transition-all disabled:opacity-20 shadow-[0_20px_60px_rgba(79,70,229,0.4)] active:scale-95 group/btn"
-                    >
-                      <SendHorizontal className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                      Transmit
-                    </button>
+                     <div className="flex gap-4">
+                        <button 
+                          onClick={sendShadowOverride}
+                          disabled={!takeoverText.trim()}
+                          className="bg-amber-600/20 border-2 border-amber-500/40 hover:bg-amber-600/40 px-10 py-6 rounded-[28px] text-amber-400 font-black text-[12px] uppercase tracking-[0.4em] flex items-center gap-4 transition-all disabled:opacity-20 active:scale-95 group/btn"
+                        >
+                          <Zap className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                          Whisper
+                        </button>
+                        <button 
+                          onClick={sendTakeoverResponse}
+                          disabled={!takeoverText.trim()}
+                          className="bg-indigo-600 hover:bg-indigo-500 px-14 py-6 rounded-[28px] text-white font-black text-[12px] uppercase tracking-[0.4em] flex items-center gap-4 transition-all disabled:opacity-20 shadow-[0_20px_60px_rgba(79,70,229,0.4)] active:scale-95 group/btn"
+                        >
+                          <SendHorizontal className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                          Transmit
+                        </button>
+                     </div>
                  </div>
               </motion.div>
             )}

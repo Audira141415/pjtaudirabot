@@ -41,6 +41,15 @@ export class LiveChatService {
         this.logger.debug('Dashboard disconnected from bridge', { socketId: socket.id });
       });
 
+      // Handle Admin Shadow Override (Whisper) commands
+      socket.on('agent:whisper', async (data: { platform: string, userId: string, text: string }) => {
+        this.logger.info('Cognitive Shadow Override initiated', data);
+        await this.eventBus.emit('agent.whisper', {
+          ...data,
+          meta: { whisper: true, origin: 'dashboard_override' }
+        });
+      });
+
       // Handle Admin Takeover commands from the dashboard
       socket.on('agent:takeover', async (data: { platform: string, userId: string, text: string }) => {
         this.logger.info('Strategic Agent Takeover received from Dashboard', data);

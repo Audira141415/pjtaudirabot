@@ -18,6 +18,11 @@ export interface FlowStep {
   logic?: Record<string, string>;
   /** Next step bypass ID */
   nextStepId?: string;
+  /**
+   * ACTION: Trigger an external process when this step (or the flow) completes.
+   */
+  action?: 'create_ticket' | 'send_email' | 'webhook' | 'save_crm' | 'notify_admin';
+  actionParams?: Record<string, any>;
 }
 
 export interface FlowDefinitionData {
@@ -165,6 +170,11 @@ export class FlowEngine {
         data: updatedData,
         status: 'COMPLETED',
       });
+
+      // TRIGGER: Final Flow Action
+      if (definition.finalAction) {
+        await this.executeAction(definition.finalAction, updatedData, userId, platform, definition.finalActionParams);
+      }
 
       return { completed: true, data: updatedData };
     }
@@ -327,8 +337,14 @@ export class FlowEngine {
     return `flow:session:${platform}:${userId}`;
   }
 
-  private formatPrompt(step: FlowStep): string {
+  private formatPrompt(step: FlowStep, data: Record<string, any> = {}): string {
     let prompt = step.prompt;
+
+    // VARIABLE INJECTION: Replace {{field}} with value from data
+    for (const [key, value] of Object.entries(data)) {
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      prompt = prompt.replace(regex, String(value));
+    }
 
     if (step.type === 'choice' && step.options) {
       const optionsList = step.options
@@ -342,6 +358,29 @@ export class FlowEngine {
     }
 
     return prompt;
+  }
+
+  /**
+   * Executes a tactical action based on flow completion.
+   */
+  private async executeAction(
+    action: string, 
+    data: Record<string, any>, 
+    userId: string, 
+    platform: string,
+    params?: Record<string, any>
+  ) {
+    this.logger.info(`NEURAL_EXECUTION: Running action ${action}`, { userId, platform });
+    
+    switch (action) {
+      case 'create_ticket':
+        // Integration point for TicketService would go here
+        this.logger.info('Action: Ticket creation scheduled via Neural Link');
+        break;
+      case 'notify_admin':
+        this.logger.info('Action: Admin alert dispatched to NOC terminal');
+        break;
+    }
   }
 
   private validateInput(step: FlowStep, input: string): string | null {

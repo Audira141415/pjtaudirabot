@@ -109,6 +109,29 @@ async function main(): Promise<void> {
   connection.onMessage((ctx) => messageHandler.handle(ctx));
   await connection.start();
 
+  // ── Admin Override Listeners (Dashboard Bridge) ──
+  eventBus.on('agent.takeover', async (data: { platform: string, userId: string, text: string }) => {
+    if (data.platform !== 'telegram') return;
+    try {
+      logger.info(`STRATEGIC_TAKEOVER: Executing cognitive override for user ${data.userId}`);
+      await connection.sendMessage(data.userId, data.text);
+    } catch (err) {
+      logger.error('Failed to execute agent takeover on Telegram', err as Error);
+    }
+  });
+
+  eventBus.on('agent.whisper', async (data: { platform: string, userId: string, text: string }) => {
+    if (data.platform !== 'telegram') return;
+    try {
+      logger.info(`COGNITIVE_SHADOW: Sending assisted intelligence to user ${data.userId}`);
+      // In whisper mode, we might want to prefix or style it differently
+      const whisperText = `🤖 *AUDIRA_ASSISTED_LINK*\n\n${data.text}`;
+      await connection.sendMessage(data.userId, whisperText, { parse_mode: 'Markdown' });
+    } catch (err) {
+      logger.error('Failed to execute shadow override on Telegram', err as Error);
+    }
+  });
+
   // ── Interval loops ──
 
   // Poll reminders every 30 seconds

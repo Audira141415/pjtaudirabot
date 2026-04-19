@@ -117,7 +117,10 @@ import { DataExtractionService } from './data-extraction';
 import { LiveChatService } from './live-chat';
 import { SearchService } from './search';
 import { CRMService } from './crm';
-import { AutomationService } from './automation';
+import { 
+  SentimentService,
+  SelfHealingService,
+} from './index';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -167,6 +170,7 @@ export interface BotServices {
   searchService: SearchService;
   crmService: CRMService;
   automationService: AutomationService;
+  sentimentService: SentimentService;
 }
 
 export interface CreateServicesOptions {
@@ -226,6 +230,8 @@ export async function createBotServices(
     redis,
     logger,
   );
+
+  const sentimentService = new SentimentService(db, logger, config.OPENAI_API_KEY);
 
   // Memory system
   let semantic: ISemanticMemory = new NoOpSemanticMemory();
@@ -353,7 +359,7 @@ export async function createBotServices(
 
   // AI Extractor & Chat Pipeline
   const aiExtractor = new AIExtractor(aiService.getProvider(), logger);
-  const chatPipeline = new ChatPipeline(db, aiExtractor, sheetsService, logger);
+  const chatPipeline = new ChatPipeline(db, aiExtractor, sentimentService, sheetsService, logger);
 
   // Uptime & Shift Handover
   const uptimeMonitorService = new UptimeMonitorService(db, redis, logger);
@@ -447,7 +453,7 @@ export async function createBotServices(
     aiExtractor, chatPipeline, ticketService, slaService,
     uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, 
     liveChatService, dataExtractionService, scheduler,
-    searchService, crmService, automationService,
+    searchService, crmService, automationService, sentimentService,
   };
 }
 

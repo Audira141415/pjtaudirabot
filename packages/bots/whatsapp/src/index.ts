@@ -177,6 +177,29 @@ async function main(): Promise<void> {
   connection.onMessage((msg) => messageHandler.handle(msg));
   await connection.connect();
 
+  // ── Admin Override Listeners (Dashboard Bridge) ──
+  eventBus.on('agent.takeover', async (data: { platform: string, userId: string, text: string }) => {
+    if (data.platform !== 'whatsapp') return;
+    try {
+      logger.info(`STRATEGIC_TAKEOVER: Executing cognitive override for user ${data.userId}`);
+      await connection.sendMessage(data.userId, data.text);
+    } catch (err) {
+      logger.error('Failed to execute agent takeover on WhatsApp', err as Error);
+    }
+  });
+
+  eventBus.on('agent.whisper', async (data: { platform: string, userId: string, text: string }) => {
+    if (data.platform !== 'whatsapp') return;
+    try {
+      logger.info(`COGNITIVE_SHADOW: Sending assisted intelligence to user ${data.userId}`);
+      // In WhatsApp, we can use bolding for the override indicator
+      const whisperText = `🤖 *AUDIRA_ASSISTED_LINK*\n\n${data.text}`;
+      await connection.sendMessage(data.userId, whisperText);
+    } catch (err) {
+      logger.error('Failed to execute shadow override on WhatsApp', err as Error);
+    }
+  });
+
   const effectiveAdminGroupJids = botsConfig.whatsapp.silentMode ? [] : adminGroupJids;
   let boundHealthPort = portConfig.whatsapp;
 

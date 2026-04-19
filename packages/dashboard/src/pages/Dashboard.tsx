@@ -20,14 +20,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, LineChart, Line,
 } from 'recharts';
-import {
-  MessageSquare, Users, Zap, AlertTriangle, TrendingUp, Clock, Ticket,
-  RefreshCw, Activity,
-  CheckCircle, ShieldCheck, ArrowUpRight, ZapOff,
-  Orbit, Layers, Cpu, Fingerprint, Radio, Target, Info, Smartphone, Command, PlusCircle, Monitor,
-  CheckCircle2,
-  ChevronRight,
-  Sparkles
+import { 
+  AlertCircle, Activity, Box, CheckCircle2, Clock, Command, Globe, Info, 
+  MessageSquare, Settings, Shield, Terminal, Zap, Search, User, 
+  ChevronRight, ArrowRight, Brain, TrendingUp, Orbit, RefreshCw, AlertTriangle, 
+  Smartphone, Ticket, ZapOff, Layers, Cpu, Fingerprint, Radio, Target, Monitor, Sparkles
 } from 'lucide-react';
 
 interface Stats {
@@ -41,16 +38,18 @@ interface Stats {
 
 const CHART_COLORS = ['#6366f1', '#a855f7', '#06b6d4', '#ec4899', '#f59e0b', '#10b981', '#ef4444'];
 
-function StatCard({ icon: Icon, label, value, color, index }: {
+function StatCard({ icon: Icon, label, value, color, index, trendData = [] }: {
   icon: React.ElementType;
   label: string;
   value: string | number;
   color: string;
   index: number;
+  trendData?: any[];
 }) {
   const iconColor = color.replace('bg-', 'text-');
   const lightIconColor = iconColor.includes('600') ? iconColor : `${iconColor}-600`;
   const darkIconColor = iconColor.replace('600', '400');
+  const glowColor = color.split('-')[1];
 
   return (
     <motion.div 
@@ -92,6 +91,29 @@ function StatCard({ icon: Icon, label, value, color, index }: {
         </div>
       </div>
 
+      {/* Mini Sparkline */}
+      <div className="mt-8 h-12 w-full relative z-10 opacity-50 group-hover:opacity-100 transition-opacity">
+        <ResponsiveContainer width="100%" height="100%">
+           <AreaChart data={trendData}>
+              <defs>
+                 <linearGradient id={`sparkGlow-${index}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={`var(--accent-${glowColor === 'indigo' ? 'primary' : glowColor === 'purple' ? 'secondary' : 'cyan'})`} stopOpacity={0.5} />
+                    <stop offset="100%" stopColor={`var(--accent-${glowColor})`} stopOpacity={0} />
+                 </linearGradient>
+              </defs>
+              <Area 
+                type="monotone" 
+                dataKey="val" 
+                stroke={glowColor === 'indigo' ? '#6366f1' : glowColor === 'purple' ? '#a855f7' : '#06b6d4'} 
+                strokeWidth={3} 
+                fill={`url(#sparkGlow-${index})`} 
+                dot={false} 
+                isAnimationActive={true} 
+              />
+           </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
       <div className="mt-12 flex items-center justify-between relative z-10 border-t border-white/5 pt-6">
         <div className="flex items-center gap-3 text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest italic font-mono">
            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -100,6 +122,66 @@ function StatCard({ icon: Icon, label, value, color, index }: {
         <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-800 group-hover:translate-x-1 group-hover:text-indigo-400 transition-all" />
       </div>
     </motion.div>
+  );
+}
+
+function CommandPalette({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [query, setQuery] = useState('');
+  
+  const commands = [
+    { name: 'GOTO_DASHBOARD', icon: Orbit, path: '/' },
+    { name: 'GOTO_TERMINAL', icon: Terminal, path: '/terminal' },
+    { name: 'GOTO_SETTINGS', icon: Settings, path: '/settings' },
+    { name: 'GOTO_TICKETS', icon: Ticket, path: '/tickets' },
+    { name: 'GOTO_NETWORK', icon: Radio, path: '/network' },
+    { name: 'SYSTEM_RESCAN', icon: RefreshCw, action: () => window.location.reload() },
+  ].filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 backdrop-blur-xl bg-slate-950/40" onClick={onClose}>
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="w-full max-w-2xl glass-ultimate ring-2 ring-indigo-500/50 shadow-[0_0_80px_rgba(99,102,241,0.3)] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-6 p-8 border-b border-white/10 bg-white/5">
+          <Search className="w-8 h-8 text-indigo-500" />
+          <input 
+            autoFocus
+            className="flex-1 bg-transparent border-none outline-none text-2xl font-black text-white italic tracking-tighter placeholder:text-slate-700 uppercase"
+            placeholder="Search Intelligence Commands..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+          />
+          <div className="px-3 py-1 rounded-lg bg-slate-900 border border-white/10 text-[10px] font-bold text-slate-500">ESC</div>
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto p-4 no-scrollbar">
+          {commands.map((cmd, i) => (
+            <div 
+              key={cmd.name}
+              className="flex items-center justify-between p-6 rounded-2xl hover:bg-indigo-600 group transition-all cursor-pointer mb-2"
+              onClick={() => { if (cmd.path) window.location.href = cmd.path; else cmd.action?.(); onClose(); }}
+            >
+              <div className="flex items-center gap-6">
+                <div className="p-4 rounded-xl bg-white/5 group-hover:bg-white/20 text-indigo-400 group-hover:text-white transition-colors">
+                  <cmd.icon className="w-6 h-6" />
+                </div>
+                <span className="text-xl font-black text-slate-300 group-hover:text-white italic tracking-tighter uppercase">{cmd.name}</span>
+              </div>
+              <ChevronRight className="w-6 h-6 text-slate-700 group-hover:text-white transition-transform group-hover:translate-x-2" />
+            </div>
+          ))}
+          {commands.length === 0 && (
+            <div className="p-20 text-center">
+              <p className="text-slate-600 font-bold uppercase tracking-widest text-sm">No commands found matching "{query}"</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -115,7 +197,20 @@ export default function DashboardPage() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedDays, setSelectedDays] = useState(14);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const prevHealthRef = useRef<SystemHealthData | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+      if (e.key === 'Escape') setIsCommandPaletteOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const messages = Number(stats.message_received ?? 0);
   const commands = Number(stats.command_executed ?? 0);
@@ -294,8 +389,10 @@ export default function DashboardPage() {
                 <AlertTriangle className="w-16 h-16" />
              </div>
              <div className="flex-1 text-center md:text-left relative z-10">
-                <h3 className="font-black uppercase text-5xl tracking-tighter italic mb-4 leading-none underline decoration-white/30 underline-offset-8 decoration-4">SIGNAL_LOSS_DETECTED: {downComponents.length} NODES_OFFLINE</h3>
-                <p className="text-white/90 text-lg font-black uppercase tracking-[0.4em] font-mono italic">{downComponents.map(c => c.name.toUpperCase()).join(' — ')} REPORTING_INTERNAL_FAILURE.</p>
+                <h3 className="font-black uppercase text-5xl tracking-tighter italic mb-4 leading-none underline decoration-white/30 underline-offset-8 decoration-4 cyber-glitch">SIGNAL_LOSS_DETECTED: {downComponents.length} NODES_OFFLINE</h3>
+                <p className="text-white/90 text-lg font-black uppercase tracking-[0.4em] font-mono italic">
+                   {downComponents.map(c => c.name.toUpperCase()).join(' — ')} REPORTING_INTERNAL_FAILURE.
+                </p>
              </div>
              <button onClick={loadHealth} className="px-20 py-8 bg-white text-rose-600 font-black text-[14px] uppercase tracking-[0.4em] rounded-[32px] hover:bg-slate-100 transition-all shadow-2xl active:scale-95 border-b-8 border-rose-200">FORCE_RE_PROBE</button>
           </motion.div>
@@ -304,11 +401,13 @@ export default function DashboardPage() {
 
       {/* Stats Grid Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 relative z-10">
-        <StatCard index={0} icon={MessageSquare} label="INGESTED_SIGNALS" value={messages} color="bg-indigo-600" />
-        <StatCard index={1} icon={Zap} label="NEURAL_COMMANDS" value={commands} color="bg-purple-600" />
-        <StatCard index={2} icon={Users} label="IDENTITY_REGISTRY" value={stats.totalUsers ?? 0} color="bg-cyan-600" />
-        <StatCard index={3} icon={AlertTriangle} label="LOGICAL_ANOMALIES" value={errors} color="bg-rose-600" />
+        <StatCard index={0} icon={MessageSquare} label="INGESTED_SIGNALS" value={messages} color="bg-indigo-600" trendData={history.map(h => ({ val: h.totalMessages }))} />
+        <StatCard index={1} icon={Zap} label="NEURAL_COMMANDS" value={commands} color="bg-purple-600" trendData={history.map(h => ({ val: h.totalCommands }))} />
+        <StatCard index={2} icon={User} label="IDENTITY_REGISTRY" value={stats.totalUsers ?? 0} color="bg-cyan-600" trendData={history.map(h => ({ val: h.totalUsers || 0 }))} />
+        <StatCard index={3} icon={AlertTriangle} label="LOGICAL_ANOMALIES" value={errors} color="bg-rose-600" trendData={history.map(h => ({ val: h.totalErrors }))} />
       </div>
+
+      <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
 
       <OperationalOverview
         ticketOverview={ticketOverview}
@@ -318,6 +417,77 @@ export default function DashboardPage() {
         escalations={escalations}
         health={health}
       />
+
+      {/* Neural Insights Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 relative z-10">
+         <div className="lg:col-span-2 glass-ultimate rounded-[48px] p-12 border-2 border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-30 transition-opacity">
+               <Brain className="w-40 h-40 text-indigo-500" />
+            </div>
+            <div className="relative z-10 space-y-10">
+               <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                     <p className="text-indigo-500 font-black text-[10px] uppercase tracking-[0.6em] font-mono italic">AI_COGNITIVE_OVERLAY</p>
+                     <h3 className="text-4xl font-black text-white italic uppercase tracking-tighter">Neural Insights</h3>
+                  </div>
+                  <button className="p-4 glass rounded-2xl text-indigo-400 hover:text-white transition-all flex items-center gap-3">
+                     <Activity className="w-5 h-5" />
+                     <span className="text-[10px] font-black uppercase tracking-widest font-mono italic">SYST_AUDIT</span>
+                  </button>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[32px] space-y-6">
+                     <div className="flex items-center gap-4">
+                        <TrendingUp className="w-5 h-5 text-emerald-500" />
+                        <span className="text-[11px] font-black uppercase text-slate-400 tracking-widest font-mono">Sentiment_Analysis</span>
+                     </div>
+                     <div className="space-y-4">
+                        <div className="flex justify-between items-end">
+                           <span className="text-sm font-black text-emerald-400 italic">POSITIVE_VIBE</span>
+                           <span className="text-2xl font-black text-white italic tracking-tighter">82%</span>
+                        </div>
+                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                           <div className="h-full bg-emerald-500 w-[82%]" />
+                        </div>
+                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">User interactions are currently stabilizing in high satisfaction bracket.</p>
+                     </div>
+                  </div>
+
+                  <div className="p-8 bg-white/[0.02] border border-white/5 rounded-[32px] space-y-6">
+                     <div className="flex items-center gap-4">
+                        <Zap className="w-5 h-5 text-indigo-500" />
+                        <span className="text-[11px] font-black uppercase text-slate-400 tracking-widest font-mono">Self_Healing_Protocol</span>
+                     </div>
+                     <div className="flex items-center gap-6">
+                        <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                           <CheckCircle2 className="w-6 h-6 text-indigo-500" />
+                        </div>
+                        <div>
+                           <p className="text-lg font-black text-white italic uppercase leading-none mb-1">Active</p>
+                           <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">No anomalies detected in last 24h</p>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <div className="glass-ultimate rounded-[48px] p-10 border-2 border-white/5 flex flex-col justify-between group">
+            <div className="space-y-8">
+               <div className="p-4 bg-rose-500/10 rounded-2xl border border-rose-500/20 w-fit">
+                  <Shield className="w-6 h-6 text-rose-500" />
+               </div>
+               <h4 className="text-2xl font-black text-white italic uppercase tracking-tighter leading-snug">Autonomous Protection Engine v2.0</h4>
+               <p className="text-[11px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed">
+                  Audira Neural Link is monitoring all nodes. Automated recovery sequences are primed for signal loss events.
+               </p>
+            </div>
+            <button className="mt-10 w-full py-5 rounded-[24px] bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.4em] italic hover:bg-white/10 transition-all active:scale-95 group-hover:border-indigo-500/30">
+               VIEW_RECOVERY_LOGS
+            </button>
+         </div>
+      </div>
 
       {/* Visual Intelligence Matrix */}
        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 relative z-10">

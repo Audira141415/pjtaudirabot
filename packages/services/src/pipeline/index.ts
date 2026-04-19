@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { ILogger } from '@pjtaudirabot/core';
 import { GoogleSheetsService } from '../sheets';
 import { AIExtractor, ExtractionOutput, ExtractionResult } from '../extractor';
+import { SentimentService } from '../SentimentService';
 
 /**
  * The result handed back to the caller (bot message handler)
@@ -32,6 +33,7 @@ export class ChatPipeline {
   constructor(
     private db: PrismaClient,
     private extractor: AIExtractor,
+    private sentiment: SentimentService,
     private sheets: GoogleSheetsService | null,
     logger: ILogger
   ) {
@@ -245,12 +247,18 @@ export class ChatPipeline {
     extraction: ExtractionOutput,
     platform: string
   ): Promise<void> {
+    const sentimentResult = await this.sentiment.analyze(message);
+
     await this.db.chatLog.create({
       data: {
         userId,
         message,
         extractedType: extractedType.toUpperCase() as any,
-        extractedData: extraction.result as any,
+        extractedData: {
+          ...(extraction.result as any),
+          sentiment: sentimentResult.sentiment,
+          sentimentScore: sentimentResult.score,
+        },
         platform: platform.toUpperCase() as any,
         confidence: extraction.confidence,
       },
