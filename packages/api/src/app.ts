@@ -60,7 +60,8 @@ export async function createApp() {
   const redis = createClient({
     url: redisConfig.url,
     password: redisConfig.password,
-    socket: {
+    socket: { reconnectStrategy: (retries: number) => Math.min(retries * 50, 500) },
+  });
   await redis.connect();
 
   // Initialize Intelligent Services
