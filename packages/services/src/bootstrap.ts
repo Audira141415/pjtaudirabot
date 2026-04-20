@@ -172,6 +172,7 @@ export interface BotServices {
   crmService: CRMService;
   automationService: AutomationService;
   sentimentService: SentimentService;
+  selfHealingService: SelfHealingService;
 }
 
 export interface CreateServicesOptions {
@@ -233,6 +234,7 @@ export async function createBotServices(
   );
 
   const sentimentService = new SentimentService(db, logger, config.OPENAI_API_KEY);
+
 
   // Memory system
   let semantic: ISemanticMemory = new NoOpSemanticMemory();
@@ -335,6 +337,8 @@ export async function createBotServices(
   const knowledgeBase = new KnowledgeBaseService(db, semantic, logger);
   const reportingService = new ReportingService(db, sheetsService, logger);
   const reminderService = new ReminderService(db, redis, logger);
+  const selfHealingService = new SelfHealingService(db, devopsService, logger);
+
   const dataExtractionService = new DataExtractionService(db, logger);
   
   // Ticket & SLA (Need to move these up so they can be passed to IntentDetector)
@@ -454,7 +458,7 @@ export async function createBotServices(
     aiExtractor, chatPipeline, ticketService, slaService,
     uptimeMonitorService, shiftHandoverService, maintenanceScheduleService, 
     liveChatService, dataExtractionService, scheduler,
-    searchService, crmService, automationService, sentimentService,
+    searchService, crmService, automationService, sentimentService, selfHealingService,
   };
 }
 
