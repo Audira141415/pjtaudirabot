@@ -310,8 +310,15 @@ export async function createApp() {
     });
   });
 
+  const ctx: AppContext = {
+    db,
+    redis,
+    logger,
+    sentiment
+  };
+
   return {
     app,
-    ctx: { db, redis, logger, sentiment } as AppContext,
+    ctx,
   };
 }
