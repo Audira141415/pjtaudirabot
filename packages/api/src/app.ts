@@ -67,7 +67,7 @@ export async function createApp() {
   // Initialize Intelligent Services
   const isProduction = serverConfig.env === 'production';
   const selfHealing = new SelfHealingService(db, logger, isProduction);
-  const sentiment = new SentimentService(db, logger, process.env.OPENAI_API_KEY);
+  const sentimentService = new SentimentService(db, logger, process.env.OPENAI_API_KEY);
 
   // Start Self-Healing loop
   selfHealing.start(isProduction ? 5 * 60 * 1000 : 60 * 1000); // 5m production, 1m dev
@@ -130,7 +130,7 @@ export async function createApp() {
   app.decorate('db', db);
   app.decorate('redis', redis);
   app.decorate('appLogger', logger);
-  app.decorate('sentiment', sentiment);
+  app.decorate('sentiment', sentimentService);
 
   // Health check route
   app.get('/health', async (_request, reply) => {
@@ -209,7 +209,7 @@ export async function createApp() {
 
   // Admin API routes (prefix: /api/admin)
   await app.register(
-    async (instance) => adminRoutes(instance, { db, redis, logger, sentiment }),
+    async (instance) => adminRoutes(instance, { db, redis, logger, sentiment: sentimentService }),
     { prefix: '/api/admin' }
   );
 
@@ -314,7 +314,7 @@ export async function createApp() {
     db,
     redis,
     logger,
-    sentiment
+    sentiment: sentimentService
   };
 
   return {
