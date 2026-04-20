@@ -312,6 +312,6 @@ export async function createApp() {
 
   return {
     app,
-    ctx: { db, redis, logger } as AppContext,
+    ctx: { db, redis, logger, sentiment } as AppContext,
   };
 }
