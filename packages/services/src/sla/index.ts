@@ -18,7 +18,7 @@ const parsePositiveInt = (value: string | undefined, fallback: number): number =
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 const AUTO_UNASSIGNED_RESPONSE_MIN = parsePositiveInt(process.env.SLA_AUTO_UNASSIGNED_RESPONSE_MIN, 15);
-const AUTO_UNASSIGNED_REOPEN_MIN = parsePositiveInt(process.env.SLA_AUTO_UNASSIGNED_REOPEN_MIN, 60);
+const AUTO_UNASSIGNED_REOPEN_MIN = parsePositiveInt(process.env.SLA_AUTO_UNASSIGNED_REOPEN_MIN, 1440); // 24 Hours Default
 const AUTO_UNASSIGNED_CATEGORY_SCOPE = (process.env.SLA_AUTO_UNASSIGNED_CATEGORIES ?? '')
   .split(',')
   .map((item) => item.trim().toUpperCase())
@@ -384,7 +384,8 @@ export class SLAService {
           }
         });
 
-        breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ auto-resolved sistem (akan dimunculkan lagi ${AUTO_UNASSIGNED_REOPEN_MIN}m).`);
+        const reopenTimeText = AUTO_UNASSIGNED_REOPEN_MIN >= 60 ? `${AUTO_UNASSIGNED_REOPEN_MIN / 60} jam` : `${AUTO_UNASSIGNED_REOPEN_MIN} menit`;
+        breaches.push(`🚨 Response timeout: ${t.ticket.ticketNumber} (${t.ticket.customer ?? 'N/A'}) — belum diambil > ${AUTO_UNASSIGNED_RESPONSE_MIN}m → ✅ *auto-resolved sistem* (akan dimunculkan lagi ${reopenTimeText}).`);
       } else if (remaining <= 0 && !t.responseBreached) {
         // Breach only (no auto-resolve)
         await this.db.sLATracking.update({
