@@ -178,7 +178,8 @@ async function main(): Promise<void> {
   await connection.connect();
 
   // ── Admin Override Listeners (Dashboard Bridge) ──
-  eventBus.on('agent.takeover', async (data: { platform: string, userId: string, text: string }) => {
+  eventBus.on('agent.takeover', async (event: any) => {
+    const data = event.data as { platform: string, userId: string, text: string };
     if (data.platform !== 'whatsapp') return;
     try {
       logger.info(`STRATEGIC_TAKEOVER: Executing cognitive override for user ${data.userId}`);
@@ -188,7 +189,8 @@ async function main(): Promise<void> {
     }
   });
 
-  eventBus.on('agent.whisper', async (data: { platform: string, userId: string, text: string }) => {
+  eventBus.on('agent.whisper', async (event: any) => {
+    const data = event.data as { platform: string, userId: string, text: string };
     if (data.platform !== 'whatsapp') return;
     try {
       logger.info(`COGNITIVE_SHADOW: Sending assisted intelligence to user ${data.userId}`);

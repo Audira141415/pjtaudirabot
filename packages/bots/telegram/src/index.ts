@@ -110,23 +110,24 @@ async function main(): Promise<void> {
   await connection.start();
 
   // ── Admin Override Listeners (Dashboard Bridge) ──
-  eventBus.on('agent.takeover', async (data: { platform: string, userId: string, text: string }) => {
+  eventBus.on('agent.takeover', async (event: any) => {
+    const data = event.data as { platform: string, userId: string, text: string };
     if (data.platform !== 'telegram') return;
     try {
-      logger.info(`STRATEGIC_TAKEOVER: Executing cognitive override for user ${data.userId}`);
+      logger.info(`STRATEGIC_TAKEOVER: Executing cognitive override for user ${data.userId} on TG`);
       await connection.sendMessage(data.userId, data.text);
     } catch (err) {
       logger.error('Failed to execute agent takeover on Telegram', err as Error);
     }
   });
 
-  eventBus.on('agent.whisper', async (data: { platform: string, userId: string, text: string }) => {
+  eventBus.on('agent.whisper', async (event: any) => {
+    const data = event.data as { platform: string, userId: string, text: string };
     if (data.platform !== 'telegram') return;
     try {
-      logger.info(`COGNITIVE_SHADOW: Sending assisted intelligence to user ${data.userId}`);
-      // In whisper mode, we might want to prefix or style it differently
-      const whisperText = `🤖 *AUDIRA_ASSISTED_LINK*\n\n${data.text}`;
-      await connection.sendMessage(data.userId, whisperText, { parse_mode: 'Markdown' });
+      logger.info(`COGNITIVE_SHADOW: Sending assisted intelligence to user ${data.userId} on TG`);
+      const whisperText = `🤖 <b>AUDIRA_ASSISTED_LINK</b>\n\n${data.text}`;
+      await connection.sendMessage(data.userId, whisperText);
     } catch (err) {
       logger.error('Failed to execute shadow override on Telegram', err as Error);
     }
