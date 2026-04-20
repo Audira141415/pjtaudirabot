@@ -221,13 +221,13 @@ export async function createApp() {
 
   // Network & High-end features routes (prefix: /api/network)
   await app.register(
-    async (instance) => networkRoutes(instance, { db, redis, logger }),
+    async (instance) => networkRoutes(instance, { db, redis, logger, sentiment: sentimentService }),
     { prefix: '/api/network' }
   );
 
   // AI Insights routes (prefix: /api/insights)
   await app.register(
-    async (instance) => insightsRoutes(instance, { db, redis, logger }),
+    async (instance) => insightsRoutes(instance, { db, redis, logger, sentiment: sentimentService }),
     { prefix: '/api/insights' }
   );
 
