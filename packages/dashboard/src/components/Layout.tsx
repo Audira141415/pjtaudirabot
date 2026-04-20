@@ -166,7 +166,7 @@ export default function Layout() {
               <h1 className="text-2xl font-black italic tracking-tighter uppercase text-slate-950 dark:text-white leading-none">
                 Audira<span className="text-indigo-500 underline decoration-4 underline-offset-8 decoration-indigo-400">OS</span>
               </h1>
-              <p className="text-[9px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-[0.5em] mt-3 italic">Core Neural Link</p>
+              <p className="text-[9px] font-black text-slate-500 dark:text-slate-600 uppercase tracking-[0.3em] mt-3 italic">Core Neural Link</p>
            </div>
         </div>
 
@@ -176,8 +176,8 @@ export default function Layout() {
              <div key={section.title} className="space-y-4">
                 <div className="flex items-center gap-4 px-4 mb-2">
                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/40" />
-                   <span className="text-[10px] font-black uppercase text-indigo-500/60 tracking-[0.4em] whitespace-nowrap italic">{section.title}</span>
-                   <div className="h-[2px] w-full bg-gradient-to-r from-indigo-500/20 to-transparent" />
+                   <span className="text-[10px] font-black uppercase text-indigo-500/60 tracking-[0.2em] whitespace-nowrap italic">{section.title}</span>
+                   <div className="h-[1px] w-full bg-gradient-to-r from-indigo-500/20 to-transparent" />
                 </div>
                 <div className="space-y-1.5">
                    {section.items.map((item) => (
@@ -202,7 +202,7 @@ export default function Layout() {
                              />
                            )}
                            <item.icon className={`w-4 h-4 shrink-0 transition-all ${isActive ? 'rotate-12 scale-110' : 'group-hover:rotate-6'}`} />
-                           <span className="italic relative z-10">{item.label}</span>
+                           <span className="italic relative z-10 truncate">{item.label}</span>
                            {(item as any).isNew && (
                              <span className={`ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[7px] font-black animate-pulse relative z-10 ${isActive ? 'bg-white text-indigo-600' : 'bg-amber-500 text-white shadow-lg shadow-amber-500/30'}`}>
                                <span className="w-1 h-1 rounded-full bg-current" />
@@ -253,7 +253,7 @@ export default function Layout() {
            <div className="flex items-center gap-8">
               <div className="flex items-center gap-4 px-6 py-3 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border-2 border-slate-200 dark:border-white/5 shadow-inner">
                  <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
-                 <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-[0.4em] italic">SIGNAL_GRID_SYNC: OPERATIONAL</span>
+                 <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-[0.2em] italic truncate">SIGNAL_GRID_SYNC: OPERATIONAL</span>
               </div>
            </div>
 

@@ -69,22 +69,22 @@ function StatCard({ icon: Icon, label, value, color, index, trendData = [] }: {
       {/* Orbital Glow Field */}
       <div className={`absolute -right-24 -top-24 w-64 h-64 blur-[100px] opacity-10 group-hover:opacity-40 transition-all duration-1000 ${color}`} />
       
-      <div className="flex items-start justify-between relative z-10">
+      <div className="flex items-start justify-between relative z-10 gap-4">
         <motion.div 
           whileHover={{ rotate: 180, scale: 1.1 }}
-          className={`p-6 rounded-[24px] ${color} bg-opacity-20 dark:bg-opacity-10 border-2 border-white/10 shadow-lg`}
+          className={`p-5 rounded-[22px] ${color} bg-opacity-20 dark:bg-opacity-10 border-2 border-white/10 shadow-lg shrink-0`}
         >
-          <Icon className={`w-8 h-8 ${lightIconColor} dark:${darkIconColor}`} />
+          <Icon className={`w-7 h-7 ${lightIconColor} dark:${darkIconColor}`} />
         </motion.div>
-        <div className="text-right">
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 mb-3 font-mono italic">
+        <div className="text-right min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 mb-3 font-mono italic truncate">
             {label}
           </p>
           <motion.p 
             key={value}
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-6xl font-black text-slate-900 dark:text-white italic tracking-tighter leading-none"
+            className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white italic tracking-tight leading-none pr-2"
           >
             {value}
           </motion.p>
@@ -347,7 +347,7 @@ export default function DashboardPage() {
                   <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                   CMD_GW: v3.0_ULTRA_PHASE
                 </span>
-                <h1 className="text-9xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mt-2">
+                <h1 className="text-6xl md:text-8xl lg:text-9xl font-black text-slate-900 dark:text-white tracking-tighter uppercase italic leading-none mt-2">
                   Control Deck
                 </h1>
              </div>
