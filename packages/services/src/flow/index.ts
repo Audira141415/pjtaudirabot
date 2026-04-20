@@ -365,10 +365,10 @@ export class FlowEngine {
    */
   private async executeAction(
     action: string, 
-    data: Record<string, any>, 
+    _data: Record<string, any>, 
     userId: string, 
     platform: string,
-    params?: Record<string, any>
+    _params?: Record<string, any>
   ) {
     this.logger.info(`NEURAL_EXECUTION: Running action ${action}`, { userId, platform });
     
