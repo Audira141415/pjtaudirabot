@@ -114,6 +114,7 @@ import { UptimeMonitorService } from './uptime-monitor';
 import { ShiftHandoverService } from './shift-handover';
 import { MaintenanceScheduleService } from './maintenance-schedule';
 import { DataExtractionService } from './data-extraction';
+import { AutomationService } from './automation';
 import { LiveChatService } from './live-chat';
 import { SearchService } from './search';
 import { CRMService } from './crm';
