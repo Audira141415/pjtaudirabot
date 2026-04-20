@@ -337,7 +337,7 @@ export async function createBotServices(
   const knowledgeBase = new KnowledgeBaseService(db, semantic, logger);
   const reportingService = new ReportingService(db, sheetsService, logger);
   const reminderService = new ReminderService(db, redis, logger);
-  const selfHealingService = new SelfHealingService(db, devopsService, logger);
+  const selfHealingService = new SelfHealingService(db, logger, config.NODE_ENV === 'production');
 
   const dataExtractionService = new DataExtractionService(db, logger);
   
