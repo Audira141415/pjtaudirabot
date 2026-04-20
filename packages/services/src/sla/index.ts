@@ -500,7 +500,7 @@ export class SLAService {
 
   // ── Granular SLA Countdown ──
   // Thresholds for proactive warnings (minutes before deadline)
-  private static readonly COUNTDOWN_THRESHOLDS = [60, 30, 15, 5, 1] as const;
+  private static readonly COUNTDOWN_THRESHOLDS = [1, 5, 15, 30, 60] as const;
 
   /**
    * Proactive SLA countdown — fires granular warnings at 60m, 30m, 15m, 5m, 1m

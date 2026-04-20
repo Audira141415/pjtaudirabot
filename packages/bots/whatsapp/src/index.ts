@@ -556,7 +556,14 @@ async function main(): Promise<void> {
           '• !ticket-resolve <ticket-number> | <root-cause> | <solution>',
         ].join('\n');
 
-        await telegramNotifier.sendReportText(message);
+        // Notification routing: Personal reminder goes to handler's WhatsApp DM
+        try {
+          await connection.sendMessage(admin.platformUserId, message);
+          logger.info(`Personal SLA reminder dispatched to handler DM: ${admin.id}`);
+        } catch (err) {
+          logger.error(`Failed to send personal SLA reminder to ${admin.id}`, err as Error);
+        }
+        
         await redis.set(dedupeKey, fingerprint, { EX: 1800 });
       }
     },
