@@ -243,6 +243,11 @@ export class TicketService {
 
     await this.addHistory(ticketId, 'status_changed', 'status', ticket.status, status, changedById, note);
     this.logger.info('Ticket status updated', { ticketId, from: ticket.status, to: status });
+    
+    if (status === 'RESOLVED') {
+      await this.triggerCsatSurvey(ticketId);
+    }
+    
     return updated;
   }
 
@@ -290,6 +295,9 @@ export class TicketService {
     }
 
     this.logger.info('Ticket resolved', { ticketId });
+    
+    await this.triggerCsatSurvey(ticketId);
+    
     return updated;
   }
 
@@ -538,5 +546,30 @@ export class TicketService {
     await this.db.ticketHistory.create({
       data: { ticketId, action, field, oldValue, newValue, changedById, note },
     });
+  }
+
+  /**
+   * Triggers a CSAT Survey for a resolved ticket by creating a pending SurveyResponse record.
+   */
+  private async triggerCsatSurvey(ticketId: string) {
+    try {
+      const existing = await (this.db as any).surveyResponse.findUnique({
+        where: { ticketId },
+      });
+
+      if (!existing) {
+        await (this.db as any).surveyResponse.create({
+          data: {
+            ticketId,
+            rating: 0, // 0 = pending/unrated
+            source: 'SYSTEM_TRIGGER',
+            feedback: 'Survey dispatched',
+          },
+        });
+        this.logger.info('CSAT Survey initialized', { ticketId });
+      }
+    } catch (error) {
+      this.logger.error('Failed to trigger CSAT Survey', error as Error, { ticketId });
+    }
   }
 }

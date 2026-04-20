@@ -98,6 +98,7 @@ services:
       TELEGRAM_NOC_CHAT_ID: ${TELEGRAM_NOC_CHAT_ID}
       WHATSAPP_SESSION_DIR: /data/whatsapp-sessions
       WHATSAPP_PORT: ${WHATSAPP_PORT:-4020}
+      TERMINAL_PORT_WHATSAPP: ${TERMINAL_PORT_WHATSAPP:-4005}
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       SLA_AUTO_UNASSIGNED_ENABLED: ${SLA_AUTO_UNASSIGNED_ENABLED:-true}
@@ -116,6 +117,7 @@ services:
         condition: service_healthy
     ports:
       - "${WHATSAPP_PORT:-4020}:${WHATSAPP_PORT:-4020}"
+      - "${TERMINAL_PORT_WHATSAPP:-4005}:${TERMINAL_PORT_WHATSAPP:-4005}"
     volumes:
       - whatsapp_sessions:/data/whatsapp-sessions
       - ./logs:/app/logs
@@ -140,6 +142,7 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
       TELEGRAM_NOC_CHAT_ID: ${TELEGRAM_NOC_CHAT_ID}
       TELEGRAM_PORT: ${TELEGRAM_PORT:-4010}
+      TERMINAL_PORT_TELEGRAM: ${TERMINAL_PORT_TELEGRAM:-4006}
       JWT_SECRET: ${JWT_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       SLA_AUTO_UNASSIGNED_ENABLED: ${SLA_AUTO_UNASSIGNED_ENABLED:-true}
@@ -158,6 +161,7 @@ services:
         condition: service_healthy
     ports:
       - "${TELEGRAM_PORT:-4010}:${TELEGRAM_PORT:-4010}"
+      - "${TERMINAL_PORT_TELEGRAM:-4006}:${TERMINAL_PORT_TELEGRAM:-4006}"
     volumes:
       - ./logs:/app/logs
       - ${GOOGLE_SHEETS_CREDENTIALS_HOST_PATH:-/dev/null}:/opt/google-credentials/google-credentials.json:ro

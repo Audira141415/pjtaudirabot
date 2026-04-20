@@ -47,7 +47,7 @@ export class SelfHealingService {
         }
       }
     } catch (err) {
-      this.logger.error('Self-healing cycle failed', err);
+      this.logger.error('Self-healing cycle failed', err instanceof Error ? err : new Error(String(err)));
     }
   }
 
@@ -67,13 +67,14 @@ export class SelfHealingService {
       const { stdout, stderr } = await execAsync(`docker restart pjtaudi-${serviceName}`);
       
       if (stderr) {
-        this.logger.error(`Recovery execution error for ${serviceName}:`, stderr);
+        this.logger.error(`Recovery execution error for ${serviceName}:`, new Error(stderr));
       } else {
-        this.logger.info(`Recovery sequence successful for ${serviceName}:`, stdout.trim());
+        this.logger.info(`Recovery sequence successful for ${serviceName}:`, { details: stdout.trim() });
         
         // Log the recovery event
         await this.db.serverLog.create({
           data: {
+            hostname: 'core-node',
             logLevel: 'INFO',
             service: 'self-healing',
             message: `SYSTEM_AUTORECOVERY: Restarted ${serviceName} container successfully.`,
@@ -82,7 +83,7 @@ export class SelfHealingService {
         });
       }
     } catch (err) {
-      this.logger.error(`Failed to execute recovery for ${serviceName}`, err);
+      this.logger.error(`Failed to execute recovery for ${serviceName}`, err instanceof Error ? err : new Error(String(err)));
     }
   }
 }

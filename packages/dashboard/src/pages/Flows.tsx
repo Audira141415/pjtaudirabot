@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api } from '../lib/api';
-import { GitBranch, Plus, Loader2, ChevronRight, Trash2, X, Circle } from 'lucide-react';
+import { GitBranch, Plus, Loader2, ChevronRight, Trash2, X, Circle, Download, LayoutTemplate, Layers } from 'lucide-react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, addEdge, MiniMap, Connection, Edge, Node } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 
 interface FlowStep {
   id: string;
@@ -62,16 +64,76 @@ export default function FlowsPage() {
     }
   };
 
+  // React Flow state
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
+
+  // Initialize visually mapping form.steps to nodes/edges
+  useEffect(() => {
+     if (showForm) {
+        setNodes([
+          {
+            id: 'trigger',
+            type: 'input',
+            data: { label: 'Inauguration Trigger' },
+            position: { x: 250, y: 50 },
+            className: 'bg-indigo-600/10 border-2 border-indigo-500/50 rounded-2xl w-[180px] p-4 text-center font-bold text-slate-900 dark:text-white uppercase tracking-tighter text-sm italic shadow-lg shadow-indigo-600/20'
+          },
+          {
+            id: 'step-1',
+            type: 'default',
+            data: { label: 'Node 1: Textual input' },
+            position: { x: 250, y: 150 },
+            className: 'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl w-[220px] p-4 text-center font-bold text-slate-900 dark:text-white transition-all shadow-sm group hover:border-brand-500'
+          }
+        ]);
+        setEdges([{ id: 'e-trigger-step-1', source: 'trigger', target: 'step-1', animated: true, style: { stroke: '#6366f1', strokeWidth: 2 } }]);
+     }
+  }, [showForm]);
+
+  const onConnect = useCallback((params: Connection) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: '#8b5cf6', strokeWidth: 2 } }, eds)), [setEdges]);
+
+  const handleAddVisualNode = () => {
+    const newNodeId = `step-${nodes.length}`;
+    const xPos = 250 + (Math.random() * 50 - 25);
+    const yPos = 150 + (nodes.length * 100);
+    setNodes((nds) => [...nds, {
+      id: newNodeId,
+      type: 'default',
+      data: { label: `Node ${nodes.length}: New Prompt` },
+      position: { x: xPos, y: yPos },
+      className: 'bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-2xl w-[220px] p-4 text-center font-bold text-slate-900 dark:text-white transition-all shadow-sm group hover:border-brand-500'
+    }]);
+    
+    // Auto edge connect from last node
+    const lastNode = nodes[nodes.length - 1];
+    if (lastNode) {
+      setEdges((eds) => addEdge({
+        id: `e-${lastNode.id}-${newNodeId}`,
+        source: lastNode.id,
+        target: newNodeId,
+        animated: true,
+        style: { stroke: '#8b5cf6', strokeWidth: 2 }
+      }, eds));
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.trigger.trim()) return;
     setSubmitting(true);
     try {
+      // Map visual layout back to sequential steps (mock map for visual demonstration)
+      const mappedSteps = nodes.filter(n => n.id !== 'trigger').map((n, i) => ({
+         prompt: String(n.data.label) || 'Undefined Prompt',
+         expectedType: 'text'
+      }));
+
       const res = await api.createFlow({
         name: form.name,
         description: form.description || undefined,
         trigger: form.trigger,
-        steps: form.steps.filter((s) => s.prompt.trim()),
+        steps: mappedSteps,
       });
       setFlows((prev) => [res.data as unknown as Flow, ...prev]);
       setShowForm(false);
@@ -81,28 +143,6 @@ export default function FlowsPage() {
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const addStep = () => {
-    setForm((prev) => ({
-      ...prev,
-      steps: [...prev.steps, { prompt: '', expectedType: 'text' }],
-    }));
-  };
-
-  const updateStep = (index: number, field: string, value: string) => {
-    setForm((prev) => ({
-      ...prev,
-      steps: prev.steps.map((s, i) => (i === index ? { ...s, [field]: value } : s)),
-    }));
-  };
-
-  const removeStep = (index: number) => {
-    if (form.steps.length <= 1) return;
-    setForm((prev) => ({
-      ...prev,
-      steps: prev.steps.filter((_, i) => i !== index),
-    }));
   };
 
   return (
@@ -164,46 +204,37 @@ export default function FlowsPage() {
             />
           </div>
 
-          <div className="mb-8 p-6 bg-slate-50 dark:bg-slate-900/60 rounded-3xl border border-slate-200 dark:border-slate-800/50">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-4 block">Sequence Definition</label>
-            <div className="space-y-4">
-              {form.steps.map((step, idx) => (
-                <div key={idx} className="flex items-start gap-4 p-4 bg-white dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/30 group">
-                  <span className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-brand-600 dark:text-brand-400 font-mono text-xs">{idx + 1}</span>
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="md:col-span-3">
-                      <input
-                        value={step.prompt}
-                        onChange={(e) => updateStep(idx, 'prompt', e.target.value)}
-                        placeholder="Interrogation prompt..."
-                        className="w-full bg-transparent border-b border-slate-200 dark:border-slate-700 focus:border-brand-500 py-1 text-sm outline-none text-slate-900 dark:text-slate-200 transition-colors"
-                      />
-                    </div>
-                    <select
-                      value={step.expectedType}
-                      onChange={(e) => updateStep(idx, 'expectedType', e.target.value)}
-                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-600 dark:text-slate-300 outline-none"
-                    >
-                      <option value="text">Textual</option>
-                      <option value="number">Numeric</option>
-                      <option value="email">Electronic Mail</option>
-                      <option value="choice">Selection</option>
-                    </select>
-                  </div>
-                  {form.steps.length > 1 && (
-                    <button type="button" onClick={() => removeStep(idx)} className="text-slate-600 hover:text-rose-500 transition-colors p-1">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
+          <div className="mb-0 flex-1 min-h-[400px] border-2 border-slate-200 dark:border-slate-800/50 rounded-3xl overflow-hidden relative group/flow">
+             <div className="absolute top-4 left-4 z-10">
+                <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 flex items-center gap-3 shadow-lg">
+                   <Layers className="w-5 h-5 text-indigo-500" />
+                   <span className="text-[10px] font-black uppercase tracking-[0.2em] italic text-slate-900 dark:text-white font-mono">Visual Mapping Matrix</span>
                 </div>
-              ))}
-            </div>
-            <button type="button" onClick={addStep} className="mt-4 text-xs font-bold text-brand-600 dark:text-brand-400 hover:text-brand-500 transition-colors flex items-center gap-1 uppercase tracking-tighter ml-12">
-              <Plus className="w-3 h-3" /> Append Protocol Step
-            </button>
+             </div>
+             <div className="absolute top-4 right-4 z-10 flex gap-2">
+                <button type="button" onClick={handleAddVisualNode} className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/30 transition-all active:scale-95">
+                   <Plus className="w-4 h-4" /> APPEND_NODE
+                </button>
+             </div>
+             
+             <ReactFlow 
+                nodes={nodes} 
+                edges={edges} 
+                onNodesChange={onNodesChange} 
+                onEdgesChange={onEdgesChange} 
+                onConnect={onConnect}
+                fitView
+                className="bg-slate-50 dark:bg-slate-950/40"
+             >
+                <Background color="#cbd5e1" gap={24} size={2} className="opacity-50 dark:opacity-10" />
+                <Controls className="bg-white dark:bg-slate-900 border-none shadow-xl rounded-xl overflow-hidden !fill-slate-700 dark:!fill-white [&>button]:border-slate-100 dark:[&>button]:border-slate-800" />
+             </ReactFlow>
           </div>
 
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-200 dark:border-slate-800/50">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono italic">
+               GRAPH_ENGINE: @xyflow/react
+            </div>
             <button type="button" onClick={() => setShowForm(false)} className="px-6 py-2.5 text-sm font-bold text-slate-500 hover:text-slate-300 transition-colors uppercase">Abuse Initialization</button>
             <button type="submit" disabled={submitting} className="px-8 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 shadow-lg shadow-brand-500/20 disabled:opacity-50 flex items-center gap-2">
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />} Finalize Workflow

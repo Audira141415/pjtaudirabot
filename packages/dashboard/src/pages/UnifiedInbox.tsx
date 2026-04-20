@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
+import { io, Socket } from 'socket.io-client';
 import { 
   Inbox, Star, Archive, Mail, Search, Filter, 
   ChevronDown, MessageSquare, Send, CheckCircle2, 
   Clock, Hash, BadgeCheck, Zap, Paperclip, MoreVertical,
   Orbit, Layers, Cpu, Fingerprint, Activity, Info,
   Power, Target, RefreshCw, Smartphone,
-  MoreHorizontal, ShieldCheck, UserCircle
+  MoreHorizontal, ShieldCheck, UserCircle, SendHorizontal, Terminal
 } from 'lucide-react';
 import { toast } from '../components/Toast';
 
@@ -36,6 +37,28 @@ export default function UnifiedInbox() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
+  const socketsRef = useRef<Record<string, Socket>>({});
+  const [activeSockets, setActiveSockets] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const STREAMS = [
+      { id: 'whatsapp', port: 4005 },
+      { id: 'telegram', port: 4006 }
+    ];
+    STREAMS.forEach(stream => {
+      const hostname = window.location.hostname === 'localhost' ? 'localhost' : window.location.hostname;
+      const socket = io(`http://${hostname}:${stream.port}`);
+      socketsRef.current[stream.id] = socket;
+      socket.on('connect', () => setActiveSockets(prev => ({ ...prev, [stream.id]: true })));
+      socket.on('disconnect', () => setActiveSockets(prev => ({ ...prev, [stream.id]: false })));
+    });
+
+    return () => {
+      Object.values(socketsRef.current).forEach(s => s.disconnect());
+    };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -94,6 +117,44 @@ export default function UnifiedInbox() {
        load();
     } catch (err) {
        toast({ type: 'error', title: 'BATCH_ACTION_FAILURE', message: 'Resolution protocol was interrupted.' });
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyText.trim() || !selected) return;
+    
+    // Default fallback JID pattern for whatsapp if fromUserId/fromNumber missing
+    let targetUserId = selected.fromUserId as string;
+    if (!targetUserId && selected.fromNumber) {
+      targetUserId = `${(selected.fromNumber as string).replace('+', '')}@s.whatsapp.net`;
+    }
+
+    if (!targetUserId) {
+      toast({ type: 'error', title: 'TARGET_UNKNOWN', message: 'Missing target User ID or Pointer.' });
+      return;
+    }
+
+    const platformKey = (selected.platform as string).toLowerCase();
+    const socket = socketsRef.current[platformKey];
+
+    if (socket && activeSockets[platformKey]) {
+      setIsReplying(true);
+      socket.emit('agent:takeover', {
+        platform: platformKey,
+        userId: targetUserId,
+        text: replyText
+      });
+      
+      // Assume success since we rely on event stream
+      setTimeout(() => {
+         toast({ type: 'success', title: 'TRANSMISSION_SENT', message: 'Reply payload dispatched to target node successfully.' });
+         setReplyText('');
+         setIsReplying(false);
+         // Auto-mark as read, optionally
+         if (!selected.isRead) handleToggleRead(selected);
+      }, 800);
+    } else {
+      toast({ type: 'error', title: 'NODE_DISCONNECTED', message: `Target platform socket (${platformKey}) is currently unavailable.` });
     }
   };
 
@@ -366,7 +427,7 @@ export default function UnifiedInbox() {
                     </button>
                   </div>
                 )}
-
+                
                 <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
                    {!!selected.sentiment && (
                       <div className={`p-8 rounded-[48px] border-2 ${SENTIMENT_STYLE[selected.sentiment as string].bg} ${SENTIMENT_STYLE[selected.sentiment as string].color} border-current opacity-80 flex flex-col items-center justify-center text-center shadow-inner group/sent transition-all hover:opacity-100`}>
@@ -390,7 +451,41 @@ export default function UnifiedInbox() {
                          </div>
                       </div>
                    )}
-                </div>
+                 </div>
+
+                 <div className="mt-12 w-full">
+                    <div className="relative">
+                      <textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Draft response payload here..."
+                        className="w-full h-32 p-6 pr-24 bg-white dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-[32px] focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/50 outline-none transition-all resize-none shadow-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400"
+                        onKeyDown={(e) => {
+                           if (e.key === 'Enter' && !e.shiftKey) {
+                             e.preventDefault();
+                             handleReply();
+                           }
+                        }}
+                      />
+                      <button
+                        onClick={handleReply}
+                        disabled={!replyText.trim() || isReplying}
+                        className="absolute right-4 bottom-4 p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl disabled:opacity-50 disabled:hover:bg-indigo-600 shadow-xl shadow-indigo-600/30 transition-all active:scale-95"
+                      >
+                        <SendHorizontal className={`w-5 h-5 ${isReplying ? 'animate-pulse' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 px-4">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest font-mono italic flex items-center gap-2">
+                        <Terminal className="w-3 h-3" /> Press Enter to send, Shift+Enter for newline
+                      </span>
+                      {activeSockets[(selected.platform as string).toLowerCase()] ? (
+                        <span className="text-[9px] font-black text-emerald-500 uppercase tracking-widest font-mono italic flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" /> NODE_CONNECTED</span>
+                      ) : (
+                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest font-mono italic flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" /> NODE_DISCONNECTED</span>
+                      )}
+                    </div>
+                 </div>
               </div>
             </>
           ) : (

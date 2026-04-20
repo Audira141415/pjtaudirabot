@@ -43,7 +43,7 @@ export class SentimentService {
         };
       }
     } catch (err) {
-      this.logger.error('Sentiment analysis failed, falling back to basic rules', err);
+      this.logger.error('Sentiment analysis failed, falling back to basic rules', err instanceof Error ? err : new Error(String(err)));
     }
 
     // Basic Rule-based Fallback
@@ -77,7 +77,7 @@ export class SentimentService {
         this.logger.warn(`URGENT SIGNAL DETECTED: [ChatLog ${logId}]`);
       }
     } catch (err) {
-      this.logger.error('Failed to record chat sentiment', err);
+      this.logger.error('Failed to record chat sentiment', err instanceof Error ? err : new Error(String(err)));
     }
   }
 }

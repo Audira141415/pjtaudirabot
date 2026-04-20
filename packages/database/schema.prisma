@@ -585,6 +585,7 @@ model Ticket {
   clusterMaster     TicketCluster[]       @relation("ClusterMaster")
   clusterMembership TicketClusterMember[] @relation("ClusterMembers")
   ticketHistory     TicketHistory[]
+  survey            SurveyResponse?
 
   @@index([status])
   @@index([priority])
@@ -594,6 +595,19 @@ model Ticket {
   @@index([assignedToId])
   @@index([createdAt])
   @@index([createdById])
+}
+
+model SurveyResponse {
+  id          String   @id @default(cuid())
+  ticketId    String   @unique
+  rating      Int
+  feedback    String?
+  source      String?
+  createdAt   DateTime @default(now())
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@index([createdAt])
 }
 
 model TicketHistory {

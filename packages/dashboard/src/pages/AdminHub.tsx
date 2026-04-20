@@ -66,10 +66,11 @@ const AdminHub = () => {
     try {
       const res = await api.getSystemHealth();
       setHealth(res.data);
-      if (res.data.components.find(c => c.name === 'WhatsApp Bot' && c.status === 'offline')) {
-        const qrRes = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/whatsapp/qr`);
-        const qrData = await qrRes.json();
-        setQrToken(qrData.token);
+      const waBot = res.data.components.find((c: any) => c.name === 'WHATSAPP Bot');
+      if (waBot && waBot.status !== 'online' && (waBot.meta as any)?.qr) {
+        setQrToken((waBot.meta as any).qr);
+      } else {
+        setQrToken(null);
       }
     } catch (err) {
        toast({ type: 'warning', title: 'TELEMETRY_SYNC_WARNING', message: 'Unable to synchronize real-time system health.' });
@@ -557,7 +558,27 @@ const AdminHub = () => {
       {/* Connectivity Handshake Modal */}
       {showQr && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-8 backdrop-blur-3xl bg-slate-950/90 animate-in fade-in duration-500">
-           {/* ... UI content of showQr ... */}
+           <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[48px] p-12 border border-slate-200 dark:border-white/10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center">
+             <button onClick={() => setShowQr(false)} className="absolute top-8 right-8 p-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <XCircle className="w-6 h-6 text-slate-400" />
+             </button>
+             <div className="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-3xl mb-8">
+               <QrCode className="w-10 h-10 text-emerald-500" />
+             </div>
+             <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-4">Device Binding</h2>
+             <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 italic">Scan the QR code from WhatsApp on your mobile device to link the node.</p>
+             
+             <div className="bg-white p-6 rounded-3xl shadow-inner border border-slate-100 dark:border-slate-800">
+                {qrToken ? (
+                   <QRCodeSVG value={qrToken} size={256} className="mx-auto" />
+                ) : (
+                   <div className="w-[256px] h-[256px] flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                      <RefreshCw className="w-8 h-8 text-slate-300 animate-spin mb-4" />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center px-4">Waiting for node<br/>to regenerate payload</span>
+                   </div>
+                )}
+             </div>
+           </div>
         </div>
       )}
 

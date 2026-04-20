@@ -17,6 +17,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@xyflow/react": "^12.10.2",
     "framer-motion": "^12.38.0",
     "lucide-react": "^0.344.0",
     "qrcode.react": "^4.2.0",
